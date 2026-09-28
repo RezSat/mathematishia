@@ -5,3 +5,10 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 description = "Syntax-independent semantic representation for Mathematishia"
+
+[dependencies]
+num-bigint = "0.4.6"
+num-integer = "0.1.46"
+
+[dev-dependencies]
+proptest = { version = "1.11.0", default-features = false, features = ["std"] }

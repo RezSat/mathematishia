@@ -1,0 +1,10 @@
+[package]
+name = "mathematishia-kernel"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Mathematical algorithms and derivations for Mathematishia"
+
+[dependencies]
+mathema = { path = "../mathema" }

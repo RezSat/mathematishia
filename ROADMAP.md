@@ -7,7 +7,11 @@ These phases describe architectural goals, not dates.
 1. Exact scalar semantic core: define Integer, Rational, Symbol, and the first
    scalar expression forms with tested semantics. Integer and canonical Rational
    values, basic exact arithmetic, and example/property tests are complete.
-   Symbol and scalar expression forms remain unimplemented.
+   Exact-name Symbol and opaque Expr values with Integer, Rational, Symbol, Add,
+   Mul, and Pow forms are complete, including conservative constructor
+   normalization, structural equality/hashing, deterministic display, and
+   example/property tests. Parsing, substitution, rewriting, simplification,
+   solving, and a user-facing CAS API remain unimplemented.
 2. Transformation and derivation infrastructure: represent transformations
    and their mathematical justification.
 3. Exact polynomial domain: add a specialized polynomial representation and

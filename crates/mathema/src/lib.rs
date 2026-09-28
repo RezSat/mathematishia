@@ -1,9 +1,13 @@
 //! Syntax-independent semantic mathematical representation for Mathematishia.
 //!
-//! Exact integer and canonical rational values with basic value arithmetic.
-//! Symbolic expressions, parsing, domain algorithms, and bindings are not yet
-//! implemented. Scalar `Display` is human formatting, not a serialization format.
+//! Exact scalars and immutable symbolic expressions with conservative constructor
+//! normalization. Parsing, transformations, domain algorithms, and bindings are
+//! not implemented. `Display` is human formatting, not a serialization format.
 
+mod expr;
 mod number;
+mod symbol;
 
+pub use expr::Expr;
 pub use number::{Integer, Rational, ZeroDenominator};
+pub use symbol::{EmptySymbolName, Symbol};

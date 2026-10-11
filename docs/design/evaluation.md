@@ -12,3 +12,7 @@ architecture. These operations remain distinct.
 The future `EvaluationContext` will carry assumptions, numeric and precision
 policy, algorithm options, a deterministic seed, and resource limits. There is
 no mutable global mathematical state. The context is not implemented yet.
+
+Kernel inspection uses the read-only semantic expression view. Single-symbol
+substitution is an explicit single-pass transformation rebuilt through the
+existing constructors. No general rewrite or derivation system exists yet.

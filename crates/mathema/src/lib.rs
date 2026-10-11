@@ -8,6 +8,6 @@ mod expr;
 mod number;
 mod symbol;
 
-pub use expr::Expr;
+pub use expr::{Expr, ExprView};
 pub use number::{Integer, Rational, ZeroDenominator};
 pub use symbol::{EmptySymbolName, Symbol};

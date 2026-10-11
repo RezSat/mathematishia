@@ -36,7 +36,9 @@ without Unicode normalization. Its display returns that name unchanged.
 The current private `Expr` implementation uses `Arc<ExprNode>` for shared
 immutable nodes. Neither the node enum nor the storage mechanism is public;
 this choice remains replaceable. Equality and hashing compare structure and
-values, never addresses. No public tree-inspection API exists.
+values, never addresses. The only inspection API is the borrowed read-only
+semantic view (`Expr::view`), which exposes scalars, symbols, and composite
+children without addresses, allocation IDs, or mutability.
 
 `From` conversions lift Integer, Rational, Symbol, and primitive integers.
 Rationals with denominator one become integer expressions, so exact scalars
@@ -59,6 +61,7 @@ Expression display uses explicit ASCII `+`, `*`, and `^`, with parentheses for
 precedence, nested powers, and fractional or negative power operands. Symbol
 names that could resemble numeric or operator syntax are quoted and escaped
 within expressions; this display convention defines no future parser grammar.
-There is no parser, substitution, rewriting, simplification engine, solver,
+The kernel provides only exact single-symbol substitution over the semantic
+view. There is no parser, general rewriting, simplification engine, solver,
 serialization, or user-facing CAS API. Generic expressions remain the symbolic
 interchange/orchestration layer, not every future algorithm's representation.

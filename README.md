@@ -24,8 +24,10 @@ with Integer, Rational, Symbol, Add, Mul, and Pow forms. Constructors flatten
 sums/products, fold exact scalars, apply zero/one identities, and sort operands
 deterministically. Powers only remove an exponent of one. Equality and hashing
 are structural; display is basic human formatting, not serialization.
-Example tests and property tests cover these invariants. There is no parser,
-substitution, rewriting, simplification engine, solver, or user-facing CAS API yet.
+Example tests and property tests cover these invariants. The kernel inspects
+expressions through a read-only semantic view and provides only exact
+single-symbol substitution. There is no parser, general rewriting,
+simplification engine, solver, or user-facing CAS API yet.
 
 ## Checks
 

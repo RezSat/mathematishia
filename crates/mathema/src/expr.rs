@@ -7,8 +7,9 @@ use crate::{Integer, Rational, Symbol};
 /// An opaque immutable expression with canonical structural equality and hashing.
 ///
 /// Equality is not general mathematical equivalence. Constructors perform only
-/// local normalization; there is no public mathematical ordering or traversal API.
-/// `Display` is basic human formatting, not a stable serialization format.
+/// local normalization; there is no public mathematical ordering or traversal
+/// framework. Read-only inspection is available through the borrowed semantic
+/// view. `Display` is basic human formatting, not a stable serialization format.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Expr(Arc<ExprNode>);
 
@@ -21,6 +22,20 @@ enum ExprNode {
     Add(Vec<Expr>),
     Mul(Vec<Expr>),
     Pow(Expr, Expr),
+}
+
+/// A borrowed read-only semantic view of an expression.
+///
+/// The view exposes meaning, not storage: scalars, symbols, and composite
+/// children by reference. There is no address, allocation, or mutability API.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum ExprView<'a> {
+    Integer(&'a Integer),
+    Rational(&'a Rational),
+    Symbol(&'a Symbol),
+    Add(&'a [Expr]),
+    Mul(&'a [Expr]),
+    Pow { base: &'a Expr, exponent: &'a Expr },
 }
 
 impl Expr {
@@ -98,6 +113,18 @@ impl Expr {
             base
         } else {
             Self::new(ExprNode::Pow(base, exponent))
+        }
+    }
+
+    /// Borrows the semantic form of this expression without exposing storage.
+    pub fn view(&self) -> ExprView<'_> {
+        match self.0.as_ref() {
+            ExprNode::Integer(value) => ExprView::Integer(value),
+            ExprNode::Rational(value) => ExprView::Rational(value),
+            ExprNode::Symbol(value) => ExprView::Symbol(value),
+            ExprNode::Add(children) => ExprView::Add(children),
+            ExprNode::Mul(children) => ExprView::Mul(children),
+            ExprNode::Pow(base, exponent) => ExprView::Pow { base, exponent },
         }
     }
 

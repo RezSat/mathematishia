@@ -12,7 +12,7 @@ requires benchmark evidence before adding performance complexity.
 ## Repository
 
 - `crates/mathema`: exact scalars, free symbols, and immutable symbolic expressions.
-- `crates/kernel`: future mathematical algorithms and derivations.
+- `crates/kernel`: mathematical transformations and structured derivation steps.
 - `docs/design`: architecture contracts; `docs/research`: architecture and
   provenance records.
 
@@ -25,9 +25,10 @@ sums/products, fold exact scalars, apply zero/one identities, and sort operands
 deterministically. Powers only remove an exponent of one. Equality and hashing
 are structural; display is basic human formatting, not serialization.
 Example tests and property tests cover these invariants. The kernel inspects
-expressions through a read-only semantic view and provides only exact
-single-symbol substitution. There is no parser, general rewriting,
-simplification engine, solver, or user-facing CAS API yet.
+expressions through a read-only semantic view and provides exact single-symbol
+substitution plus a single justified distributive transformation step. There is
+no parser, general rewriting, simplification engine, solver, or user-facing CAS
+API yet.
 
 ## Checks
 

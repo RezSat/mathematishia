@@ -10,12 +10,15 @@ These phases describe architectural goals, not dates.
    Exact-name Symbol and opaque Expr values with Integer, Rational, Symbol, Add,
    Mul, and Pow forms are complete, including conservative constructor
    normalization, structural equality/hashing, deterministic display, and
-   example/property tests. Kernel inspection uses a read-only semantic view
-   and provides only exact single-symbol substitution. Parsing, general
+   example/property tests. Kernel inspection uses a read-only semantic view;
+   exact single-symbol substitution is implemented. Parsing, general
    rewriting, simplification, solving, and a user-facing CAS API remain
    unimplemented.
 2. Transformation and derivation infrastructure: represent transformations
-   and their mathematical justification.
+   and their mathematical justification. A minimal `DerivationStep`, stable
+   `RuleId`, `Equal` relation, and one distributive-law transformation are
+   implemented. General transformation infrastructure, assumptions,
+   verification obligations, and complete derivations remain future work.
 3. Exact polynomial domain: add a specialized polynomial representation and
    algorithms.
 4. First equation solver: solve a deliberately bounded class of equations and

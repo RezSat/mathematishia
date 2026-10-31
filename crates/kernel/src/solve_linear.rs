@@ -156,29 +156,35 @@ pub fn solve_linear_equation(
     variable: &Symbol,
 ) -> Result<LinearSolveResult, LinearSolveError> {
     const CONVERSION_BOUND: usize = 32;
-    let left = RationalPolynomial::try_from_expr(
-        equation.left(),
-        variable,
-        CONVERSION_BOUND,
-    )?;
-    let right = RationalPolynomial::try_from_expr(
-        equation.right(),
-        variable,
-        CONVERSION_BOUND,
-    )?;
+    let left = RationalPolynomial::try_from_expr(equation.left(), variable, CONVERSION_BOUND)?;
+    let right = RationalPolynomial::try_from_expr(equation.right(), variable, CONVERSION_BOUND)?;
     let residual = left.subtract(&right);
     if residual.degree().is_some_and(|degree| degree > 1) {
         return Err(LinearSolveError::NonlinearEquation);
     }
 
     let zero = Rational::from(Integer::zero());
-    let constant = residual.coefficients().first().cloned().unwrap_or_else(|| zero.clone());
-    let coefficient = residual.coefficients().get(1).cloned().unwrap_or_else(|| zero.clone());
+    let constant = residual
+        .coefficients()
+        .first()
+        .cloned()
+        .unwrap_or_else(|| zero.clone());
+    let coefficient = residual
+        .coefficients()
+        .get(1)
+        .cloned()
+        .unwrap_or_else(|| zero.clone());
     let mut current = equation.clone();
     let mut steps = Vec::new();
 
     let reduced = Equation::new(residual.to_expr(variable), Expr::from(0));
-    record_step(&mut steps, &mut current, reduced, EquationRuleId::CollectToZero, None);
+    record_step(
+        &mut steps,
+        &mut current,
+        reduced,
+        EquationRuleId::CollectToZero,
+        None,
+    );
 
     let solution = if coefficient.numerator().is_zero() {
         if constant.numerator().is_zero() {
@@ -189,7 +195,10 @@ pub fn solve_linear_equation(
     } else {
         let neg_constant = -&constant;
         let isolated = Equation::new(
-            Expr::mul([Expr::from(coefficient.clone()), Expr::from(variable.clone())]),
+            Expr::mul([
+                Expr::from(coefficient.clone()),
+                Expr::from(variable.clone()),
+            ]),
             Expr::from(neg_constant.clone()),
         );
         record_step(

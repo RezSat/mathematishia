@@ -8,16 +8,16 @@ use mathema::{Expr, ExprView, Symbol};
 
 mod poly_convert;
 mod poly_division;
-mod solve_linear;
 mod polynomial;
+mod solve_linear;
 
 pub use poly_convert::PolynomialConversionError;
 pub use poly_division::ZeroPolynomialDivisor;
+pub use polynomial::RationalPolynomial;
 pub use solve_linear::{
     EquationRuleId, EquationStep, LinearSolution, LinearSolveError, LinearSolveResult,
     VerifiedCondition, solve_linear_equation,
 };
-pub use polynomial::RationalPolynomial;
 
 /// A stable identifier for a mathematical transformation rule.
 ///

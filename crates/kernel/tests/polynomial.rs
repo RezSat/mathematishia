@@ -25,10 +25,7 @@ fn canonicalizes_trailing_zeros_and_zero_polynomials() {
 
     let polynomial = p(&[(3, 1), (0, 1), (2, 1), (0, 1), (0, 1)]);
     assert_eq!(polynomial.degree(), Some(2));
-    assert_eq!(
-        polynomial.coefficients(),
-        &[q(3, 1), q(0, 1), q(2, 1)]
-    );
+    assert_eq!(polynomial.coefficients(), &[q(3, 1), q(0, 1), q(2, 1)]);
     assert!(!polynomial.is_zero());
     assert_eq!(p(&[(5, 2), (0, 1)]), p(&[(5, 2)]));
 }
@@ -36,10 +33,7 @@ fn canonicalizes_trailing_zeros_and_zero_polynomials() {
 #[test]
 fn canonicalizes_rational_coefficients_and_preserves_internal_zeros() {
     let polynomial = p(&[(2, 4), (0, 1), (-6, -9)]);
-    assert_eq!(
-        polynomial.coefficients(),
-        &[q(1, 2), q(0, 1), q(2, 3)]
-    );
+    assert_eq!(polynomial.coefficients(), &[q(1, 2), q(0, 1), q(2, 3)]);
     assert_eq!(polynomial.degree(), Some(2));
 }
 
@@ -83,10 +77,7 @@ fn multiplies_exactly_and_handles_zero_and_constants() {
 fn preserves_sparse_holes_during_multiplication() {
     let x_squared = p(&[(0, 1), (0, 1), (1, 1)]);
     let shifted = x_squared.multiply(&p(&[(1, 1), (0, 1), (1, 1)]));
-    assert_eq!(
-        shifted,
-        p(&[(0, 1), (0, 1), (1, 1), (0, 1), (1, 1)])
-    );
+    assert_eq!(shifted, p(&[(0, 1), (0, 1), (1, 1), (0, 1), (1, 1)]));
 }
 
 #[test]
@@ -128,14 +119,8 @@ fn addition_and_multiplication_are_associative_on_small_examples() {
     let c = p(&[(-1, 4), (0, 1), (2, 1)]);
 
     assert_eq!(a.add(&b).add(&c), a.add(&b.add(&c)));
-    assert_eq!(
-        a.multiply(&b).multiply(&c),
-        a.multiply(&b.multiply(&c))
-    );
-    assert_eq!(
-        a.multiply(&b.add(&c)),
-        a.multiply(&b).add(&a.multiply(&c))
-    );
+    assert_eq!(a.multiply(&b).multiply(&c), a.multiply(&b.multiply(&c)));
+    assert_eq!(a.multiply(&b.add(&c)), a.multiply(&b).add(&a.multiply(&c)));
 }
 
 #[test]

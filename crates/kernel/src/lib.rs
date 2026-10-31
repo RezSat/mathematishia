@@ -7,12 +7,12 @@
 use mathema::{Expr, ExprView, Symbol};
 
 mod poly_convert;
-mod polynomial;
 mod poly_division;
+mod polynomial;
 
 pub use poly_convert::PolynomialConversionError;
-pub use polynomial::RationalPolynomial;
 pub use poly_division::ZeroPolynomialDivisor;
+pub use polynomial::RationalPolynomial;
 
 /// A stable identifier for a mathematical transformation rule.
 ///

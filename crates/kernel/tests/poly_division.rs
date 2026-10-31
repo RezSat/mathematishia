@@ -19,7 +19,10 @@ fn rejects_zero_divisor() {
     let zero = RationalPolynomial::zero();
     let x = p(&[(0, 1), (1, 1)]);
     assert_eq!(x.divide_with_remainder(&zero), Err(ZeroPolynomialDivisor));
-    assert_eq!(zero.divide_with_remainder(&zero), Err(ZeroPolynomialDivisor));
+    assert_eq!(
+        zero.divide_with_remainder(&zero),
+        Err(ZeroPolynomialDivisor)
+    );
 }
 
 #[test]
@@ -86,7 +89,10 @@ fn gcd_zero_and_coprime_cases() {
     assert_eq!(a.monic_gcd(&zero), expected);
     assert_eq!(zero.monic_gcd(&a), expected);
     assert_eq!(zero.monic_gcd(&zero), zero);
-    assert_eq!(p(&[(1, 1), (1, 1)]).monic_gcd(&p(&[(2, 1), (1, 1)])), p(&[(1, 1)]));
+    assert_eq!(
+        p(&[(1, 1), (1, 1)]).monic_gcd(&p(&[(2, 1), (1, 1)])),
+        p(&[(1, 1)])
+    );
 }
 
 #[test]

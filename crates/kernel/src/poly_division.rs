@@ -45,10 +45,8 @@ impl RationalPolynomial {
             return Ok((Self::zero(), self.clone()));
         }
 
-        let mut quotient = vec![
-            Rational::from(Integer::zero());
-            dividend_degree - divisor_degree + 1
-        ];
+        let mut quotient =
+            vec![Rational::from(Integer::zero()); dividend_degree - divisor_degree + 1];
         let mut remainder = self.clone();
         let divisor_lead = &divisor.coefficients()[divisor_degree];
 
@@ -61,10 +59,8 @@ impl RationalPolynomial {
             let factor = rational_quotient(leading, divisor_lead);
             quotient[offset] = &quotient[offset] + &factor;
 
-            let mut subtraction = vec![
-                Rational::from(Integer::zero());
-                offset + divisor_degree + 1
-            ];
+            let mut subtraction =
+                vec![Rational::from(Integer::zero()); offset + divisor_degree + 1];
             for (index, coefficient) in divisor.coefficients().iter().enumerate() {
                 subtraction[offset + index] = coefficient * &factor;
             }

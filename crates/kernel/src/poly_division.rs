@@ -17,7 +17,7 @@ impl fmt::Display for ZeroPolynomialDivisor {
 
 impl Error for ZeroPolynomialDivisor {}
 
-fn rational_quotient(numerator: &Rational, denominator: &Rational) -> Rational {
+pub(crate) fn rational_quotient(numerator: &Rational, denominator: &Rational) -> Rational {
     Rational::new(
         numerator.numerator() * denominator.denominator(),
         numerator.denominator() * denominator.numerator(),

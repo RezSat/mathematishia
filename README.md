@@ -29,8 +29,10 @@ Example tests and property tests cover these invariants. The kernel inspects
 expressions through a read-only semantic view and provides exact single-symbol
 substitution and bounded, deterministic distributive expansion with a chain of
 justified steps. The expansion budget counts steps but does not bound memory or
-expression size. There is no parser, general rewriting, simplification engine,
-solver, or user-facing CAS API yet. RationalPolynomial supports canonical
+expression size. There is no parser, general rewriting, general simplification engine,
+or user-facing CAS API yet. A separate Equation value supports a deliberately
+bounded exact univariate linear solver, with typed equivalent-equation steps,
+verified nonzero division, and three solution-set classifications. RationalPolynomial supports canonical
 univariate rational coefficients, exact arithmetic, and Horner evaluation;
 fallible bounded expression-to-polynomial conversion and conversion back to
 semantic expressions are available. Polynomial long division and canonical

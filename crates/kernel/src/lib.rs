@@ -8,10 +8,15 @@ use mathema::{Expr, ExprView, Symbol};
 
 mod poly_convert;
 mod poly_division;
+mod solve_linear;
 mod polynomial;
 
 pub use poly_convert::PolynomialConversionError;
 pub use poly_division::ZeroPolynomialDivisor;
+pub use solve_linear::{
+    EquationRuleId, EquationStep, LinearSolution, LinearSolveError, LinearSolveResult,
+    VerifiedCondition, solve_linear_equation,
+};
 pub use polynomial::RationalPolynomial;
 
 /// A stable identifier for a mathematical transformation rule.
@@ -40,6 +45,8 @@ impl RuleId {
 pub enum Relation {
     /// The expressions denote equal values within the rule's documented scope.
     Equal,
+    /// The equations have exactly the same solution set in the documented domain.
+    Equivalent,
 }
 
 /// A single structured transformation step with a typed mathematical justification.

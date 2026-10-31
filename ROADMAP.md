@@ -25,8 +25,11 @@ These phases describe architectural goals, not dates.
    provides exact addition, subtraction, multiplication, and evaluation.
    Explicit fallible Expr conversion, division, GCD, and advanced algorithms
    remain future milestones.
-4. First equation solver: solve a deliberately bounded class of equations and
-   report conditions and derivations.
+4. First equation solver: an exact, univariate linear solver now classifies
+   unique, empty, and universal rational solution sets. It records typed
+   equation-equivalence steps, with an exactly checked nonzero division
+   condition. Nonlinear, multivariate and assumption-dependent solving remain
+   future work.
 5. Mathema surface frontend: parse text and lower it into semantic values.
 6. Python bindings: expose established kernel behavior.
 7. Arbitrary-precision numerical work: distinguish approximation from

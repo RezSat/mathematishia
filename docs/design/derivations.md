@@ -36,3 +36,12 @@ Relation concepts for future rules include `Equal`, `Equivalent`, `Implies`,
 `Approximate`, and `DefinedAs`; only `Equal` is implemented. Phrases such as
 “By the zero-product property” belong to rendering, not mathematical semantics.
 Mathematishia is not claiming to be a formal proof assistant.
+
+The initial linear equation solver works with a separate semantic `Equation`
+value (two Expr sides). It converts both sides to bounded univariate rational
+polynomials and classifies their difference as a unique root, no solution, or
+all rational values. Recorded `EquationStep`s use `Relation::Equivalent`, not
+expression equality, and the coefficient-division step carries the exact
+nonzero scalar verified by arithmetic. Constant-equation classification is a
+typed result, not an invented equality step. This is not a general equation
+solver, conditional rewrite system, or independently checked proof certificate.

@@ -32,7 +32,8 @@ justified steps. The expansion budget counts steps but does not bound memory or
 expression size. There is no parser, general rewriting, simplification engine,
 solver, or user-facing CAS API yet. RationalPolynomial supports canonical
 univariate rational coefficients, exact arithmetic, and Horner evaluation;
-expression-to-polynomial conversion is not implemented.
+fallible bounded expression-to-polynomial conversion and conversion back to
+semantic expressions are available.
 
 ## Checks
 

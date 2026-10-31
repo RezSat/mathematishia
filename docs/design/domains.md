@@ -21,3 +21,10 @@ coefficients removed (the zero polynomial stores no coefficients). Addition,
 subtraction, quadratic-time coefficient convolution, and Horner evaluation are
 exact. This domain neither parses nor owns Expr; conversion from expressions
 will be explicit and fallible when implemented.
+
+`RationalPolynomial::try_from_expr` converts supported exact scalar expressions
+in one selected `Symbol` with an explicit maximum degree/power budget. It rejects
+other symbols, non-positive or non-integer powers (including ambiguous `0^0`),
+and values beyond the bound. `to_expr` constructs a semantic expression using
+the selected indeterminate; the round trip guarantees polynomial value, not
+identical expression structure. Conversion does not modify `Expr` normalization.

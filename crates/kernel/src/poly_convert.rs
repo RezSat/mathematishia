@@ -45,9 +45,7 @@ impl RationalPolynomial {
         max_degree: usize,
     ) -> Result<Self, PolynomialConversionError> {
         match expr.view() {
-            ExprView::Integer(value) => {
-                Ok(Self::new(vec![Rational::from(value.clone())]))
-            }
+            ExprView::Integer(value) => Ok(Self::new(vec![Rational::from(value.clone())])),
             ExprView::Rational(value) => Ok(Self::new(vec![value.clone()])),
             ExprView::Symbol(value) if value == variable => {
                 if max_degree < 1 {
@@ -123,22 +121,26 @@ impl RationalPolynomial {
     /// This is a semantic conversion, not a structural Expr round trip:
     /// constructor normalization can change operand shape.
     pub fn to_expr(&self, variable: &Symbol) -> Expr {
-        let terms = self.coefficients().iter().enumerate().filter_map(|(power, coefficient)| {
-            if coefficient.numerator().is_zero() {
-                return None;
-            }
-            let scalar = Expr::from(coefficient.clone());
-            if power == 0 {
-                return Some(scalar);
-            }
-            let symbol = Expr::from(variable.clone());
-            let variable_power = if power == 1 {
-                symbol
-            } else {
-                Expr::pow(symbol, Expr::from(power))
-            };
-            Some(Expr::mul([scalar, variable_power]))
-        });
+        let terms = self
+            .coefficients()
+            .iter()
+            .enumerate()
+            .filter_map(|(power, coefficient)| {
+                if coefficient.numerator().is_zero() {
+                    return None;
+                }
+                let scalar = Expr::from(coefficient.clone());
+                if power == 0 {
+                    return Some(scalar);
+                }
+                let symbol = Expr::from(variable.clone());
+                let variable_power = if power == 1 {
+                    symbol
+                } else {
+                    Expr::pow(symbol, Expr::from(power))
+                };
+                Some(Expr::mul([scalar, variable_power]))
+            });
         Expr::add(terms)
     }
 }

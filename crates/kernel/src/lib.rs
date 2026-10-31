@@ -6,11 +6,11 @@
 
 use mathema::{Expr, ExprView, Symbol};
 
-mod polynomial;
 mod poly_convert;
+mod polynomial;
 
-pub use polynomial::RationalPolynomial;
 pub use poly_convert::PolynomialConversionError;
+pub use polynomial::RationalPolynomial;
 
 /// A stable identifier for a mathematical transformation rule.
 ///

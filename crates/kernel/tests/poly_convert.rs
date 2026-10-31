@@ -41,7 +41,10 @@ fn collects_terms_and_distributes_inside_the_specialized_domain() {
 
 #[test]
 fn exactly_converts_fractional_coefficients() {
-    let expr = Expr::mul([Expr::from(q(1, 2)), Expr::add([sym("x"), Expr::from(q(1, 3))])]);
+    let expr = Expr::mul([
+        Expr::from(q(1, 2)),
+        Expr::add([sym("x"), Expr::from(q(1, 3))]),
+    ]);
     assert_eq!(convert(&expr).unwrap(), poly(&[(1, 6), (1, 2)]));
 }
 
@@ -60,7 +63,10 @@ fn round_trips_polynomials_by_value_not_expression_structure() {
 
 #[test]
 fn conversion_is_explicit_and_rejects_other_symbols() {
-    assert_eq!(convert(&sym("y")), Err(PolynomialConversionError::OtherSymbol));
+    assert_eq!(
+        convert(&sym("y")),
+        Err(PolynomialConversionError::OtherSymbol)
+    );
     assert_eq!(
         convert(&Expr::mul([sym("x"), sym("y")])),
         Err(PolynomialConversionError::OtherSymbol)
@@ -77,7 +83,10 @@ fn rejects_ambiguous_and_non_polynomial_powers() {
         Expr::pow(x.clone(), sym("y")),
         Expr::pow(x, Expr::from(q(1, 2))),
     ] {
-        assert_eq!(convert(&expr), Err(PolynomialConversionError::UnsupportedPower));
+        assert_eq!(
+            convert(&expr),
+            Err(PolynomialConversionError::UnsupportedPower)
+        );
     }
 }
 
@@ -97,10 +106,7 @@ fn enforces_degree_and_exponent_limits_before_large_expansion() {
         RationalPolynomial::try_from_expr(&huge, &x(), 16),
         Err(PolynomialConversionError::DegreeLimitExceeded)
     );
-    let product = Expr::mul([
-        Expr::pow(sym("x"), 2.into()),
-        Expr::pow(sym("x"), 2.into()),
-    ]);
+    let product = Expr::mul([Expr::pow(sym("x"), 2.into()), Expr::pow(sym("x"), 2.into())]);
     assert_eq!(
         RationalPolynomial::try_from_expr(&product, &x(), 3),
         Err(PolynomialConversionError::DegreeLimitExceeded)

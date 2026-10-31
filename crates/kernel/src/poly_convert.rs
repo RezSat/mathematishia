@@ -68,10 +68,14 @@ impl RationalPolynomial {
                 let mut product = Self::new(vec![Rational::from(Integer::one())]);
                 for child in children {
                     let factor = Self::try_from_expr(child, variable, max_degree)?;
-                    if let (Some(a), Some(b)) = (product.degree(), factor.degree()) {
-                        if a.checked_add(b).is_none_or(|degree| degree > max_degree) {
-                            return Err(PolynomialConversionError::DegreeLimitExceeded);
+                    let exceeds_limit = match (product.degree(), factor.degree()) {
+                        (Some(a), Some(b)) => {
+                            a.checked_add(b).is_none_or(|degree| degree > max_degree)
                         }
+                        _ => false,
+                    };
+                    if exceeds_limit {
+                        return Err(PolynomialConversionError::DegreeLimitExceeded);
                     }
                     product = product.multiply(&factor);
                 }

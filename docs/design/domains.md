@@ -28,3 +28,9 @@ other symbols, non-positive or non-integer powers (including ambiguous `0^0`),
 and values beyond the bound. `to_expr` constructs a semantic expression using
 the selected indeterminate; the round trip guarantees polynomial value, not
 identical expression structure. Conversion does not modify `Expr` normalization.
+
+Polynomial long division over QQ returns an exact quotient and remainder,
+rejecting zero divisors; the remainder is zero or has strictly lower degree.
+Euclidean GCD repeatedly uses that division, then normalizes the result to
+monic form. GCD(0,0) is defined as zero, and other constant GCDs equal one.
+These operations are specialized algorithms, not generic expression rewrites.

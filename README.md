@@ -33,7 +33,8 @@ expression size. There is no parser, general rewriting, simplification engine,
 solver, or user-facing CAS API yet. RationalPolynomial supports canonical
 univariate rational coefficients, exact arithmetic, and Horner evaluation;
 fallible bounded expression-to-polynomial conversion and conversion back to
-semantic expressions are available.
+semantic expressions are available. Polynomial long division and canonical
+monic GCD are exact, with division-by-zero rejected.
 
 ## Checks
 

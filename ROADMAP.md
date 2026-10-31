@@ -21,8 +21,10 @@ These phases describe architectural goals, not dates.
    verification obligations, and complete derivations remain future work.
    The distributive rule now supports bounded, deterministic sequences of
    whole-expression steps under a restricted Add/Mul traversal.
-3. Exact polynomial domain: add a specialized polynomial representation and
-   algorithms.
+3. Exact polynomial domain: a canonical univariate QQ polynomial value now
+   provides exact addition, subtraction, multiplication, and evaluation.
+   Explicit fallible Expr conversion, division, GCD, and advanced algorithms
+   remain future milestones.
 4. First equation solver: solve a deliberately bounded class of equations and
    report conditions and derivations.
 5. Mathema surface frontend: parse text and lower it into semantic values.

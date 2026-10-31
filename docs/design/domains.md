@@ -13,3 +13,11 @@ The initial implementation direction is pure Rust. Mature native libraries
 such as FLINT may be evaluated behind suitable boundaries if measurements
 justify them. No backend trait is warranted solely because multiple backends
 might exist later.
+
+The first specialized domain is RationalPolynomial in the kernel: an exact
+univariate polynomial over QQ with an implicit indeterminate. Dense
+coefficients are stored in ascending degree order, with all trailing zero
+coefficients removed (the zero polynomial stores no coefficients). Addition,
+subtraction, quadratic-time coefficient convolution, and Horner evaluation are
+exact. This domain neither parses nor owns Expr; conversion from expressions
+will be explicit and fallible when implemented.

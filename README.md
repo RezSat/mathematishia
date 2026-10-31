@@ -12,7 +12,8 @@ requires benchmark evidence before adding performance complexity.
 ## Repository
 
 - `crates/mathema`: exact scalars, free symbols, and immutable symbolic expressions.
-- `crates/kernel`: mathematical transformations and structured derivation steps.
+- `crates/kernel`: mathematical transformations, structured derivation steps, and
+  the initial exact rational-polynomial domain.
 - `docs/design`: architecture contracts; `docs/research`: architecture and
   provenance records.
 
@@ -29,7 +30,9 @@ expressions through a read-only semantic view and provides exact single-symbol
 substitution and bounded, deterministic distributive expansion with a chain of
 justified steps. The expansion budget counts steps but does not bound memory or
 expression size. There is no parser, general rewriting, simplification engine,
-solver, or user-facing CAS API yet.
+solver, or user-facing CAS API yet. RationalPolynomial supports canonical
+univariate rational coefficients, exact arithmetic, and Horner evaluation;
+expression-to-polynomial conversion is not implemented.
 
 ## Checks
 

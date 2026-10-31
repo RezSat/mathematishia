@@ -6,6 +6,10 @@
 
 use mathema::{Expr, ExprView, Symbol};
 
+mod polynomial;
+
+pub use polynomial::RationalPolynomial;
+
 /// A stable identifier for a mathematical transformation rule.
 ///
 /// Identifiers are documented names, not display text or runtime lookup keys.

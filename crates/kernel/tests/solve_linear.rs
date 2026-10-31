@@ -226,14 +226,8 @@ fn exhaustive_small_linear_grid_agrees_with_exact_coefficient_arithmetic() {
             for c in -2..=2_i32 {
                 for d in -2..=2_i32 {
                     let eq = equation(
-                        Expr::add([
-                            Expr::mul([Expr::from(a), symbol("x")]),
-                            Expr::from(b),
-                        ]),
-                        Expr::add([
-                            Expr::mul([Expr::from(c), symbol("x")]),
-                            Expr::from(d),
-                        ]),
+                        Expr::add([Expr::mul([Expr::from(a), symbol("x")]), Expr::from(b)]),
+                        Expr::add([Expr::mul([Expr::from(c), symbol("x")]), Expr::from(d)]),
                     );
                     let result = solve(&eq).unwrap();
                     let expected = if a == c {

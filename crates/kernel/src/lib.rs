@@ -114,6 +114,121 @@ pub fn distribute_product_once(expr: &Expr) -> Option<DerivationStep> {
     })
 }
 
+/// The outcome of a bounded sequence of distributive-law steps.
+///
+/// Completion only means that no eligible distribution remains under the
+/// supported Add/Mul traversal. Powers are intentionally not traversed.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DistributionResult {
+    result: Expr,
+    steps: Vec<DerivationStep>,
+    complete: bool,
+}
+
+impl DistributionResult {
+    /// Returns the expression after the recorded steps.
+    pub fn result(&self) -> &Expr {
+        &self.result
+    }
+
+    /// Returns consecutive equality-preserving steps, in application order.
+    pub fn steps(&self) -> &[DerivationStep] {
+        &self.steps
+    }
+
+    /// Reports whether further distribution is available in the supported scope.
+    pub const fn is_complete(&self) -> bool {
+        self.complete
+    }
+}
+
+/// Applies one distributive law at the root or first eligible nested location.
+///
+/// Root-level products take priority. Otherwise Add/Mul children are searched
+/// depth-first in their canonical order. Powers are not traversed. The returned
+/// step describes the entire expression before and after the one local change.
+pub fn distribute_first_once(expr: &Expr) -> Option<DerivationStep> {
+    if let Some(step) = distribute_product_once(expr) {
+        return Some(step);
+    }
+
+    let (children, is_sum) = match expr.view() {
+        ExprView::Add(children) => (children, true),
+        ExprView::Mul(children) => (children, false),
+        _ => return None,
+    };
+
+    for (index, child) in children.iter().enumerate() {
+        if let Some(inner) = distribute_first_once(child) {
+            let updated = children.iter().enumerate().map(|(position, original)| {
+                if position == index {
+                    inner.after().clone()
+                } else {
+                    original.clone()
+                }
+            });
+            let after = if is_sum {
+                Expr::add(updated)
+            } else {
+                Expr::mul(updated)
+            };
+            return Some(DerivationStep {
+                before: expr.clone(),
+                after,
+                rule: inner.rule(),
+                relation: inner.relation(),
+            });
+        }
+    }
+
+    None
+}
+
+fn has_distributive_work(expr: &Expr) -> bool {
+    match expr.view() {
+        ExprView::Add(children) => children.iter().any(has_distributive_work),
+        ExprView::Mul(factors) => {
+            factors
+                .iter()
+                .any(|factor| matches!(factor.view(), ExprView::Add(_)))
+                || factors.iter().any(has_distributive_work)
+        }
+        ExprView::Integer(_)
+        | ExprView::Rational(_)
+        | ExprView::Symbol(_)
+        | ExprView::Pow { .. } => false,
+    }
+}
+
+/// Applies at most max_steps distributive-law steps and preserves their chain.
+///
+/// A zero budget leaves the input unchanged. A completed result has no further
+/// eligible distribution under the Add/Mul traversal, but is not necessarily
+/// mathematically simplified. The step count does not bound expression size,
+/// memory consumption, or recursion depth.
+pub fn expand_distributively(expr: &Expr, max_steps: usize) -> DistributionResult {
+    let mut current = expr.clone();
+    let mut steps = Vec::new();
+
+    for _ in 0..max_steps {
+        let Some(step) = distribute_first_once(&current) else {
+            return DistributionResult {
+                result: current,
+                steps,
+                complete: true,
+            };
+        };
+        current = step.after().clone();
+        steps.push(step);
+    }
+
+    DistributionResult {
+        complete: !has_distributive_work(&current),
+        result: current,
+        steps,
+    }
+}
+
 /// Replaces every free occurrence of `symbol` with `replacement`.
 ///
 /// Scalars are unchanged; non-target symbols are unchanged; the target symbol

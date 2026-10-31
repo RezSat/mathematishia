@@ -19,6 +19,13 @@ Because the rule is an unconditional formal identity, it has no side
 conditions. Future conditional rules must represent their assumptions and
 obligations explicitly in typed data before they are implemented.
 
+Bounded distribution can now search Add/Mul children in canonical depth-first order
+without entering powers. Each step records the full expression before and after;
+`expand_distributively` returns a connected sequence, a result, and an explicit
+completion flag. Completion means no further eligible distribution within this
+restricted traversal, not complete symbolic simplification. The step budget
+limits steps only, not expression size or memory consumption.
+
 Equation and assumption representations, proof or verification obligations,
 introduced restrictions, and optional sub-derivations remain future work.
 `substitute_symbol` is a single-symbol replacement operation, not an

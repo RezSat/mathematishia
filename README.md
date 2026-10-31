@@ -26,9 +26,10 @@ deterministically. Powers only remove an exponent of one. Equality and hashing
 are structural; display is basic human formatting, not serialization.
 Example tests and property tests cover these invariants. The kernel inspects
 expressions through a read-only semantic view and provides exact single-symbol
-substitution plus a single justified distributive transformation step. There is
-no parser, general rewriting, simplification engine, solver, or user-facing CAS
-API yet.
+substitution and bounded, deterministic distributive expansion with a chain of
+justified steps. The expansion budget counts steps but does not bound memory or
+expression size. There is no parser, general rewriting, simplification engine,
+solver, or user-facing CAS API yet.
 
 ## Checks
 

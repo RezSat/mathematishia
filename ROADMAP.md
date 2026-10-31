@@ -19,6 +19,8 @@ These phases describe architectural goals, not dates.
    `RuleId`, `Equal` relation, and one distributive-law transformation are
    implemented. General transformation infrastructure, assumptions,
    verification obligations, and complete derivations remain future work.
+   The distributive rule now supports bounded, deterministic sequences of
+   whole-expression steps under a restricted Add/Mul traversal.
 3. Exact polynomial domain: add a specialized polynomial representation and
    algorithms.
 4. First equation solver: solve a deliberately bounded class of equations and

@@ -217,3 +217,55 @@ fn leaves_original_equation_and_expressions_unchanged() {
     assert_eq!(eq.left(), &lhs);
     assert_eq!(eq.right(), &rhs);
 }
+
+#[test]
+fn exhaustive_small_linear_grid_agrees_with_exact_coefficient_arithmetic() {
+    // 625 combinations cover equal/opposite/zero coefficients and constants.
+    for a in -2..=2_i32 {
+        for b in -2..=2_i32 {
+            for c in -2..=2_i32 {
+                for d in -2..=2_i32 {
+                    let eq = equation(
+                        Expr::add([
+                            Expr::mul([Expr::from(a), symbol("x")]),
+                            Expr::from(b),
+                        ]),
+                        Expr::add([
+                            Expr::mul([Expr::from(c), symbol("x")]),
+                            Expr::from(d),
+                        ]),
+                    );
+                    let result = solve(&eq).unwrap();
+                    let expected = if a == c {
+                        if b == d {
+                            LinearSolution::AllRationals
+                        } else {
+                            LinearSolution::NoSolution
+                        }
+                    } else {
+                        LinearSolution::Unique(q(i64::from(d - b), i64::from(a - c)))
+                    };
+                    assert_eq!(*result.solution(), expected, "a={a} b={b} c={c} d={d}");
+
+                    for (index, step) in result.steps().iter().enumerate() {
+                        if index == 0 {
+                            assert_eq!(step.before(), &eq);
+                        } else {
+                            assert_eq!(result.steps()[index - 1].after(), step.before());
+                        }
+                        assert_eq!(step.relation(), Relation::Equivalent);
+                        if let Some(VerifiedCondition::Nonzero(coefficient)) =
+                            step.verified_condition()
+                        {
+                            assert_ne!(coefficient.numerator(), &Integer::zero());
+                            assert_eq!(step.rule(), EquationRuleId::DivideByNonzeroCoefficient);
+                        }
+                    }
+                    if let LinearSolution::Unique(root) = result.solution() {
+                        assert_eq!(result.residual().evaluate(root), q(0, 1));
+                    }
+                }
+            }
+        }
+    }
+}

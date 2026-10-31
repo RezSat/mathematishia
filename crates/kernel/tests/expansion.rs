@@ -26,15 +26,15 @@ fn root_distribution_precedes_any_nested_work() {
         Expr::pow(nested, 2.into()),
     ]);
 
-    assert_eq!(distribute_first_once(&before), distribute_product_once(&before));
+    assert_eq!(
+        distribute_first_once(&before),
+        distribute_product_once(&before)
+    );
 }
 
 #[test]
 fn distributes_inside_add_and_records_the_whole_expression() {
-    let product = Expr::mul([
-        symbol("x"),
-        Expr::add([symbol("y"), symbol("z")]),
-    ]);
+    let product = Expr::mul([symbol("x"), Expr::add([symbol("y"), symbol("z")])]);
     let before = Expr::add([product, symbol("w")]);
     assert_eq!(distribute_product_once(&before), None);
 
@@ -53,14 +53,8 @@ fn distributes_inside_add_and_records_the_whole_expression() {
 
 #[test]
 fn selects_first_nested_child_in_canonical_order() {
-    let left = Expr::mul([
-        symbol("a"),
-        Expr::add([symbol("b"), symbol("c")]),
-    ]);
-    let right = Expr::mul([
-        symbol("x"),
-        Expr::add([symbol("y"), symbol("z")]),
-    ]);
+    let left = Expr::mul([symbol("a"), Expr::add([symbol("b"), symbol("c")])]);
+    let right = Expr::mul([symbol("x"), Expr::add([symbol("y"), symbol("z")])]);
     let before = Expr::add([right, left]);
     let ExprView::Add(children) = before.view() else {
         panic!("expected a sum of products");
@@ -90,9 +84,15 @@ fn expands_two_sums_with_contiguous_steps() {
     for window in expansion.steps().windows(2) {
         assert_eq!(window[0].after(), window[1].before());
     }
-    assert_eq!(expansion.steps().last().unwrap().after(), expansion.result());
+    assert_eq!(
+        expansion.steps().last().unwrap().after(),
+        expansion.result()
+    );
     for step in expansion.steps() {
-        assert_eq!(step.rule().stable_id(), "algebra.distribute_product_over_sum");
+        assert_eq!(
+            step.rule().stable_id(),
+            "algebra.distribute_product_over_sum"
+        );
         assert_eq!(step.relation(), Relation::Equal);
     }
 }
@@ -153,10 +153,7 @@ fn completed_expression_has_zero_steps_even_with_zero_budget() {
 
 #[test]
 fn never_enters_powers() {
-    let hidden = Expr::mul([
-        symbol("x"),
-        Expr::add([symbol("y"), symbol("z")]),
-    ]);
+    let hidden = Expr::mul([symbol("x"), Expr::add([symbol("y"), symbol("z")])]);
     let before = Expr::pow(hidden, 2.into());
     assert_eq!(distribute_first_once(&before), None);
     let expansion = expand_distributively(&before, 10);
@@ -189,10 +186,7 @@ fn permutation_invariance_includes_the_step_chain() {
     let candidates = [
         Expr::mul([first.clone(), second.clone()]),
         Expr::mul([second.clone(), first.clone()]),
-        Expr::mul([
-            Expr::add([b, a]),
-            Expr::add([d, c]),
-        ]),
+        Expr::mul([Expr::add([b, a]), Expr::add([d, c])]),
     ];
     let expected = expand_distributively(&candidates[0], 3);
     for expr in &candidates[1..] {

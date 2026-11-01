@@ -1,0 +1,16 @@
+[package]
+name = "mathematishia-cli"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Initial exact Mathematishia command-line interface"
+
+[dependencies]
+mathema = { path = "../mathema" }
+mathema-frontend = { path = "../frontend" }
+mathematishia-kernel = { path = "../kernel" }
+
+[[bin]]
+name = "mathematishia"
+path = "src/main.rs"

@@ -13,6 +13,7 @@ requires benchmark evidence before adding performance complexity.
 
 - `crates/mathema`: exact scalars, free symbols, and immutable symbolic expressions.
 - `crates/frontend`: the first bounded Mathema expression/equation parser and lowering.
+- `crates/cli`: a CLI that uses the frontend and kernel without duplicating mathematics.
 - `crates/kernel`: mathematical transformations, structured derivation steps, and
   the initial exact rational-polynomial domain.
 - `docs/design`: architecture contracts; `docs/research`: architecture and
@@ -38,6 +39,21 @@ univariate rational coefficients, exact arithmetic, and Horner evaluation;
 fallible bounded expression-to-polynomial conversion and conversion back to
 semantic expressions are available. Polynomial long division and canonical
 monic GCD are exact, with division-by-zero rejected.
+
+
+## First CLI commands
+
+Use quoted arguments so your shell passes the complete Mathema expression:
+
+```sh
+cargo run -p mathematishia-cli -- expr '1/2+1/3'
+cargo run -p mathematishia-cli -- expand '2*(x+3)' 4
+cargo run -p mathematishia-cli -- solve '2*x+4=10' x
+```
+
+The solver currently supports only exact rational-linear equations in one
+selected variable. Expansion is step-limited; a step count is not a memory
+bound. See [Mathema's initial syntax](docs/design/mathema-surface.md).
 
 ## Checks
 

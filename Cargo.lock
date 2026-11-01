@@ -55,6 +55,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "mathematishia-cli"
+version = "0.1.0"
+dependencies = [
+ "mathema",
+ "mathema-frontend",
+ "mathematishia-kernel",
+]
+
+[[package]]
 name = "mathematishia-kernel"
 version = "0.1.0"
 dependencies = [

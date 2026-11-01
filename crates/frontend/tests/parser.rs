@@ -16,7 +16,9 @@ fn parses_exact_big_integers_beyond_i128() {
     let got = parse_expression(huge).unwrap();
     assert_eq!(got.to_string(), huge);
     assert_eq!(
-        parse_expression("999999999999999999999999999999999999999999999").unwrap().to_string(),
+        parse_expression("999999999999999999999999999999999999999999999")
+            .unwrap()
+            .to_string(),
         "999999999999999999999999999999999999999999999"
     );
 }
@@ -36,10 +38,7 @@ fn parses_and_reduces_rational_literals() {
 
 #[test]
 fn respects_precedence_and_right_associativity() {
-    assert_eq!(
-        parse_expression("1+2*3").unwrap(),
-        Expr::from(7)
-    );
+    assert_eq!(parse_expression("1+2*3").unwrap(), Expr::from(7));
     let powers = Expr::pow(x(), Expr::pow(Expr::from(2), Expr::from(3)));
     assert_eq!(parse_expression("x^2^3").unwrap(), powers);
     assert_eq!(
@@ -59,9 +58,15 @@ fn respects_precedence_and_right_associativity() {
 #[test]
 fn lowers_subtraction_and_unary_operators_through_semantics() {
     assert_eq!(parse_expression("5-3-1").unwrap(), Expr::from(1));
-    assert_eq!(parse_expression("x--2").unwrap(), Expr::add([x(), 2.into()]));
+    assert_eq!(
+        parse_expression("x--2").unwrap(),
+        Expr::add([x(), 2.into()])
+    );
     assert_eq!(parse_expression("+(+x)").unwrap(), x());
-    assert_eq!(parse_expression("-(x+1)").unwrap(), Expr::mul([(-1).into(), Expr::add([x(), 1.into()])]));
+    assert_eq!(
+        parse_expression("-(x+1)").unwrap(),
+        Expr::mul([(-1).into(), Expr::add([x(), 1.into()])])
+    );
 }
 
 #[test]
@@ -88,8 +93,13 @@ fn accepts_unicode_identifier_without_normalizing_its_name() {
 
 #[test]
 fn rejects_implicit_multiplication_and_unsupported_division() {
-    for invalid in ["2x", "2(x+1)", "x/2", "1/(2)", "1/0", "3.5", "x==1", "x=y=z"] {
-        assert!(parse_statement(invalid).is_err(), "unexpectedly parsed {invalid}");
+    for invalid in [
+        "2x", "2(x+1)", "x/2", "1/(2)", "1/0", "3.5", "x==1", "x=y=z",
+    ] {
+        assert!(
+            parse_statement(invalid).is_err(),
+            "unexpectedly parsed {invalid}"
+        );
     }
 }
 
@@ -129,8 +139,14 @@ fn bounded_input_and_nesting_report_errors() {
 
 #[test]
 fn canonical_inputs_have_deterministic_semantic_values() {
-    assert_eq!(parse_expression("x+1").unwrap(), parse_expression("1+x").unwrap());
-    assert_eq!(parse_expression("x*(y+2)").unwrap(), parse_expression("(2+y)*x").unwrap());
+    assert_eq!(
+        parse_expression("x+1").unwrap(),
+        parse_expression("1+x").unwrap()
+    );
+    assert_eq!(
+        parse_expression("x*(y+2)").unwrap(),
+        parse_expression("(2+y)*x").unwrap()
+    );
 }
 
 #[test]

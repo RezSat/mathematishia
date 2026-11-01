@@ -64,7 +64,9 @@ impl fmt::Display for ParseError {
             ParseErrorKind::ExpectedClosingParenthesis => "expected ')'".to_owned(),
             ParseErrorKind::InvalidInteger => "invalid integer literal".to_owned(),
             ParseErrorKind::ZeroDenominator => "rational denominator must not be zero".to_owned(),
-            ParseErrorKind::ExpectedExpression => "expected an expression, not an equation".to_owned(),
+            ParseErrorKind::ExpectedExpression => {
+                "expected an expression, not an equation".to_owned()
+            }
             ParseErrorKind::InputLimitExceeded => "input byte limit exceeded".to_owned(),
             ParseErrorKind::TokenLimitExceeded => "token limit exceeded".to_owned(),
             ParseErrorKind::NestingLimitExceeded => "expression nesting limit exceeded".to_owned(),
@@ -138,13 +140,21 @@ fn tokenize(input: &str) -> Result<Vec<Token<'_>>, ParseError> {
                 '(' => TokenKind::LeftParen,
                 ')' => TokenKind::RightParen,
                 '=' => TokenKind::Equal,
-                _ => return Err(ParseError::at(start, ParseErrorKind::UnexpectedCharacter(c))),
+                _ => {
+                    return Err(ParseError::at(
+                        start,
+                        ParseErrorKind::UnexpectedCharacter(c),
+                    ));
+                }
             }
         };
         if result.len() == MAX_TOKENS {
             return Err(ParseError::at(start, ParseErrorKind::TokenLimitExceeded));
         }
-        result.push(Token { kind, offset: start });
+        result.push(Token {
+            kind,
+            offset: start,
+        });
     }
     result.push(Token {
         kind: TokenKind::End,
@@ -197,7 +207,10 @@ impl<'a> Parser<'a> {
 
     fn check_depth(&self, depth: usize) -> Result<(), ParseError> {
         if depth > MAX_PARSE_DEPTH {
-            Err(ParseError::at(self.offset(), ParseErrorKind::NestingLimitExceeded))
+            Err(ParseError::at(
+                self.offset(),
+                ParseErrorKind::NestingLimitExceeded,
+            ))
         } else {
             Ok(())
         }
@@ -261,7 +274,10 @@ impl<'a> Parser<'a> {
                 self.advance();
                 if self.consume(TokenKind::Slash) {
                     let TokenKind::Integer(denominator) = self.current() else {
-                        return Err(ParseError::at(self.offset(), ParseErrorKind::UnexpectedToken));
+                        return Err(ParseError::at(
+                            self.offset(),
+                            ParseErrorKind::UnexpectedToken,
+                        ));
                     };
                     self.advance();
                     Ok(Syntax::Fraction(numerator, denominator, offset))
@@ -310,9 +326,10 @@ fn lower(node: Syntax<'_>) -> Result<Expr, ParseError> {
             .expect("lexer only produces nonempty identifiers")
             .into()),
         Syntax::Sum(left, right) => Ok(Expr::add([lower(*left)?, lower(*right)?])),
-        Syntax::Difference(left, right) => {
-            Ok(Expr::add([lower(*left)?, Expr::mul([(-1).into(), lower(*right)?])]))
-        }
+        Syntax::Difference(left, right) => Ok(Expr::add([
+            lower(*left)?,
+            Expr::mul([(-1).into(), lower(*right)?]),
+        ])),
         Syntax::Product(left, right) => Ok(Expr::mul([lower(*left)?, lower(*right)?])),
         Syntax::Power(left, right) => Ok(Expr::pow(lower(*left)?, lower(*right)?)),
         Syntax::Negate(node) => Ok(Expr::mul([(-1).into(), lower(*node)?])),
@@ -341,7 +358,10 @@ pub fn parse_statement(input: &str) -> Result<Statement, ParseError> {
         Statement::Expression(lower(left)?)
     };
     if parser.current() != TokenKind::End {
-        return Err(ParseError::at(parser.offset(), ParseErrorKind::UnexpectedToken));
+        return Err(ParseError::at(
+            parser.offset(),
+            ParseErrorKind::UnexpectedToken,
+        ));
     }
     Ok(result)
 }

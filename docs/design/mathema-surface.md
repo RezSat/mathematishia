@@ -21,3 +21,8 @@ It lives in `mathema-frontend`, not in the semantic `mathema` crate.
 Examples: `(x+1)^2`, `1/3*x+2`, `2*x+4=10`.
 Do not treat semantic `Expr::Display` as a guaranteed source round-trip format;
 separate stable serialization and rendering remain future work.
+
+The `mathematishia` CLI exposes `expr`, `expand`, `solve`, `poly`, `eval`,
+`divide`, and `gcd`. It delegates mathematics to the existing kernel.
+The CLI currently bounds polynomial conversion at degree 32 and distribution
+at 12 steps; step limits are not general memory/CPU guarantees.

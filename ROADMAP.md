@@ -30,7 +30,11 @@ These phases describe architectural goals, not dates.
    equation-equivalence steps, with an exactly checked nonzero division
    condition. Nonlinear, multivariate and assumption-dependent solving remain
    future work.
-5. Mathema surface frontend: parse text and lower it into semantic values.
+5. Mathema surface frontend: the first bounded expression/equation grammar
+   and explicit lowering are implemented in a separate crate. The initial
+   CLI can parse, expand, solve rational-linear equations, and perform exact
+   polynomial operations. This is not yet a general Mathema language, REPL,
+   general evaluator or user-facing application.
 6. Python bindings: expose established kernel behavior.
 7. Arbitrary-precision numerical work: distinguish approximation from
    certified numerical results.

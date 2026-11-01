@@ -54,3 +54,52 @@ fn rejects_invalid_input_without_panicking() {
         assert!(run(&command).is_err(), "command should fail: {command:?}");
     }
 }
+
+#[test]
+fn polynomial_cli_reports_exact_coefficients() {
+    let output = run(&["poly", "(x+1)^2", "x"]).unwrap();
+    assert!(output.contains("degree: 2"));
+    assert!(output.contains("coefficients: [1, 2, 1]"));
+    let zero = run(&["poly", "0", "x"]).unwrap();
+    assert!(zero.contains("degree: undefined"));
+    assert!(zero.contains("coefficients: []"));
+}
+
+#[test]
+fn polynomial_evaluation_is_exact() {
+    assert_eq!(run(&["eval", "x^2+1/2", "x", "1/2"]).unwrap(), "value: 3/4");
+    assert_eq!(run(&["eval", "x^2+1", "x", "-2"]).unwrap(), "value: 5");
+}
+
+#[test]
+fn cli_division_reconstructs_exact_quotient_and_remainder() {
+    let output = run(&["divide", "x^2-1", "x-1", "x"]).unwrap();
+    assert!(output.contains("quotient: "));
+    assert!(output.contains("remainder: 0"));
+    let remainder = run(&["divide", "x^2+1", "x+1", "x"]).unwrap();
+    assert!(remainder.contains("remainder: 2"));
+}
+
+#[test]
+fn cli_gcd_is_monic_and_deterministic() {
+    let lhs = run(&["gcd", "x^2-1", "x-1", "x"]).unwrap();
+    let rhs = run(&["gcd", "x-1", "x^2-1", "x"]).unwrap();
+    assert_eq!(lhs, rhs);
+    assert!(lhs.starts_with("gcd: "));
+    assert_eq!(run(&["gcd", "0", "0", "x"]).unwrap(), "gcd: 0");
+}
+
+#[test]
+fn polynomial_cli_rejects_invalid_domains_and_division_by_zero() {
+    for command in [
+        vec!["poly", "y+1", "x"],
+        vec!["poly", "x^-1", "x"],
+        vec!["poly", "x^33", "x"],
+        vec!["eval", "x", "x", "y"],
+        vec!["divide", "x", "0", "x"],
+        vec!["divide", "x", "y", "x"],
+        vec!["gcd", "x", "x", "2"],
+    ] {
+        assert!(run(&command).is_err(), "must reject {command:?}");
+    }
+}

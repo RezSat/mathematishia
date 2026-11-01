@@ -61,7 +61,9 @@ Expression display uses explicit ASCII `+`, `*`, and `^`, with parentheses for
 precedence, nested powers, and fractional or negative power operands. Symbol
 names that could resemble numeric or operator syntax are quoted and escaped
 within expressions; this display convention defines no future parser grammar.
-The kernel provides only exact single-symbol substitution over the semantic
-view. There is no parser, general rewriting, simplification engine, solver,
-serialization, or user-facing CAS API. Generic expressions remain the symbolic
-interchange/orchestration layer, not every future algorithm's representation.
+The frontend separately parses and lowers a deliberately small Mathema subset.
+The kernel provides substitution, deterministic distribution, and a bounded
+rational-linear solver, not general rewriting or simplification. Stable
+serialization and a full user-facing CAS remain future work. Generic
+expressions are the symbolic interchange/orchestration layer, not every
+algorithm's representation.

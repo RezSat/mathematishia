@@ -49,6 +49,10 @@ Use quoted arguments so your shell passes the complete Mathema expression:
 cargo run -p mathematishia-cli -- expr '1/2+1/3'
 cargo run -p mathematishia-cli -- expand '2*(x+3)' 4
 cargo run -p mathematishia-cli -- solve '2*x+4=10' x
+cargo run -p mathematishia-cli -- poly '(x+1)^2' x
+cargo run -p mathematishia-cli -- eval 'x^2+1/2' x '1/2'
+cargo run -p mathematishia-cli -- divide 'x^2-1' 'x-1' x
+cargo run -p mathematishia-cli -- gcd 'x^2-1' 'x-1' x
 ```
 
 The solver currently supports only exact rational-linear equations in one

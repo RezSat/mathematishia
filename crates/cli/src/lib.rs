@@ -6,10 +6,11 @@
 use std::fmt;
 use std::fmt::Write as _;
 
-use mathema::{Equation, Expr, ExprView, Symbol};
+use mathema::{Equation, Expr, ExprView, Rational, Symbol};
 use mathema_frontend::{Statement, parse_expression, parse_statement};
 use mathematishia_kernel::{
-    LinearSolution, VerifiedCondition, expand_distributively, solve_linear_equation,
+    LinearSolution, RationalPolynomial, VerifiedCondition, expand_distributively,
+    solve_linear_equation,
 };
 
 pub const HELP: &str = "Mathematishia (early exact-math CLI)
@@ -17,12 +18,20 @@ Usage:
   mathematishia expr <EXPRESSION>
   mathematishia expand <EXPRESSION> [MAX_STEPS]
   mathematishia solve <EQUATION> <VARIABLE>
+  mathematishia poly <EXPRESSION> <VARIABLE>
+  mathematishia eval <POLYNOMIAL> <VARIABLE> <RATIONAL>
+  mathematishia divide <DIVIDEND> <DIVISOR> <VARIABLE>
+  mathematishia gcd <LEFT> <RIGHT> <VARIABLE>
   mathematishia --help
 
 Examples:
   mathematishia expr '(x+1)^2'
   mathematishia expand '2*(x+3)' 4
   mathematishia solve '2*x+4=10' x
+  mathematishia poly '(x+1)^2' x
+  mathematishia eval 'x^2+1/2' x '1/2'
+  mathematishia divide 'x^2-1' 'x-1' x
+  mathematishia gcd 'x^2-1' 'x-1' x
 
 Syntax: integers, exact fraction literals n/d, identifiers, + - * ^ ( ) =.
 Use explicit multiplication. '/' only separates literal integers, not expressions.
@@ -61,6 +70,24 @@ fn equation(input: &str) -> Result<Equation, CliError> {
     match parse_statement(input).map_err(|error| invalid(error.to_string()))? {
         Statement::Equation(equation) => Ok(equation),
         Statement::Expression(_) => Err(invalid("expected an equation containing '='")),
+    }
+}
+
+
+const MAX_POLYNOMIAL_DEGREE: usize = 32;
+
+fn polynomial(input: &str, name: &Symbol) -> Result<RationalPolynomial, CliError> {
+    let parsed = expression(input)?;
+    RationalPolynomial::try_from_expr(&parsed, name, MAX_POLYNOMIAL_DEGREE)
+        .map_err(|error| invalid(error.to_string()))
+}
+
+fn scalar(input: &str) -> Result<Rational, CliError> {
+    let parsed = expression(input)?;
+    match parsed.view() {
+        ExprView::Integer(value) => Ok(Rational::from(value.clone())),
+        ExprView::Rational(value) => Ok(value.clone()),
+        _ => Err(invalid("expected an exact rational number")),
     }
 }
 
@@ -136,6 +163,46 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
                 }
             }
             Ok(out)
+        }
+        ["poly", input, name] => {
+            let symbol = variable(name)?;
+            let poly = polynomial(input, &symbol)?;
+            let degree = poly.degree().map_or_else(|| "undefined".to_owned(), |n| n.to_string());
+            let coefficients = poly
+                .coefficients()
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join(", ");
+            Ok(format!(
+                "polynomial: {}\ndegree: {degree}\ncoefficients: [{coefficients}]",
+                poly.to_expr(&symbol)
+            ))
+        }
+        ["eval", input, name, value] => {
+            let symbol = variable(name)?;
+            let poly = polynomial(input, &symbol)?;
+            let at = scalar(value)?;
+            Ok(format!("value: {}", poly.evaluate(&at)))
+        }
+        ["divide", dividend, divisor, name] => {
+            let symbol = variable(name)?;
+            let left = polynomial(dividend, &symbol)?;
+            let right = polynomial(divisor, &symbol)?;
+            let (quotient, remainder) = left
+                .divide_with_remainder(&right)
+                .map_err(|error| invalid(error.to_string()))?;
+            Ok(format!(
+                "quotient: {}\nremainder: {}",
+                quotient.to_expr(&symbol),
+                remainder.to_expr(&symbol)
+            ))
+        }
+        ["gcd", left, right, name] => {
+            let symbol = variable(name)?;
+            let first = polynomial(left, &symbol)?;
+            let second = polynomial(right, &symbol)?;
+            Ok(format!("gcd: {}", first.monic_gcd(&second).to_expr(&symbol)))
         }
         _ => Err(invalid("invalid command or argument count; use --help")),
     }

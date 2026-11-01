@@ -12,6 +12,7 @@ requires benchmark evidence before adding performance complexity.
 ## Repository
 
 - `crates/mathema`: exact scalars, free symbols, and immutable symbolic expressions.
+- `crates/frontend`: the first bounded Mathema expression/equation parser and lowering.
 - `crates/kernel`: mathematical transformations, structured derivation steps, and
   the initial exact rational-polynomial domain.
 - `docs/design`: architecture contracts; `docs/research`: architecture and

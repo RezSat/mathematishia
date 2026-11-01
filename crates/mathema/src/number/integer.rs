@@ -1,5 +1,6 @@
 use std::fmt;
 use std::ops::{Add, Mul, Neg, Sub};
+use std::str::FromStr;
 
 use num_bigint::{BigInt, Sign};
 
@@ -167,5 +168,14 @@ impl Mul for &Integer {
 
     fn mul(self, rhs: Self) -> Integer {
         Integer(&self.0 * &rhs.0)
+    }
+}
+
+/// Parses an arbitrary-precision decimal integer without using a fixed-width intermediate.
+impl FromStr for Integer {
+    type Err = num_bigint::ParseBigIntError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        value.parse::<BigInt>().map(Self)
     }
 }

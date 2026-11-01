@@ -48,6 +48,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "mathema-frontend"
+version = "0.1.0"
+dependencies = [
+ "mathema",
+]
+
+[[package]]
 name = "mathematishia-kernel"
 version = "0.1.0"
 dependencies = [

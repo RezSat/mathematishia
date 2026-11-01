@@ -19,7 +19,11 @@ fn actual_binary_reports_exact_polynomial_division() {
         .output()
         .unwrap();
     assert!(output.status.success());
-    assert!(String::from_utf8(output.stdout).unwrap().contains("remainder: 0"));
+    assert!(
+        String::from_utf8(output.stdout)
+            .unwrap()
+            .contains("remainder: 0")
+    );
 }
 
 #[test]
@@ -30,5 +34,9 @@ fn actual_binary_reports_errors_on_stderr_with_nonzero_status() {
         .unwrap();
     assert!(!output.status.success());
     assert!(output.stdout.is_empty());
-    assert!(String::from_utf8(output.stderr).unwrap().contains("not linear"));
+    assert!(
+        String::from_utf8(output.stderr)
+            .unwrap()
+            .contains("not linear")
+    );
 }

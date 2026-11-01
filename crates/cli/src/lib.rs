@@ -73,7 +73,6 @@ fn equation(input: &str) -> Result<Equation, CliError> {
     }
 }
 
-
 const MAX_POLYNOMIAL_DEGREE: usize = 32;
 
 fn polynomial(input: &str, name: &Symbol) -> Result<RationalPolynomial, CliError> {
@@ -167,7 +166,9 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
         ["poly", input, name] => {
             let symbol = variable(name)?;
             let poly = polynomial(input, &symbol)?;
-            let degree = poly.degree().map_or_else(|| "undefined".to_owned(), |n| n.to_string());
+            let degree = poly
+                .degree()
+                .map_or_else(|| "undefined".to_owned(), |n| n.to_string());
             let coefficients = poly
                 .coefficients()
                 .iter()
@@ -202,7 +203,10 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
             let symbol = variable(name)?;
             let first = polynomial(left, &symbol)?;
             let second = polynomial(right, &symbol)?;
-            Ok(format!("gcd: {}", first.monic_gcd(&second).to_expr(&symbol)))
+            Ok(format!(
+                "gcd: {}",
+                first.monic_gcd(&second).to_expr(&symbol)
+            ))
         }
         _ => Err(invalid("invalid command or argument count; use --help")),
     }

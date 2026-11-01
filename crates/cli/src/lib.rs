@@ -111,8 +111,8 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
         ["solve", input, name] => {
             let eq = equation(input)?;
             let symbol = variable(name)?;
-            let solved = solve_linear_equation(&eq, &symbol)
-                .map_err(|error| invalid(error.to_string()))?;
+            let solved =
+                solve_linear_equation(&eq, &symbol).map_err(|error| invalid(error.to_string()))?;
             let mut out = match solved.solution() {
                 LinearSolution::Unique(value) => format!("solution: {symbol} = {value}"),
                 LinearSolution::NoSolution => "solution: none in Q".to_owned(),

@@ -20,7 +20,9 @@ create_exception!(_native, VerificationFailure, PyRuntimeError);
 
 fn map_evaluation_error(error: EvaluationError) -> PyErr {
     match error {
-        EvaluationError::Limit(kind) => ResourceLimitError::new_err(format!("{kind:?} limit exceeded")),
+        EvaluationError::Limit(kind) => {
+            ResourceLimitError::new_err(format!("{kind:?} limit exceeded"))
+        }
         EvaluationError::Verification(reason) => VerificationFailure::new_err(reason.to_string()),
         EvaluationError::Polynomial(_)
         | EvaluationError::Linear(_)
@@ -31,8 +33,8 @@ fn map_evaluation_error(error: EvaluationError) -> PyErr {
 }
 
 fn checked_expression(source: &str) -> PyResult<Expr> {
-    let expr = parse_expression(source)
-        .map_err(|error| MathSyntaxError::new_err(error.to_string()))?;
+    let expr =
+        parse_expression(source).map_err(|error| MathSyntaxError::new_err(error.to_string()))?;
     EvaluationContext::default()
         .check_expression(&expr)
         .map_err(map_evaluation_error)?;
@@ -51,7 +53,9 @@ fn selected_variable(name: &str) -> PyResult<Symbol> {
 fn selected_equation(source: &str) -> PyResult<Equation> {
     match parse_statement(source).map_err(|error| MathSyntaxError::new_err(error.to_string()))? {
         Statement::Equation(eq) => Ok(eq),
-        Statement::Expression(_) => Err(MathSyntaxError::new_err("expected an equation containing '='")),
+        Statement::Expression(_) => Err(MathSyntaxError::new_err(
+            "expected an equation containing '='",
+        )),
     }
 }
 
@@ -75,7 +79,10 @@ fn selected_polynomial(source: &str, symbol: &Symbol) -> PyResult<RationalPolyno
 fn poly_data(poly: &RationalPolynomial, symbol: &Symbol) -> (String, Vec<String>) {
     (
         poly.to_expr(symbol).to_string(),
-        poly.coefficients().iter().map(ToString::to_string).collect(),
+        poly.coefficients()
+            .iter()
+            .map(ToString::to_string)
+            .collect(),
     )
 }
 
@@ -89,7 +96,10 @@ fn py_expression(source: &str) -> PyResult<String> {
 }
 
 #[pyfunction(name = "expand", signature = (source, max_steps=8))]
-fn py_expand(source: &str, max_steps: usize) -> PyResult<(String, bool, Vec<(String, String, String)>)> {
+fn py_expand(
+    source: &str,
+    max_steps: usize,
+) -> PyResult<(String, bool, Vec<(String, String, String)>)> {
     let default = EvaluationContext::default();
     if max_steps > default.limits().max_distribution_steps {
         return Err(map_evaluation_error(EvaluationError::Limit(
@@ -118,7 +128,10 @@ fn py_expand(source: &str, max_steps: usize) -> PyResult<(String, bool, Vec<(Str
 type PyEquationStep = (String, String, String, Option<String>);
 
 #[pyfunction(name = "solve")]
-fn py_solve(source: &str, variable: &str) -> PyResult<(String, Option<String>, Vec<PyEquationStep>)> {
+fn py_solve(
+    source: &str,
+    variable: &str,
+) -> PyResult<(String, Option<String>, Vec<PyEquationStep>)> {
     let eq = selected_equation(source)?;
     let symbol = selected_variable(variable)?;
     let result = EvaluationContext::default()
@@ -177,7 +190,10 @@ fn py_divide(
     let (quotient, remainder) = EvaluationContext::default()
         .divide(&first, &second)
         .map_err(map_evaluation_error)?;
-    Ok((poly_data(&quotient, &symbol), poly_data(&remainder, &symbol)))
+    Ok((
+        poly_data(&quotient, &symbol),
+        poly_data(&remainder, &symbol),
+    ))
 }
 
 #[pyfunction(name = "gcd")]
@@ -205,7 +221,13 @@ fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
         "UnsupportedMathematicsError",
         m.py().get_type::<UnsupportedMathematicsError>(),
     )?;
-    m.add("ResourceLimitError", m.py().get_type::<ResourceLimitError>())?;
-    m.add("VerificationFailure", m.py().get_type::<VerificationFailure>())?;
+    m.add(
+        "ResourceLimitError",
+        m.py().get_type::<ResourceLimitError>(),
+    )?;
+    m.add(
+        "VerificationFailure",
+        m.py().get_type::<VerificationFailure>(),
+    )?;
     Ok(())
 }

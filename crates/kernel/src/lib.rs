@@ -300,10 +300,7 @@ mod verification_adversarial_tests {
     #[test]
     fn rejects_a_forged_distribution_and_false_completion_flag() {
         let variable = Expr::from(Symbol::new("x").unwrap());
-        let before = Expr::mul([
-            variable.clone(),
-            Expr::add([variable, Expr::from(1)]),
-        ]);
+        let before = Expr::mul([variable.clone(), Expr::add([variable, Expr::from(1)])]);
         let fake = DerivationStep {
             before: before.clone(),
             after: Expr::from(42),

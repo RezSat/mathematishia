@@ -217,7 +217,10 @@ pub fn verify_equation_step(
             let a = lhs.coefficients().get(1).unwrap_or(&zero);
             let b = rhs.coefficients().first().unwrap_or(&zero);
             if a.numerator().is_zero()
-                || lhs.coefficients().first().is_some_and(|c| !c.numerator().is_zero())
+                || lhs
+                    .coefficients()
+                    .first()
+                    .is_some_and(|c| !c.numerator().is_zero())
                 || rhs.degree().is_some_and(|degree| degree != 0)
                 || step.before().left()
                     != &Expr::mul([Expr::from(a.clone()), Expr::from(variable.clone())])

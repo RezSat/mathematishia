@@ -119,3 +119,19 @@ fn cli_uses_resource_context_instead_of_unbounded_polynomial_execution() {
             .contains("resource limit exceeded")
     );
 }
+
+#[test]
+fn differentiates_supported_polynomials_exactly() {
+    let result = run(&["diff", "x^3+1/2*x", "x"]).unwrap();
+    assert!(result.starts_with("derivative: "));
+    assert!(result.contains("3 * x ^ 2"));
+    assert_eq!(run(&["diff", "5", "x"]).unwrap(), "derivative: 0");
+    assert_eq!(run(&["diff", "0", "x"]).unwrap(), "derivative: 0");
+}
+
+#[test]
+fn polynomial_differentiation_rejects_unsupported_domains() {
+    for expr in ["x^-1", "x^33", "x+y"] {
+        assert!(run(&["diff", expr, "x"]).is_err());
+    }
+}

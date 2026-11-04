@@ -24,7 +24,8 @@ These phases describe architectural goals, not dates.
 3. Exact polynomial domain: a canonical univariate QQ polynomial value now
    provides exact addition, subtraction, multiplication, and evaluation.
    Bounded fallible expression conversion, exact long division and monic GCD
-   are implemented. Multivariate and advanced algorithms remain future work.
+   and exact formal rational-polynomial differentiation are implemented.
+   Multivariate algorithms and general symbolic calculus remain future work.
 4. First equation solver: an exact, univariate linear solver now classifies
    unique, empty, and universal rational solution sets. It records typed
    equation-equivalence steps, with an exactly checked nonzero division
@@ -33,7 +34,8 @@ These phases describe architectural goals, not dates.
 5. Mathema surface frontend: the first bounded expression/equation grammar
    and explicit lowering are implemented in a separate crate. The initial
    CLI can parse, expand, solve rational-linear equations, and perform exact
-   polynomial operations. This is not yet a general Mathema language, REPL,
+   polynomial operations, including formal differentiation. This is not yet
+   a general Mathema language, REPL,
    general evaluator or user-facing application.
 6. Python bindings: experimental PyO3/maturin package exposes exact parsing,
    distribution, rational-linear solving and polynomial operations using the

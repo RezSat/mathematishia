@@ -49,6 +49,20 @@ class ExactMathTests(unittest.TestCase):
         self.assertEqual(m.gcd("x^2-1", "x-1", "x").coefficients,
                          (Fraction(-1), Fraction(1)))
 
+    def test_formal_differentiation_is_exact(self):
+        derivative = m.differentiate("x^3+1/2*x", "x")
+        self.assertEqual(
+            derivative.coefficients,
+            (Fraction(1, 2), Fraction(0), Fraction(3)),
+        )
+        self.assertEqual(derivative.degree, 2)
+        self.assertEqual(m.differentiate("5", "x").coefficients, ())
+        self.assertEqual(m.differentiate("0", "x").coefficients, ())
+        with self.assertRaises(m.UnsupportedMathematicsError):
+            m.differentiate("x^-1", "x")
+        with self.assertRaises(m.UnsupportedMathematicsError):
+            m.differentiate("x^33", "x")
+
     def test_typed_errors(self):
         with self.assertRaises(m.MathSyntaxError):
             m.expression("x / 2")

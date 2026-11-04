@@ -16,6 +16,7 @@ import mathematishia as m
 answer = m.solve("2*x+4=10", "x")
 assert answer.kind == "unique" and answer.value == Fraction(3)
 assert m.evaluate("x^2+1/2", "x", "1/2") == Fraction(3, 4)
+assert m.differentiate("x^3", "x").coefficients == (Fraction(0), Fraction(0), Fraction(3))
 print(answer.steps)
 ```
 

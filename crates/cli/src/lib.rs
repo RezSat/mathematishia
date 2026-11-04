@@ -21,6 +21,7 @@ Usage:
   mathematishia eval <POLYNOMIAL> <VARIABLE> <RATIONAL>
   mathematishia divide <DIVIDEND> <DIVISOR> <VARIABLE>
   mathematishia gcd <LEFT> <RIGHT> <VARIABLE>
+  mathematishia diff <POLYNOMIAL> <VARIABLE>
   mathematishia --help
 
 Examples:
@@ -31,6 +32,7 @@ Examples:
   mathematishia eval 'x^2+1/2' x '1/2'
   mathematishia divide 'x^2-1' 'x-1' x
   mathematishia gcd 'x^2-1' 'x-1' x
+  mathematishia diff 'x^3+1/2*x' x
 
 Syntax: integers, exact fraction literals n/d, identifiers, + - * ^ ( ) =.
 Use explicit multiplication. '/' only separates literal integers, not expressions.
@@ -219,6 +221,14 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
                     .map_err(|error| invalid(error.to_string()))?
                     .to_expr(&symbol)
             ))
+        }
+        ["diff", input, name] => {
+            let symbol = variable(name)?;
+            let poly = polynomial(input, &symbol)?;
+            let derivative = EvaluationContext::default()
+                .differentiate(&poly)
+                .map_err(|error| invalid(error.to_string()))?;
+            Ok(format!("derivative: {}", derivative.to_expr(&symbol)))
         }
         _ => Err(invalid("invalid command or argument count; use --help")),
     }

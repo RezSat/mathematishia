@@ -79,6 +79,11 @@ def polynomial(source: str, variable: str) -> Polynomial:
     return _poly(_native.polynomial(source, variable))
 
 
+
+def differentiate(source: str, variable: str) -> Polynomial:
+    """Return the formal derivative of a supported exact rational polynomial."""
+    return _poly(_native.differentiate(source, variable))
+
 def evaluate(source: str, variable: str, at: str) -> Fraction:
     """Evaluate a rational polynomial at an exact rational input string."""
     return Fraction(_native.evaluate(source, variable, at))
@@ -98,5 +103,6 @@ def gcd(left: str, right: str, variable: str) -> Polynomial:
 __all__ = [
     "MathSyntaxError", "ResourceLimitError", "UnsupportedMathematicsError",
     "VerificationFailure", "Step", "Expansion", "LinearResult", "Polynomial",
-    "expression", "expand", "solve", "polynomial", "evaluate", "divide", "gcd",
+    "expression", "expand", "solve", "polynomial", "differentiate",
+    "evaluate", "divide", "gcd",
 ]

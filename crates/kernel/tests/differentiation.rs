@@ -90,9 +90,9 @@ fn operations_preserve_caller_owned_inputs() {
 
 #[test]
 fn context_checks_exact_input_and_output() {
-    let poly = p(&[(0, 1), (1, 1), (5, 1)]);
+    let poly = p(&[(0, 1), (1, 1), (3, 1)]);
     let normal = EvaluationContext::default();
-    assert_eq!(normal.differentiate(&poly).unwrap(), p(&[(1, 1), (10, 1)]));
+    assert_eq!(normal.differentiate(&poly).unwrap(), p(&[(1, 1), (6, 1)]));
     let limited = EvaluationContext::new(ResourceLimits {
         max_scalar_bits: 2,
         ..ResourceLimits::default()

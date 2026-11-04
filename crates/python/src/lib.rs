@@ -205,6 +205,16 @@ fn py_gcd(left: &str, right: &str, variable: &str) -> PyResult<(String, Vec<Stri
     Ok(poly_data(&result, &symbol))
 }
 
+#[pyfunction(name = "differentiate")]
+fn py_differentiate(source: &str, variable: &str) -> PyResult<PyPolynomialData> {
+    let symbol = selected_variable(variable)?;
+    let polynomial = selected_polynomial(source, &symbol)?;
+    let derivative = EvaluationContext::default()
+        .differentiate(&polynomial)
+        .map_err(map_evaluation_error)?;
+    Ok(poly_data(&derivative, &symbol))
+}
+
 #[pymodule]
 fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(py_expression, m)?)?;
@@ -214,6 +224,7 @@ fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(py_evaluate, m)?)?;
     m.add_function(wrap_pyfunction!(py_divide, m)?)?;
     m.add_function(wrap_pyfunction!(py_gcd, m)?)?;
+    m.add_function(wrap_pyfunction!(py_differentiate, m)?)?;
     m.add("MathSyntaxError", m.py().get_type::<MathSyntaxError>())?;
     m.add(
         "UnsupportedMathematicsError",

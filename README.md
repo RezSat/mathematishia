@@ -40,7 +40,8 @@ solution-set classifications. `RationalPolynomial` supports canonical
 univariate rational coefficients, exact arithmetic and Horner evaluation;
 fallible bounded expression-to-polynomial conversion and conversion back to
 semantic expressions are available. Polynomial long division and canonical
-monic GCD are exact, with division-by-zero rejected.
+monic GCD are exact, with division-by-zero rejected. Exact formal polynomial
+differentiation is also available; arbitrary symbolic calculus is not yet.
 
 ## First CLI commands
 
@@ -54,6 +55,7 @@ cargo run -p mathematishia-cli -- poly '(x+1)^2' x
 cargo run -p mathematishia-cli -- eval 'x^2+1/2' x '1/2'
 cargo run -p mathematishia-cli -- divide 'x^2-1' 'x-1' x
 cargo run -p mathematishia-cli -- gcd 'x^2-1' 'x-1' x
+cargo run -p mathematishia-cli -- diff 'x^3+1/2*x' x
 ```
 
 The solver currently supports only exact rational-linear equations in one

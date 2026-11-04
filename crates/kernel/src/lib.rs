@@ -292,3 +292,45 @@ pub fn substitute_symbol(expr: &Expr, symbol: &Symbol, replacement: &Expr) -> Ex
         ),
     }
 }
+
+#[cfg(test)]
+mod verification_adversarial_tests {
+    use super::*;
+
+    #[test]
+    fn rejects_a_forged_distribution_and_false_completion_flag() {
+        let variable = Expr::from(Symbol::new("x").unwrap());
+        let before = Expr::mul([
+            variable.clone(),
+            Expr::add([variable, Expr::from(1)]),
+        ]);
+        let fake = DerivationStep {
+            before: before.clone(),
+            after: Expr::from(42),
+            rule: RuleId::DistributeProductOverSum,
+            relation: Relation::Equal,
+        };
+        assert_eq!(
+            verify_distribution_step(&fake),
+            Err(VerificationError::InvalidStep)
+        );
+        let false_completion = DistributionResult {
+            result: before.clone(),
+            steps: Vec::new(),
+            complete: true,
+        };
+        assert_eq!(
+            verify_distribution(&before, &false_completion),
+            Err(VerificationError::IncorrectCompleteness)
+        );
+        let forged_chain = DistributionResult {
+            result: Expr::from(42),
+            steps: vec![fake],
+            complete: true,
+        };
+        assert_eq!(
+            verify_distribution(&before, &forged_chain),
+            Err(VerificationError::InvalidStep)
+        );
+    }
+}

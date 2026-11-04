@@ -228,3 +228,60 @@ pub fn solve_linear_equation(
         steps,
     })
 }
+
+#[cfg(test)]
+mod verification_adversarial_tests {
+    use super::*;
+    use crate::{VerificationError, verify_linear_solution};
+
+    fn sample() -> (Symbol, LinearSolveResult) {
+        let var = Symbol::new("x").unwrap();
+        let equation = Equation::new(
+            Expr::add([
+                Expr::mul([Expr::from(2), Expr::from(var.clone())]),
+                Expr::from(4),
+            ]),
+            Expr::from(10),
+        );
+        let result = solve_linear_equation(&equation, &var).unwrap();
+        (var, result)
+    }
+
+    #[test]
+    fn detects_a_forged_solution_classification() {
+        let (variable, mut result) = sample();
+        result.solution = LinearSolution::NoSolution;
+        assert_eq!(
+            verify_linear_solution(&result, &variable),
+            Err(VerificationError::IncorrectResult)
+        );
+    }
+
+    #[test]
+    fn rejects_an_incorrect_equivalence_relation_and_division_condition() {
+        let (variable, mut result) = sample();
+        result.steps[0].relation = Relation::Equal;
+        assert_eq!(
+            verify_linear_solution(&result, &variable),
+            Err(VerificationError::InvalidStep)
+        );
+
+        let (variable, mut result) = sample();
+        let last = result.steps.last_mut().unwrap();
+        last.condition = Some(VerifiedCondition::Nonzero(Rational::from(Integer::zero())));
+        assert_eq!(
+            verify_linear_solution(&result, &variable),
+            Err(VerificationError::InvalidStep)
+        );
+    }
+
+    #[test]
+    fn rejects_disconnected_equation_steps() {
+        let (variable, mut result) = sample();
+        result.steps.swap(0, 1);
+        assert_eq!(
+            verify_linear_solution(&result, &variable),
+            Err(VerificationError::BrokenChain)
+        );
+    }
+}

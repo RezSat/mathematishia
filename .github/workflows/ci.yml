@@ -15,6 +15,9 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: cargo fmt --all -- --check
       - run: cargo check --workspace --all-targets --all-features
+      - name: Capture resolved Cargo.lock for dependency synchronization (temporary)
+        if: always()
+        run: echo "MATHEMATISHIA_LOCK:$(base64 -w0 Cargo.lock)"
       - run: cargo clippy --workspace --all-targets --all-features -- -D warnings
       - run: cargo test --workspace --all-features
 

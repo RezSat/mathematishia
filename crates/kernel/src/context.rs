@@ -223,6 +223,10 @@ impl EvaluationContext {
         variable: &Symbol,
     ) -> Result<LinearSolveResult, EvaluationError> {
         self.check_equation(equation)?;
+        // Enforce this context's degree and coefficient policy on *each*
+        // input side, even if high-degree terms cancel in the residual.
+        self.polynomial(equation.left(), variable)?;
+        self.polynomial(equation.right(), variable)?;
         let result = solve_linear_equation(equation, variable)?;
         self.check_polynomial(result.residual())?;
         for step in result.steps() {

@@ -143,3 +143,17 @@ fn checked_polynomial_division_rejects_zero_divisor() {
         Err(EvaluationError::DivisionByZero)
     );
 }
+
+#[test]
+fn linear_solver_respects_context_degree_even_if_high_terms_cancel() {
+    let cubic = Expr::pow(symbol(), 3.into());
+    let equation = Equation::new(Expr::add([cubic.clone(), symbol()]), cubic);
+    let ctx = EvaluationContext::new(ResourceLimits {
+        max_polynomial_degree: 1,
+        ..ResourceLimits::default()
+    });
+    assert!(matches!(
+        ctx.solve_linear(&equation, &x()),
+        Err(EvaluationError::Polynomial(_))
+    ));
+}

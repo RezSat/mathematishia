@@ -10,6 +10,7 @@ mod poly_convert;
 mod poly_division;
 mod polynomial;
 mod solve_linear;
+mod verification;
 
 pub use poly_convert::PolynomialConversionError;
 pub use poly_division::ZeroPolynomialDivisor;
@@ -17,6 +18,10 @@ pub use polynomial::RationalPolynomial;
 pub use solve_linear::{
     EquationRuleId, EquationStep, LinearSolution, LinearSolveError, LinearSolveResult,
     VerifiedCondition, solve_linear_equation,
+};
+pub use verification::{
+    VerificationError, verify_distribution, verify_distribution_step, verify_equation_step,
+    verify_linear_solution,
 };
 
 /// A stable identifier for a mathematical transformation rule.

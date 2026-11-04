@@ -45,3 +45,15 @@ expression equality, and the coefficient-division step carries the exact
 nonzero scalar verified by arithmetic. Constant-equation classification is a
 typed result, not an invented equality step. This is not a general equation
 solver, conditional rewrite system, or independently checked proof certificate.
+
+## Independent checking (Task 14)
+
+The kernel now exposes explicit, rule-specific verification operations for
+recorded distributive and rational-linear derivations. Distribution verification
+reconstructs *all* legal one-step rewrites in supported Add/Mul contexts without
+calling the generator. Equation verification checks rule shapes, exact rational
+solution-set equivalence, and the recorded nonzero coefficient at division.
+Chain verification checks the supplied source, intermediate continuity, result,
+solution classification and narrow completion semantics. An unrecognized or
+unsupported claim is rejected; this is not a general proof assistant, proof
+certificate format, or independent verification of arbitrary symbolic functions.

@@ -11,6 +11,7 @@ mod poly_convert;
 mod poly_division;
 mod polynomial;
 mod solve_linear;
+mod square_free;
 mod verification;
 
 pub use context::{EvaluationContext, EvaluationError, ResourceLimitKind, ResourceLimits};
@@ -20,6 +21,10 @@ pub use polynomial::RationalPolynomial;
 pub use solve_linear::{
     EquationRuleId, EquationStep, LinearSolution, LinearSolveError, LinearSolveResult,
     VerifiedCondition, solve_linear_equation,
+};
+pub use square_free::{
+    SquareFreeDecomposition, SquareFreeError, SquareFreeFactor, SquareFreeVerificationError,
+    verify_square_free_decomposition,
 };
 pub use verification::{
     VerificationError, verify_distribution, verify_distribution_step, verify_equation_step,

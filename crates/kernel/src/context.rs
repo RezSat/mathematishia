@@ -11,9 +11,10 @@ use mathema::{Equation, Expr, ExprView, Integer, Rational, Symbol};
 
 use crate::{
     DerivationStep, DistributionResult, LinearSolution, LinearSolveResult,
-    PolynomialConversionError, RationalPolynomial, VerificationError, ZeroPolynomialDivisor,
-    distribute_first_once, expand_distributively, solve_linear_equation, verify_distribution,
-    verify_linear_solution,
+    PolynomialConversionError, RationalPolynomial, SquareFreeDecomposition, SquareFreeError,
+    SquareFreeVerificationError, VerificationError, ZeroPolynomialDivisor, distribute_first_once,
+    expand_distributively, solve_linear_equation, verify_distribution,
+    verify_linear_solution, verify_square_free_decomposition,
 };
 
 /// Explicit, configurable limits. None are process-global.
@@ -54,6 +55,8 @@ pub enum EvaluationError {
     Polynomial(PolynomialConversionError),
     Linear(crate::LinearSolveError),
     DivisionByZero,
+    SquareFree(SquareFreeError),
+    SquareFreeVerification(SquareFreeVerificationError),
     Verification(VerificationError),
 }
 
@@ -64,6 +67,8 @@ impl fmt::Display for EvaluationError {
             Self::Polynomial(error) => write!(f, "{error}"),
             Self::Linear(error) => write!(f, "{error}"),
             Self::DivisionByZero => f.write_str("cannot divide by the zero polynomial"),
+            Self::SquareFree(error) => write!(f, "{error}"),
+            Self::SquareFreeVerification(error) => write!(f, "square-free verification failed: {error}"),
             Self::Verification(error) => write!(f, "derivation verification failed: {error}"),
         }
     }
@@ -92,6 +97,18 @@ impl From<ZeroPolynomialDivisor> for EvaluationError {
 impl From<VerificationError> for EvaluationError {
     fn from(value: VerificationError) -> Self {
         Self::Verification(value)
+    }
+}
+
+impl From<SquareFreeError> for EvaluationError {
+    fn from(value: SquareFreeError) -> Self {
+        Self::SquareFree(value)
+    }
+}
+
+impl From<SquareFreeVerificationError> for EvaluationError {
+    fn from(value: SquareFreeVerificationError) -> Self {
+        Self::SquareFreeVerification(value)
     }
 }
 
@@ -251,6 +268,25 @@ impl EvaluationContext {
         self.check_polynomial(polynomial)?;
         let result = polynomial.differentiate();
         self.check_polynomial(&result)?;
+        Ok(result)
+    }
+
+    /// Separates multiplicity classes, admitting exact input and output values
+    /// and independently verifying the reported decomposition.
+    ///
+    /// Intermediate Euclidean arithmetic is not currently subject to a hard
+    /// memory or time limit. This API does not claim full factorization.
+    pub fn square_free_decomposition(
+        &self,
+        polynomial: &RationalPolynomial,
+    ) -> Result<SquareFreeDecomposition, EvaluationError> {
+        self.check_polynomial(polynomial)?;
+        let result = polynomial.square_free_decomposition()?;
+        self.check_rational(result.unit())?;
+        for factor in result.factors() {
+            self.check_polynomial(factor.polynomial())?;
+        }
+        verify_square_free_decomposition(polynomial, &result)?;
         Ok(result)
     }
 

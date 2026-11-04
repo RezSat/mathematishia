@@ -42,3 +42,22 @@ zero. `RationalPolynomial::differentiate` does not construct generic symbolic
 steps, and the context-checked operation enforces input/output resource
 admission. General symbolic calculus and a justified differentiation-step
 format remain separate future work.
+
+## Exact square-free decomposition (Task 18)
+
+For nonzero univariate rational polynomials, a GCD-with-formal-derivative
+algorithm separates the polynomial into a leading rational unit and monic
+square-free factors, listed in strictly increasing multiplicity order.
+Factors from different multiplicity classes are pairwise coprime. A nonzero
+constant has an empty factor list; the zero polynomial has no square-free
+decomposition and receives an explicit error. This is *not* a complete
+irreducible factorization or a root-finding algorithm. The independent
+`verify_square_free_decomposition` operation checks monicity, multiplicity
+ordering, square-freeness, coprimality, degree and exact recomposition.
+Checked context APIs enforce admitted coefficient/degree limits around the
+operation, but do not impose hard intermediate-memory/CPU bounds.
+
+Algorithm/reference: FLINT's characteristic-zero square-free documentation,
+and SymPy's `sqf_list` output convention, consulted November 2026:
+https://flintlib.org/doc/algorithms/polynomials/squarefree.html
+https://docs.sympy.org/latest/modules/polys/reference.html

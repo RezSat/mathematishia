@@ -96,10 +96,7 @@ fn py_expression(source: &str) -> PyResult<String> {
 }
 
 #[pyfunction(name = "expand", signature = (source, max_steps=8))]
-fn py_expand(
-    source: &str,
-    max_steps: usize,
-) -> PyResult<PyExpansion> {
+fn py_expand(source: &str, max_steps: usize) -> PyResult<PyExpansion> {
     let default = EvaluationContext::default();
     if max_steps > default.limits().max_distribution_steps {
         return Err(map_evaluation_error(EvaluationError::Limit(
@@ -184,11 +181,7 @@ fn py_evaluate(source: &str, variable: &str, at: &str) -> PyResult<String> {
 }
 
 #[pyfunction(name = "divide")]
-fn py_divide(
-    dividend: &str,
-    divisor: &str,
-    variable: &str,
-) -> PyResult<PyDivision> {
+fn py_divide(dividend: &str, divisor: &str, variable: &str) -> PyResult<PyDivision> {
     let symbol = selected_variable(variable)?;
     let first = selected_polynomial(dividend, &symbol)?;
     let second = selected_polynomial(divisor, &symbol)?;

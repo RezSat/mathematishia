@@ -32,15 +32,15 @@ Example tests and property tests cover these invariants. The kernel inspects
 expressions through a read-only semantic view and provides exact single-symbol
 substitution and bounded, deterministic distributive expansion with a chain of
 justified steps. The expansion budget counts steps but does not bound memory or
-expression size. There is no parser, general rewriting, general simplification engine,
-or user-facing CAS API yet. A separate Equation value supports a deliberately
-bounded exact univariate linear solver, with typed equivalent-equation steps,
-verified nonzero division, and three solution-set classifications. RationalPolynomial supports canonical
-univariate rational coefficients, exact arithmetic, and Horner evaluation;
+expression size. A bounded Mathema parser exists in the frontend, but general
+rewriting, general simplification and a mature user-facing CAS API are not yet
+implemented. The separate `Equation` value supports exact rational-linear
+solving with typed equivalence steps, verified nonzero division and all three
+solution-set classifications. `RationalPolynomial` supports canonical
+univariate rational coefficients, exact arithmetic and Horner evaluation;
 fallible bounded expression-to-polynomial conversion and conversion back to
 semantic expressions are available. Polynomial long division and canonical
 monic GCD are exact, with division-by-zero rejected.
-
 
 ## First CLI commands
 
@@ -81,9 +81,9 @@ runs the Python smoke suite. Python 3.10+ is required.
 
 ```sh
 cargo fmt --all -- --check
-cargo check --workspace --all-targets --all-features
-cargo clippy --workspace --all-targets --all-features -- -D warnings
-cargo test --workspace --all-features
+cargo check --workspace --all-targets --all-features --locked
+cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+cargo test --workspace --all-features --locked
 ```
 
 Licensed under Apache-2.0; see [LICENSE](LICENSE).

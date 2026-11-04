@@ -7,8 +7,8 @@ a user-facing mathematical explanation.
 mathematical computation proceeds. It can be rendered independently of the
 algorithm. The kernel now provides a minimal `DerivationStep`: ordinary typed
 data recording the `before` and `after` expressions, a stable `RuleId`, and the
-`Relation` between them. It is not a general proof framework, and no formal
-proof checker exists.
+`Relation` between them. A limited, rule-specific independent checker now
+exists; it is not a general formal proof framework.
 
 The first rule is `algebra.distribute_product_over_sum` with `Relation::Equal`.
 It applies the unconditional distributive identity
@@ -26,14 +26,16 @@ completion flag. Completion means no further eligible distribution within this
 restricted traversal, not complete symbolic simplification. The step budget
 limits steps only, not expression size or memory consumption.
 
-Equation and assumption representations, proof or verification obligations,
-introduced restrictions, and optional sub-derivations remain future work.
+A separate `Equation` representation and exact nonzero conditions for the
+linear division rule are implemented. General assumptions, proof obligations,
+introduced restrictions and optional sub-derivations remain future work.
 `substitute_symbol` is a single-symbol replacement operation, not an
 equality-preserving derivation: without an assignment assumption, substitution
 does not prove equality of the original and resulting expressions.
 
-Relation concepts for future rules include `Equal`, `Equivalent`, `Implies`,
-`Approximate`, and `DefinedAs`; only `Equal` is implemented. Phrases such as
+The implemented relation kinds are `Equal` for scalar identities and
+`Equivalent` for equations with identical rational solution sets. `Implies`,
+`Approximate` and `DefinedAs` remain future designs. Phrases such as
 “By the zero-product property” belong to rendering, not mathematical semantics.
 Mathematishia is not claiming to be a formal proof assistant.
 
@@ -44,7 +46,8 @@ all rational values. Recorded `EquationStep`s use `Relation::Equivalent`, not
 expression equality, and the coefficient-division step carries the exact
 nonzero scalar verified by arithmetic. Constant-equation classification is a
 typed result, not an invented equality step. This is not a general equation
-solver, conditional rewrite system, or independently checked proof certificate.
+solver or conditional rewrite system. The supported steps can be checked
+independently, but they do not constitute a general proof certificate.
 
 ## Independent checking (Task 14)
 

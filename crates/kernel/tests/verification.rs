@@ -73,7 +73,10 @@ fn verifies_empty_and_universal_rational_solution_sets() {
         Expr::add([expr("x"), 2.into()]),
     );
     assert_eq!(
-        verify_linear_solution(&solve_linear_equation(&eq, &symbol("x")).unwrap(), &symbol("x")),
+        verify_linear_solution(
+            &solve_linear_equation(&eq, &symbol("x")).unwrap(),
+            &symbol("x")
+        ),
         Ok(())
     );
 }
@@ -81,10 +84,7 @@ fn verifies_empty_and_universal_rational_solution_sets() {
 #[test]
 fn verifies_large_exact_coefficients_without_sampling() {
     let huge = Expr::from(Integer::from(u128::MAX));
-    let eq = Equation::new(
-        Expr::mul([huge, expr("x")]),
-        Expr::from(0),
-    );
+    let eq = Equation::new(Expr::mul([huge, expr("x")]), Expr::from(0));
     let result = solve_linear_equation(&eq, &symbol("x")).unwrap();
     assert_eq!(verify_linear_solution(&result, &symbol("x")), Ok(()));
 }

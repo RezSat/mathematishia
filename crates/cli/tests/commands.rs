@@ -135,3 +135,24 @@ fn polynomial_differentiation_rejects_unsupported_domains() {
         assert!(run(&["diff", expr, "x"]).is_err());
     }
 }
+
+#[test]
+fn square_free_cli_reports_unit_and_multiplicity_classes() {
+    let output = run(&["sqfree", "2*(x-1)^2*(x+2)^3", "x"]).unwrap();
+    assert!(output.starts_with("unit: 2\n"));
+    assert!(output.contains("factor (multiplicity 2):"));
+    assert!(output.contains("factor (multiplicity 3):"));
+    assert!(output.find("multiplicity 2").unwrap() < output.find("multiplicity 3").unwrap());
+
+    assert_eq!(run(&["sqfree", "-3/4", "x"]).unwrap(), "unit: -3/4");
+    let irreducible = run(&["sqfree", "x^2+1", "x"]).unwrap();
+    assert!(irreducible.contains("factor (multiplicity 1):"));
+    assert_eq!(irreducible.matches("factor (multiplicity").count(), 1);
+}
+
+#[test]
+fn square_free_cli_rejects_zero_and_unsupported_domains() {
+    for expr in ["0", "x^-1", "x^33", "y+1"] {
+        assert!(run(&["sqfree", expr, "x"]).is_err());
+    }
+}

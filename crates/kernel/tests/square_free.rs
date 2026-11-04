@@ -110,6 +110,17 @@ fn deterministic_grid_of_exact_repeated_factor_products_verifies() {
 }
 
 #[test]
+fn different_roots_with_same_multiplicity_remain_one_square_free_factor() {
+    let composite = linear(-2).multiply(&linear(1));
+    let input = power(&composite, 2);
+    let result = input.square_free_decomposition().unwrap();
+    assert_eq!(result.factors().len(), 1);
+    assert_eq!(result.factors()[0].polynomial(), &composite);
+    assert_eq!(result.factors()[0].multiplicity(), 2);
+    assert_eq!(verify_square_free_decomposition(&input, &result), Ok(()));
+}
+
+#[test]
 fn repeated_multiplicity_with_a_shared_root_is_combined() {
     let common_root = linear(1);
     let input = power(&common_root, 2).multiply(&power(&common_root, 3));

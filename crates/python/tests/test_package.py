@@ -63,6 +63,37 @@ class ExactMathTests(unittest.TestCase):
         with self.assertRaises(m.UnsupportedMathematicsError):
             m.differentiate("x^33", "x")
 
+    def test_square_free_decomposition_and_immutable_typed_results(self):
+        result = m.square_free("2*(x-1)^2*(x+2)^3", "x")
+        self.assertEqual(result.unit, Fraction(2))
+        self.assertEqual(
+            [(factor.polynomial.coefficients, factor.multiplicity)
+             for factor in result.factors],
+            [
+                ((Fraction(-1), Fraction(1)), 2),
+                ((Fraction(2), Fraction(1)), 3),
+            ],
+        )
+        with self.assertRaises(FrozenInstanceError):
+            result.unit = Fraction(3)
+        with self.assertRaises(FrozenInstanceError):
+            result.factors[0].multiplicity = 4
+
+    def test_square_free_constants_and_unsupported_polynomials(self):
+        constant = m.square_free("-3/4", "x")
+        self.assertEqual(constant.unit, Fraction(-3, 4))
+        self.assertEqual(constant.factors, ())
+        sample = m.square_free("x^2+1", "x")
+        self.assertEqual(len(sample.factors), 1)
+        self.assertEqual(sample.factors[0].multiplicity, 1)
+        self.assertEqual(
+            sample.factors[0].polynomial.coefficients,
+            (Fraction(1), Fraction(0), Fraction(1)),
+        )
+        for expr in ["0", "x^-1", "x^33", "y+1"]:
+            with self.assertRaises(m.UnsupportedMathematicsError):
+                m.square_free(expr, "x")
+
     def test_typed_errors(self):
         with self.assertRaises(m.MathSyntaxError):
             m.expression("x / 2")

@@ -219,6 +219,29 @@ fn py_differentiate(source: &str, variable: &str) -> PyResult<PyPolynomialData> 
     Ok(poly_data(&derivative, &symbol))
 }
 
+type PySquareFreeFactor = (PyPolynomialData, usize);
+type PySquareFreeResult = (String, Vec<PySquareFreeFactor>);
+
+#[pyfunction(name = "square_free")]
+fn py_square_free(source: &str, variable: &str) -> PyResult<PySquareFreeResult> {
+    let symbol = selected_variable(variable)?;
+    let polynomial = selected_polynomial(source, &symbol)?;
+    let result = EvaluationContext::default()
+        .square_free_decomposition(&polynomial)
+        .map_err(map_evaluation_error)?;
+    let factors = result
+        .factors()
+        .iter()
+        .map(|entry| {
+            (
+                poly_data(entry.polynomial(), &symbol),
+                entry.multiplicity(),
+            )
+        })
+        .collect();
+    Ok((result.unit().to_string(), factors))
+}
+
 #[pymodule]
 fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(py_expression, m)?)?;
@@ -229,6 +252,7 @@ fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(py_divide, m)?)?;
     m.add_function(wrap_pyfunction!(py_gcd, m)?)?;
     m.add_function(wrap_pyfunction!(py_differentiate, m)?)?;
+    m.add_function(wrap_pyfunction!(py_square_free, m)?)?;
     m.add("MathSyntaxError", m.py().get_type::<MathSyntaxError>())?;
     m.add(
         "UnsupportedMathematicsError",

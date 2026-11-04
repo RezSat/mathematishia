@@ -22,6 +22,7 @@ Usage:
   mathematishia divide <DIVIDEND> <DIVISOR> <VARIABLE>
   mathematishia gcd <LEFT> <RIGHT> <VARIABLE>
   mathematishia diff <POLYNOMIAL> <VARIABLE>
+  mathematishia sqfree <POLYNOMIAL> <VARIABLE>
   mathematishia --help
 
 Examples:
@@ -33,6 +34,7 @@ Examples:
   mathematishia divide 'x^2-1' 'x-1' x
   mathematishia gcd 'x^2-1' 'x-1' x
   mathematishia diff 'x^3+1/2*x' x
+  mathematishia sqfree '2*(x-1)^2*(x+2)^3' x
 
 Syntax: integers, exact fraction literals n/d, identifiers, + - * ^ ( ) =.
 Use explicit multiplication. '/' only separates literal integers, not expressions.
@@ -229,6 +231,24 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
                 .differentiate(&poly)
                 .map_err(|error| invalid(error.to_string()))?;
             Ok(format!("derivative: {}", derivative.to_expr(&symbol)))
+        }
+        ["sqfree", input, name] => {
+            let symbol = variable(name)?;
+            let poly = polynomial(input, &symbol)?;
+            let decomposition = EvaluationContext::default()
+                .square_free_decomposition(&poly)
+                .map_err(|error| invalid(error.to_string()))?;
+            let mut out = format!("unit: {}", decomposition.unit());
+            for entry in decomposition.factors() {
+                write!(
+                    &mut out,
+                    "\nfactor (multiplicity {}): {}",
+                    entry.multiplicity(),
+                    entry.polynomial().to_expr(&symbol)
+                )
+                .expect("writing to a String is infallible");
+            }
+            Ok(out)
         }
         _ => Err(invalid("invalid command or argument count; use --help")),
     }

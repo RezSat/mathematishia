@@ -48,6 +48,18 @@ class Polynomial:
         return len(self.coefficients) - 1 if self.coefficients else None
 
 
+@dataclass(frozen=True)
+class SquareFreeFactor:
+    polynomial: Polynomial
+    multiplicity: int
+
+
+@dataclass(frozen=True)
+class SquareFreeDecomposition:
+    unit: Fraction
+    factors: tuple[SquareFreeFactor, ...]
+
+
 def _poly(data: tuple[str, list[str]]) -> Polynomial:
     expression_text, coefficients = data
     return Polynomial(expression_text, tuple(Fraction(c) for c in coefficients))
@@ -84,6 +96,16 @@ def differentiate(source: str, variable: str) -> Polynomial:
     """Return the formal derivative of a supported exact rational polynomial."""
     return _poly(_native.differentiate(source, variable))
 
+def square_free(source: str, variable: str) -> SquareFreeDecomposition:
+    """Separate exact polynomial multiplicity classes, not irreducible factors."""
+    unit, factors = _native.square_free(source, variable)
+    return SquareFreeDecomposition(
+        Fraction(unit),
+        tuple(SquareFreeFactor(_poly(data), multiplicity)
+              for data, multiplicity in factors),
+    )
+
+
 def evaluate(source: str, variable: str, at: str) -> Fraction:
     """Evaluate a rational polynomial at an exact rational input string."""
     return Fraction(_native.evaluate(source, variable, at))
@@ -103,6 +125,7 @@ def gcd(left: str, right: str, variable: str) -> Polynomial:
 __all__ = [
     "MathSyntaxError", "ResourceLimitError", "UnsupportedMathematicsError",
     "VerificationFailure", "Step", "Expansion", "LinearResult", "Polynomial",
-    "expression", "expand", "solve", "polynomial", "differentiate",
+    "SquareFreeFactor", "SquareFreeDecomposition",
+    "expression", "expand", "solve", "polynomial", "differentiate", "square_free",
     "evaluate", "divide", "gcd",
 ]

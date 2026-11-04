@@ -1,7 +1,5 @@
 use mathema::{Equation, Expr, Integer, Rational, Symbol};
-use mathematishia_kernel::{
-    EvaluationContext, EvaluationError, ResourceLimitKind, ResourceLimits,
-};
+use mathematishia_kernel::{EvaluationContext, EvaluationError, ResourceLimitKind, ResourceLimits};
 
 fn x() -> Symbol {
     Symbol::new("x").unwrap()
@@ -118,9 +116,18 @@ fn verified_linear_solver_and_arithmetic_use_same_context() {
     );
     let ctx = limited();
     let solved = ctx.solve_linear(&eq, &x()).unwrap();
-    assert_eq!(solved.solution(), &mathematishia_kernel::LinearSolution::Unique(Rational::from(Integer::from(3))));
-    let poly = ctx.polynomial(&Expr::add([Expr::pow(symbol(), 2.into()), 1.into()]), &x()).unwrap();
-    assert_eq!(ctx.evaluate_polynomial(&poly, &Rational::from(Integer::one())).unwrap(), Rational::from(Integer::from(2)));
+    assert_eq!(
+        solved.solution(),
+        &mathematishia_kernel::LinearSolution::Unique(Rational::from(Integer::from(3)))
+    );
+    let poly = ctx
+        .polynomial(&Expr::add([Expr::pow(symbol(), 2.into()), 1.into()]), &x())
+        .unwrap();
+    assert_eq!(
+        ctx.evaluate_polynomial(&poly, &Rational::from(Integer::one()))
+            .unwrap(),
+        Rational::from(Integer::from(2))
+    );
     let (quotient, remainder) = ctx.divide(&poly, &poly).unwrap();
     assert!(remainder.is_zero());
     assert_eq!(quotient.degree(), Some(0));
@@ -131,5 +138,8 @@ fn verified_linear_solver_and_arithmetic_use_same_context() {
 fn checked_polynomial_division_rejects_zero_divisor() {
     let ctx = limited();
     let poly = ctx.polynomial(&symbol(), &x()).unwrap();
-    assert_eq!(ctx.divide(&poly, &mathematishia_kernel::RationalPolynomial::zero()), Err(EvaluationError::DivisionByZero));
+    assert_eq!(
+        ctx.divide(&poly, &mathematishia_kernel::RationalPolynomial::zero()),
+        Err(EvaluationError::DivisionByZero)
+    );
 }

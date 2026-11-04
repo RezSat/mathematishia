@@ -10,9 +10,10 @@ use std::fmt;
 use mathema::{Equation, Expr, ExprView, Integer, Rational, Symbol};
 
 use crate::{
-    DerivationStep, DistributionResult, LinearSolution, LinearSolveResult, PolynomialConversionError,
-    RationalPolynomial, VerificationError, ZeroPolynomialDivisor, distribute_first_once,
-    expand_distributively, solve_linear_equation, verify_distribution, verify_linear_solution,
+    DerivationStep, DistributionResult, LinearSolution, LinearSolveResult,
+    PolynomialConversionError, RationalPolynomial, VerificationError, ZeroPolynomialDivisor,
+    distribute_first_once, expand_distributively, solve_linear_equation, verify_distribution,
+    verify_linear_solution,
 };
 
 /// Explicit, configurable limits. None are process-global.
@@ -189,11 +190,8 @@ impl EvaluationContext {
         variable: &Symbol,
     ) -> Result<RationalPolynomial, EvaluationError> {
         self.check_expression(expr)?;
-        let value = RationalPolynomial::try_from_expr(
-            expr,
-            variable,
-            self.limits.max_polynomial_degree,
-        )?;
+        let value =
+            RationalPolynomial::try_from_expr(expr, variable, self.limits.max_polynomial_degree)?;
         self.check_polynomial(&value)?;
         Ok(value)
     }

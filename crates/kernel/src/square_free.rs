@@ -22,7 +22,9 @@ impl fmt::Display for SquareFreeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::ZeroPolynomial => f.write_str("square-free decomposition is undefined for zero"),
-            Self::NonExactDivision => f.write_str("square-free algorithm encountered an inexact division"),
+            Self::NonExactDivision => {
+                f.write_str("square-free algorithm encountered an inexact division")
+            }
         }
     }
 }
@@ -89,9 +91,7 @@ impl RationalPolynomial {
     /// Uses repeated exact GCDs with the formal derivative. The algorithm is
     /// deliberately implemented over our established dense polynomial domain;
     /// it is not a full irreducible factorization procedure.
-    pub fn square_free_decomposition(
-        &self,
-    ) -> Result<SquareFreeDecomposition, SquareFreeError> {
+    pub fn square_free_decomposition(&self) -> Result<SquareFreeDecomposition, SquareFreeError> {
         let Some(leading) = self.coefficients().last() else {
             return Err(SquareFreeError::ZeroPolynomial);
         };

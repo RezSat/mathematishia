@@ -24,8 +24,12 @@ fn map_evaluation_error(error: EvaluationError) -> PyErr {
             ResourceLimitError::new_err(format!("{kind:?} limit exceeded"))
         }
         EvaluationError::Verification(reason) => VerificationFailure::new_err(reason.to_string()),
+        EvaluationError::SquareFreeVerification(reason) => {
+            VerificationFailure::new_err(reason.to_string())
+        }
         EvaluationError::Polynomial(_)
         | EvaluationError::Linear(_)
+        | EvaluationError::SquareFree(_)
         | EvaluationError::DivisionByZero => {
             UnsupportedMathematicsError::new_err(error.to_string())
         }

@@ -13,8 +13,8 @@ use crate::{
     DerivationStep, DistributionResult, LinearSolution, LinearSolveResult,
     PolynomialConversionError, RationalPolynomial, SquareFreeDecomposition, SquareFreeError,
     SquareFreeVerificationError, VerificationError, ZeroPolynomialDivisor, distribute_first_once,
-    expand_distributively, solve_linear_equation, verify_distribution,
-    verify_linear_solution, verify_square_free_decomposition,
+    expand_distributively, solve_linear_equation, verify_distribution, verify_linear_solution,
+    verify_square_free_decomposition,
 };
 
 /// Explicit, configurable limits. None are process-global.
@@ -68,7 +68,9 @@ impl fmt::Display for EvaluationError {
             Self::Linear(error) => write!(f, "{error}"),
             Self::DivisionByZero => f.write_str("cannot divide by the zero polynomial"),
             Self::SquareFree(error) => write!(f, "{error}"),
-            Self::SquareFreeVerification(error) => write!(f, "square-free verification failed: {error}"),
+            Self::SquareFreeVerification(error) => {
+                write!(f, "square-free verification failed: {error}")
+            }
             Self::Verification(error) => write!(f, "derivation verification failed: {error}"),
         }
     }

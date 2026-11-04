@@ -37,7 +37,10 @@ fn separates_two_multiplicity_classes_and_preserves_nonmonic_unit() {
     assert_eq!(decomposition.factors()[0].polynomial(), &linear(1));
     assert_eq!(decomposition.factors()[1].multiplicity(), 3);
     assert_eq!(decomposition.factors()[1].polynomial(), &linear(-2));
-    assert_eq!(verify_square_free_decomposition(&original, &decomposition), Ok(()));
+    assert_eq!(
+        verify_square_free_decomposition(&original, &decomposition),
+        Ok(())
+    );
 }
 
 #[test]
@@ -62,19 +65,24 @@ fn square_free_does_not_claim_to_factor_irreducible_polynomials() {
     assert_eq!(decomposition.factors().len(), 1);
     assert_eq!(decomposition.factors()[0].multiplicity(), 1);
     assert_eq!(decomposition.factors()[0].polynomial(), &original);
-    assert_eq!(verify_square_free_decomposition(&original, &decomposition), Ok(()));
+    assert_eq!(
+        verify_square_free_decomposition(&original, &decomposition),
+        Ok(())
+    );
 }
 
 #[test]
 fn repeated_root_at_zero_and_negative_rational_unit_are_exact() {
-    let original = power(&linear(0), 7)
-        .multiply(&polynomial(&[(-3, 4)]));
+    let original = power(&linear(0), 7).multiply(&polynomial(&[(-3, 4)]));
     let decomposition = original.square_free_decomposition().unwrap();
     assert_eq!(decomposition.unit(), &rational(-3, 4));
     assert_eq!(decomposition.factors().len(), 1);
     assert_eq!(decomposition.factors()[0].polynomial(), &linear(0));
     assert_eq!(decomposition.factors()[0].multiplicity(), 7);
-    assert_eq!(verify_square_free_decomposition(&original, &decomposition), Ok(()));
+    assert_eq!(
+        verify_square_free_decomposition(&original, &decomposition),
+        Ok(())
+    );
 }
 
 #[test]

@@ -280,6 +280,32 @@ mod adversarial_tests {
     }
 
     #[test]
+    fn verifier_rejects_non_coprime_multiplicity_classes() {
+        let first = p(&[1, 1]);
+        let second = p(&[2, 1]);
+        let original = first.multiply(&first).multiply(&second).multiply(&second).multiply(&second);
+        let mut forged = original.square_free_decomposition().unwrap();
+        forged.factors[1].polynomial = first;
+        assert_eq!(
+            verify_square_free_decomposition(&original, &forged),
+            Err(SquareFreeVerificationError::NotCoprime)
+        );
+    }
+
+    #[test]
+    fn verifier_rejects_equal_multiplicity_labels() {
+        let first = p(&[1, 1]);
+        let second = p(&[2, 1]);
+        let original = first.multiply(&first).multiply(&second).multiply(&second).multiply(&second);
+        let mut forged = original.square_free_decomposition().unwrap();
+        forged.factors[1].multiplicity = forged.factors[0].multiplicity;
+        assert_eq!(
+            verify_square_free_decomposition(&original, &forged),
+            Err(SquareFreeVerificationError::InvalidMultiplicity)
+        );
+    }
+
+    #[test]
     fn verifier_rejects_wrong_product_without_approximation() {
         let original = p(&[1, 2, 1]);
         let mut forged = original.square_free_decomposition().unwrap();

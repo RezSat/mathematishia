@@ -94,6 +94,20 @@ class ExactMathTests(unittest.TestCase):
             with self.assertRaises(m.UnsupportedMathematicsError):
                 m.square_free(expr, "x")
 
+    def test_square_free_matches_published_reference_coefficients(self):
+        result = m.square_free(
+            "2*x^5+16*x^4+50*x^3+76*x^2+56*x+16",
+            "x",
+        )
+        self.assertEqual(result.unit, Fraction(2))
+        self.assertEqual(
+            [(f.polynomial.coefficients, f.multiplicity) for f in result.factors],
+            [
+                ((Fraction(1), Fraction(1)), 2),
+                ((Fraction(2), Fraction(1)), 3),
+            ],
+        )
+
     def test_typed_errors(self):
         with self.assertRaises(m.MathSyntaxError):
             m.expression("x / 2")

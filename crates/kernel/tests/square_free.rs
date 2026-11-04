@@ -72,6 +72,22 @@ fn square_free_does_not_claim_to_factor_irreducible_polynomials() {
 }
 
 #[test]
+fn published_square_free_reference_polynomial_matches_exact_multiplicities() {
+    // SymPy's reference example: 2*(x+1)^2*(x+2)^3
+    let input = polynomial(&[
+        (16, 1), (56, 1), (76, 1), (50, 1), (16, 1), (2, 1),
+    ]);
+    let output = input.square_free_decomposition().unwrap();
+    assert_eq!(output.unit(), &rational(2, 1));
+    assert_eq!(output.factors().len(), 2);
+    assert_eq!(output.factors()[0].polynomial(), &linear(-1));
+    assert_eq!(output.factors()[0].multiplicity(), 2);
+    assert_eq!(output.factors()[1].polynomial(), &linear(-2));
+    assert_eq!(output.factors()[1].multiplicity(), 3);
+    assert_eq!(verify_square_free_decomposition(&input, &output), Ok(()));
+}
+
+#[test]
 fn repeated_root_at_zero_and_negative_rational_unit_are_exact() {
     let original = power(&linear(0), 7).multiply(&polynomial(&[(-3, 4)]));
     let decomposition = original.square_free_decomposition().unwrap();

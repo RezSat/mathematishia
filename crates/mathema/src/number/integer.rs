@@ -27,6 +27,11 @@ impl Integer {
     pub fn is_one(&self) -> bool {
         self.0 == BigInt::from(1u8)
     }
+
+    /// Magnitude bit length, excluding the sign (zero has length zero).
+    pub fn bit_len(&self) -> u64 {
+        self.0.bits()
+    }
 }
 
 impl fmt::Display for Integer {

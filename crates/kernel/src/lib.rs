@@ -6,12 +6,14 @@
 
 use mathema::{Expr, ExprView, Symbol};
 
+mod context;
 mod poly_convert;
 mod poly_division;
 mod polynomial;
 mod solve_linear;
 mod verification;
 
+pub use context::{EvaluationContext, EvaluationError, ResourceLimitKind, ResourceLimits};
 pub use poly_convert::PolynomialConversionError;
 pub use poly_division::ZeroPolynomialDivisor;
 pub use polynomial::RationalPolynomial;
@@ -159,6 +161,14 @@ impl DistributionResult {
     /// Reports whether further distribution is available in the supported scope.
     pub const fn is_complete(&self) -> bool {
         self.complete
+    }
+
+    pub(crate) fn from_parts(result: Expr, steps: Vec<DerivationStep>, complete: bool) -> Self {
+        Self {
+            result,
+            steps,
+            complete,
+        }
     }
 }
 

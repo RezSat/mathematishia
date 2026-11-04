@@ -9,9 +9,14 @@ form. Algorithm execution invokes a domain or mathematical procedure.
 Mathematishia does not use a universal repeated-rewrite evaluator as its central
 architecture. These operations remain distinct.
 
-The future `EvaluationContext` will carry assumptions, numeric and precision
-policy, algorithm options, a deterministic seed, and resource limits. There is
-no mutable global mathematical state. The context is not implemented yet.
+An initial immutable `EvaluationContext` now carries explicit admission limits:
+expression occurrences, depth, scalar magnitude bits, polynomial degree and
+maximum distribution steps. Checked APIs validate inputs and results at
+supported operation boundaries and independently verify derivations. These
+checks are NOT hard memory, wall-clock or intermediate-allocation limits;
+existing low-level APIs remain available for trusted Rust callers. Assumptions,
+numeric/precision policy and deterministic seeds are future extensions.
+There is no mutable global mathematical state.
 
 Kernel inspection uses the read-only semantic expression view. Single-symbol
 substitution is an explicit single-pass transformation rebuilt through the

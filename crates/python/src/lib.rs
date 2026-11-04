@@ -99,7 +99,7 @@ fn py_expression(source: &str) -> PyResult<String> {
 fn py_expand(
     source: &str,
     max_steps: usize,
-) -> PyResult<(String, bool, Vec<(String, String, String)>)> {
+) -> PyResult<PyExpansion> {
     let default = EvaluationContext::default();
     if max_steps > default.limits().max_distribution_steps {
         return Err(map_evaluation_error(EvaluationError::Limit(
@@ -124,6 +124,11 @@ fn py_expand(
         .collect();
     Ok((result.result().to_string(), result.is_complete(), steps))
 }
+
+type PyExpansionStep = (String, String, String);
+type PyExpansion = (String, bool, Vec<PyExpansionStep>);
+type PyPolynomialData = (String, Vec<String>);
+type PyDivision = (PyPolynomialData, PyPolynomialData);
 
 type PyEquationStep = (String, String, String, Option<String>);
 
@@ -183,7 +188,7 @@ fn py_divide(
     dividend: &str,
     divisor: &str,
     variable: &str,
-) -> PyResult<((String, Vec<String>), (String, Vec<String>))> {
+) -> PyResult<PyDivision> {
     let symbol = selected_variable(variable)?;
     let first = selected_polynomial(dividend, &symbol)?;
     let second = selected_polynomial(divisor, &symbol)?;

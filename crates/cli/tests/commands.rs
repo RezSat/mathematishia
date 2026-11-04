@@ -103,3 +103,11 @@ fn polynomial_cli_rejects_invalid_domains_and_division_by_zero() {
         assert!(run(&command).is_err(), "must reject {command:?}");
     }
 }
+
+#[test]
+fn cli_uses_resource_context_instead_of_unbounded_polynomial_execution() {
+    let huge = format!("{}^32", "99999999999999999999999999999999999999999999999999999999");
+    let response = run(&["poly", &huge, "x"]);
+    assert!(response.is_err());
+    assert!(response.unwrap_err().to_string().contains("resource limit exceeded"));
+}

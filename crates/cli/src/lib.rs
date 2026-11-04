@@ -9,8 +9,7 @@ use std::fmt::Write as _;
 use mathema::{Equation, Expr, ExprView, Rational, Symbol};
 use mathema_frontend::{Statement, parse_expression, parse_statement};
 use mathematishia_kernel::{
-    LinearSolution, RationalPolynomial, VerifiedCondition, expand_distributively,
-    solve_linear_equation,
+    EvaluationContext, LinearSolution, RationalPolynomial, VerifiedCondition,
 };
 
 pub const HELP: &str = "Mathematishia (early exact-math CLI)
@@ -55,7 +54,11 @@ fn invalid(message: impl Into<String>) -> CliError {
 }
 
 fn expression(input: &str) -> Result<Expr, CliError> {
-    parse_expression(input).map_err(|error| invalid(error.to_string()))
+    let parsed = parse_expression(input).map_err(|error| invalid(error.to_string()))?;
+    EvaluationContext::default()
+        .check_expression(&parsed)
+        .map_err(|error| invalid(error.to_string()))?;
+    Ok(parsed)
 }
 
 fn variable(input: &str) -> Result<Symbol, CliError> {
@@ -73,11 +76,10 @@ fn equation(input: &str) -> Result<Equation, CliError> {
     }
 }
 
-const MAX_POLYNOMIAL_DEGREE: usize = 32;
-
 fn polynomial(input: &str, name: &Symbol) -> Result<RationalPolynomial, CliError> {
     let parsed = expression(input)?;
-    RationalPolynomial::try_from_expr(&parsed, name, MAX_POLYNOMIAL_DEGREE)
+    EvaluationContext::default()
+        .polynomial(&parsed, name)
         .map_err(|error| invalid(error.to_string()))
 }
 
@@ -114,7 +116,10 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
                 )));
             }
             let parsed = expression(input)?;
-            let result = expand_distributively(&parsed, budget);
+            let result = EvaluationContext::default()
+                .with_distribution_steps(budget)
+                .expand(&parsed)
+                .map_err(|error| invalid(error.to_string()))?;
             let mut out = format!(
                 "result: {}\nsteps: {}\ncomplete: {}",
                 result.result(),
@@ -137,8 +142,9 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
         ["solve", input, name] => {
             let eq = equation(input)?;
             let symbol = variable(name)?;
-            let solved =
-                solve_linear_equation(&eq, &symbol).map_err(|error| invalid(error.to_string()))?;
+            let solved = EvaluationContext::default()
+                .solve_linear(&eq, &symbol)
+                .map_err(|error| invalid(error.to_string()))?;
             let mut out = match solved.solution() {
                 LinearSolution::Unique(value) => format!("solution: {symbol} = {value}"),
                 LinearSolution::NoSolution => "solution: none in Q".to_owned(),
@@ -184,14 +190,17 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
             let symbol = variable(name)?;
             let poly = polynomial(input, &symbol)?;
             let at = scalar(value)?;
-            Ok(format!("value: {}", poly.evaluate(&at)))
+            let evaluated = EvaluationContext::default()
+                .evaluate_polynomial(&poly, &at)
+                .map_err(|error| invalid(error.to_string()))?;
+            Ok(format!("value: {evaluated}"))
         }
         ["divide", dividend, divisor, name] => {
             let symbol = variable(name)?;
             let left = polynomial(dividend, &symbol)?;
             let right = polynomial(divisor, &symbol)?;
-            let (quotient, remainder) = left
-                .divide_with_remainder(&right)
+            let (quotient, remainder) = EvaluationContext::default()
+                .divide(&left, &right)
                 .map_err(|error| invalid(error.to_string()))?;
             Ok(format!(
                 "quotient: {}\nremainder: {}",
@@ -205,7 +214,10 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
             let second = polynomial(right, &symbol)?;
             Ok(format!(
                 "gcd: {}",
-                first.monic_gcd(&second).to_expr(&symbol)
+                EvaluationContext::default()
+                    .gcd(&first, &second)
+                    .map_err(|error| invalid(error.to_string()))?
+                    .to_expr(&symbol)
             ))
         }
         _ => Err(invalid("invalid command or argument count; use --help")),

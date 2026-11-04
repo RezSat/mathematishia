@@ -56,8 +56,10 @@ cargo run -p mathematishia-cli -- gcd 'x^2-1' 'x-1' x
 ```
 
 The solver currently supports only exact rational-linear equations in one
-selected variable. Expansion is step-limited; a step count is not a memory
-bound. See [Mathema's initial syntax](docs/design/mathema-surface.md).
+selected variable. The CLI uses the explicit checked evaluation context,
+including structural limits and independent derivation checks. Expansion is
+step-limited; these checks are not hard memory, wall-clock or intermediate
+allocation bounds. See [Mathema's initial syntax](docs/design/mathema-surface.md).
 
 ## Checks
 

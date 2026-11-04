@@ -1,5 +1,7 @@
 use mathema::{Integer, Rational};
-use mathematishia_kernel::{EvaluationContext, EvaluationError, RationalPolynomial, ResourceLimitKind, ResourceLimits};
+use mathematishia_kernel::{
+    EvaluationContext, EvaluationError, RationalPolynomial, ResourceLimitKind, ResourceLimits,
+};
 
 fn q(n: i64, d: i64) -> Rational {
     Rational::new(Integer::from(n), Integer::from(d)).unwrap()
@@ -47,7 +49,9 @@ fn exact_linearity_and_product_rule_hold_on_a_grid() {
             );
             assert_eq!(
                 a.multiply(b).differentiate(),
-                a.differentiate().multiply(b).add(&a.multiply(&b.differentiate()))
+                a.differentiate()
+                    .multiply(b)
+                    .add(&a.multiply(&b.differentiate()))
             );
         }
     }

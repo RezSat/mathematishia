@@ -105,9 +105,7 @@ impl RationalPolynomial {
                 .iter()
                 .enumerate()
                 .skip(1)
-                .map(|(power, coefficient)| {
-                    coefficient * &Rational::from(Integer::from(power))
-                })
+                .map(|(power, coefficient)| coefficient * &Rational::from(Integer::from(power)))
                 .collect(),
         )
     }

@@ -19,7 +19,6 @@ jobs:
       - run: cargo test --workspace --all-features --locked
 
   python-wheel:
-    needs: checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,7 +30,8 @@ jobs:
         run: |
           python -m venv .venv
           .venv/bin/python -m pip install --upgrade pip 'maturin>=1.9.4,<2'
-          .venv/bin/maturin build --manifest-path crates/python/Cargo.toml --interpreter .venv/bin/python --out wheels
+          .venv/bin/maturin build --manifest-path crates/python/Cargo.toml --locked --interpreter .venv/bin/python --out wheels
           .venv/bin/python -m pip install wheels/*.whl
+          .venv/bin/python -m pip check
       - name: Test installed Python package
         run: .venv/bin/python -m unittest discover -s crates/python/tests -v

@@ -232,12 +232,7 @@ fn py_square_free(source: &str, variable: &str) -> PyResult<PySquareFreeResult> 
     let factors = result
         .factors()
         .iter()
-        .map(|entry| {
-            (
-                poly_data(entry.polynomial(), &symbol),
-                entry.multiplicity(),
-            )
-        })
+        .map(|entry| (poly_data(entry.polynomial(), &symbol), entry.multiplicity()))
         .collect();
     Ok((result.unit().to_string(), factors))
 }

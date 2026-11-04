@@ -240,6 +240,20 @@ impl EvaluationContext {
         Ok(result)
     }
 
+    /// Differentiates the exact rational-polynomial domain under this context.
+    ///
+    /// Limits are checked on the input and output. The operation is a formal
+    /// derivative over Q[x], not a general Expr differentiation rule.
+    pub fn differentiate(
+        &self,
+        polynomial: &RationalPolynomial,
+    ) -> Result<RationalPolynomial, EvaluationError> {
+        self.check_polynomial(polynomial)?;
+        let result = polynomial.differentiate();
+        self.check_polynomial(&result)?;
+        Ok(result)
+    }
+
     pub fn evaluate_polynomial(
         &self,
         polynomial: &RationalPolynomial,

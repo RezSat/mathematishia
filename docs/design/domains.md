@@ -34,3 +34,11 @@ rejecting zero divisors; the remainder is zero or has strictly lower degree.
 Euclidean GCD repeatedly uses that division, then normalizes the result to
 monic form. GCD(0,0) is defined as zero, and other constant GCDs equal one.
 These operations are specialized algorithms, not generic expression rewrites.
+
+Formal differentiation of the rational-polynomial domain applies the exact
+coefficient power rule: the coefficient of x^(i-1) in p'(x) equals i times
+the coefficient of x^i in p(x). Constants and zero differentiate to canonical
+zero. `RationalPolynomial::differentiate` does not construct generic symbolic
+steps, and the context-checked operation enforces input/output resource
+admission. General symbolic calculus and a justified differentiation-step
+format remain separate future work.

@@ -94,6 +94,24 @@ impl RationalPolynomial {
         Self::new(coefficients)
     }
 
+    /// Returns the exact formal derivative with respect to the implicit variable.
+    ///
+    /// For p(x) = sum(a_i * x^i), the coefficient of x^(i-1) is i*a_i.
+    /// Constants and the zero polynomial differentiate to canonical zero.
+    /// No floating-point approximation or symbolic rewrite engine is used.
+    pub fn differentiate(&self) -> Self {
+        Self::new(
+            self.coefficients
+                .iter()
+                .enumerate()
+                .skip(1)
+                .map(|(power, coefficient)| {
+                    coefficient * &Rational::from(Integer::from(power))
+                })
+                .collect(),
+        )
+    }
+
     /// Evaluates exactly with Horner's method.
     pub fn evaluate(&self, at: &Rational) -> Rational {
         self.coefficients

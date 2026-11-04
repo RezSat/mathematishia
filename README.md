@@ -14,6 +14,7 @@ requires benchmark evidence before adding performance complexity.
 - `crates/mathema`: exact scalars, free symbols, and immutable symbolic expressions.
 - `crates/frontend`: the first bounded Mathema expression/equation parser and lowering.
 - `crates/cli`: a CLI that uses the frontend and kernel without duplicating mathematics.
+- `crates/python`: native PyO3/maturin Python package over the same checked kernel.
 - `crates/kernel`: mathematical transformations, structured derivation steps, and
   the initial exact rational-polynomial domain.
 - `docs/design`: architecture contracts; `docs/research`: architecture and
@@ -60,6 +61,21 @@ selected variable. The CLI uses the explicit checked evaluation context,
 including structural limits and independent derivation checks. Expansion is
 step-limited; these checks are not hard memory, wall-clock or intermediate
 allocation bounds. See [Mathema's initial syntax](docs/design/mathema-surface.md).
+
+## Python bindings
+
+An experimental native Python package is available in `crates/python`, with
+immutable typed results, Python `fractions.Fraction`, and distinct syntax,
+unsupported-mathematics, resource-limit and verification exceptions. It is
+built from the Rust kernel, not a Python algebra rewrite.
+
+```sh
+python -m pip install ./crates/python
+python -c "import mathematishia as m; print(m.solve('2*x+4=10', 'x'))"
+```
+
+A dedicated GitHub Actions job builds a wheel, installs it in isolation and
+runs the Python smoke suite. Python 3.10+ is required.
 
 ## Checks
 

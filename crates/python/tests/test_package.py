@@ -1,0 +1,75 @@
+import unittest
+from dataclasses import FrozenInstanceError
+from fractions import Fraction
+
+import mathematishia as m
+
+
+class ExactMathTests(unittest.TestCase):
+    def test_module_imports_installed_extension(self):
+        self.assertTrue(hasattr(m, "solve"))
+        self.assertEqual(m.expression("1/2 + 1/3"), "5/6")
+        self.assertEqual(m.expression("340282366920938463463374607431768211456"),
+                         "340282366920938463463374607431768211456")
+
+    def test_linear_solver_and_verified_conditions(self):
+        result = m.solve("2*x+4=10", "x")
+        self.assertEqual(result.kind, "unique")
+        self.assertEqual(result.value, Fraction(3))
+        self.assertGreaterEqual(len(result.steps), 1)
+        self.assertEqual(result.steps[0].before.replace(" ", ""), "4+2*x=10".replace(" ", ""))
+        self.assertEqual(result.steps[-1].rule, "equation.divide_by_nonzero_coefficient")
+        self.assertEqual(result.steps[-1].verified_condition, "2 != 0")
+        with self.assertRaises(FrozenInstanceError):
+            result.value = Fraction(4)
+
+    def test_no_and_all_rational_solutions(self):
+        self.assertEqual(m.solve("x+1=x+2", "x").kind, "none")
+        self.assertEqual(m.solve("x=x", "x").kind, "all")
+
+    def test_partial_and_complete_expansion(self):
+        partial = m.expand("(x+1)*(y+2)", 0)
+        self.assertFalse(partial.complete)
+        self.assertEqual(len(partial.steps), 0)
+        result = m.expand("2*(x+3)", 4)
+        self.assertTrue(result.complete)
+        self.assertEqual(len(result.steps), 1)
+        self.assertEqual(result.steps[0].rule, "algebra.distribute_product_over_sum")
+
+    def test_exact_polynomial_arithmetic(self):
+        p = m.polynomial("(x+1)^2", "x")
+        self.assertEqual(p.coefficients, (Fraction(1), Fraction(2), Fraction(1)))
+        self.assertEqual(p.degree, 2)
+        self.assertEqual(m.polynomial("0", "x").degree, None)
+        self.assertEqual(m.evaluate("x^2+1/2", "x", "1/2"), Fraction(3, 4))
+        q, r = m.divide("x^2-1", "x-1", "x")
+        self.assertEqual(q.coefficients, (Fraction(1), Fraction(1)))
+        self.assertEqual(r.coefficients, ())
+        self.assertEqual(m.gcd("x^2-1", "x-1", "x").coefficients,
+                         (Fraction(-1), Fraction(1)))
+
+    def test_typed_errors(self):
+        with self.assertRaises(m.MathSyntaxError):
+            m.expression("x / 2")
+        with self.assertRaises(m.UnsupportedMathematicsError):
+            m.solve("x^2=4", "x")
+        with self.assertRaises(m.UnsupportedMathematicsError):
+            m.divide("x", "0", "x")
+        with self.assertRaises(m.UnsupportedMathematicsError):
+            m.polynomial("y+1", "x")
+        with self.assertRaises(m.ResourceLimitError):
+            m.expand("x*(y+1)", 13)
+
+    def test_untrusted_input_cannot_bypass_type_validation(self):
+        with self.assertRaises(m.MathSyntaxError):
+            m.solve("x+2", "x")
+        with self.assertRaises(m.MathSyntaxError):
+            m.solve("x=1", "2")
+        with self.assertRaises(m.UnsupportedMathematicsError):
+            m.evaluate("x+1", "x", "y")
+        with self.assertRaises(m.MathSyntaxError):
+            m.expression("5/0")
+
+
+if __name__ == "__main__":
+    unittest.main()

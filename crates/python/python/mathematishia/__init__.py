@@ -1,0 +1,102 @@
+"""Exact Mathematishia operations backed by Rust.
+
+This package exposes a narrow rational algebra domain, not a full CAS.
+Numeric results use fractions.Fraction, never floating-point approximation.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from fractions import Fraction
+from typing import Literal
+
+from . import _native
+from ._native import (MathSyntaxError, ResourceLimitError,
+                      UnsupportedMathematicsError, VerificationFailure)
+
+
+@dataclass(frozen=True)
+class Step:
+    before: str
+    after: str
+    rule: str
+    verified_condition: str | None = None
+
+
+@dataclass(frozen=True)
+class Expansion:
+    expression: str
+    complete: bool
+    steps: tuple[Step, ...]
+
+
+@dataclass(frozen=True)
+class LinearResult:
+    kind: Literal["unique", "none", "all"]
+    value: Fraction | None
+    steps: tuple[Step, ...]
+
+
+@dataclass(frozen=True)
+class Polynomial:
+    expression: str
+    coefficients: tuple[Fraction, ...]
+
+    @property
+    def degree(self) -> int | None:
+        """Degree is undefined for the zero polynomial."""
+        return len(self.coefficients) - 1 if self.coefficients else None
+
+
+def _poly(data: tuple[str, list[str]]) -> Polynomial:
+    expression_text, coefficients = data
+    return Polynomial(expression_text, tuple(Fraction(c) for c in coefficients))
+
+
+def expression(source: str) -> str:
+    """Parse and return the conservatively canonicalized expression display."""
+    return _native.expression(source)
+
+
+def expand(source: str, max_steps: int = 8) -> Expansion:
+    """Return bounded, independently verified distributive steps."""
+    text, complete, steps = _native.expand(source, max_steps)
+    return Expansion(text, complete, tuple(Step(*step) for step in steps))
+
+
+def solve(equation: str, variable: str) -> LinearResult:
+    """Solve an exact univariate rational-linear equation."""
+    kind, value, steps = _native.solve(equation, variable)
+    return LinearResult(
+        kind,
+        Fraction(value) if value is not None else None,
+        tuple(Step(*step) for step in steps),
+    )
+
+
+def polynomial(source: str, variable: str) -> Polynomial:
+    """Convert a supported expression into the exact Q[x] domain."""
+    return _poly(_native.polynomial(source, variable))
+
+
+def evaluate(source: str, variable: str, at: str) -> Fraction:
+    """Evaluate a rational polynomial at an exact rational input string."""
+    return Fraction(_native.evaluate(source, variable, at))
+
+
+def divide(dividend: str, divisor: str, variable: str) -> tuple[Polynomial, Polynomial]:
+    """Return exact quotient and remainder in Q[x]."""
+    quotient, remainder = _native.divide(dividend, divisor, variable)
+    return _poly(quotient), _poly(remainder)
+
+
+def gcd(left: str, right: str, variable: str) -> Polynomial:
+    """Return the monic greatest common divisor in Q[x]."""
+    return _poly(_native.gcd(left, right, variable))
+
+
+__all__ = [
+    "MathSyntaxError", "ResourceLimitError", "UnsupportedMathematicsError",
+    "VerificationFailure", "Step", "Expansion", "LinearResult", "Polynomial",
+    "expression", "expand", "solve", "polynomial", "evaluate", "divide", "gcd",
+]

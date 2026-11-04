@@ -35,7 +35,10 @@ These phases describe architectural goals, not dates.
    CLI can parse, expand, solve rational-linear equations, and perform exact
    polynomial operations. This is not yet a general Mathema language, REPL,
    general evaluator or user-facing application.
-6. Python bindings: expose established kernel behavior.
+6. Python bindings: experimental PyO3/maturin package exposes exact parsing,
+   distribution, rational-linear solving and polynomial operations using the
+   checked Rust kernel. Packaging and installed-wheel tests are in CI;
+   stable API, broader platforms and release automation are future work.
 7. Arbitrary-precision numerical work: distinguish approximation from
    certified numerical results.
 8. Calculus and additional domains: add capabilities as their semantics and

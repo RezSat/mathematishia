@@ -74,9 +74,7 @@ fn square_free_does_not_claim_to_factor_irreducible_polynomials() {
 #[test]
 fn published_square_free_reference_polynomial_matches_exact_multiplicities() {
     // SymPy's reference example: 2*(x+1)^2*(x+2)^3
-    let input = polynomial(&[
-        (16, 1), (56, 1), (76, 1), (50, 1), (16, 1), (2, 1),
-    ]);
+    let input = polynomial(&[(16, 1), (56, 1), (76, 1), (50, 1), (16, 1), (2, 1)]);
     let output = input.square_free_decomposition().unwrap();
     assert_eq!(output.unit(), &rational(2, 1));
     assert_eq!(output.factors().len(), 2);

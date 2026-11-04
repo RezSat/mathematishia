@@ -283,7 +283,11 @@ mod adversarial_tests {
     fn verifier_rejects_non_coprime_multiplicity_classes() {
         let first = p(&[1, 1]);
         let second = p(&[2, 1]);
-        let original = first.multiply(&first).multiply(&second).multiply(&second).multiply(&second);
+        let original = first
+            .multiply(&first)
+            .multiply(&second)
+            .multiply(&second)
+            .multiply(&second);
         let mut forged = original.square_free_decomposition().unwrap();
         forged.factors[1].polynomial = first;
         assert_eq!(
@@ -296,7 +300,11 @@ mod adversarial_tests {
     fn verifier_rejects_equal_multiplicity_labels() {
         let first = p(&[1, 1]);
         let second = p(&[2, 1]);
-        let original = first.multiply(&first).multiply(&second).multiply(&second).multiply(&second);
+        let original = first
+            .multiply(&first)
+            .multiply(&second)
+            .multiply(&second)
+            .multiply(&second);
         let mut forged = original.square_free_decomposition().unwrap();
         forged.factors[1].multiplicity = forged.factors[0].multiplicity;
         assert_eq!(

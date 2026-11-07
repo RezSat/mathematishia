@@ -175,10 +175,7 @@ fn metered_division_gcd_and_square_free_match_unmetered_exact_math_grid() {
                     ctx.divide(&left, &divisor).unwrap(),
                     left.divide_with_remainder(&divisor).unwrap()
                 );
-                assert_eq!(
-                    ctx.gcd(&left, &divisor).unwrap(),
-                    left.monic_gcd(&divisor)
-                );
+                assert_eq!(ctx.gcd(&left, &divisor).unwrap(), left.monic_gcd(&divisor));
                 if !left.is_zero() {
                     assert_eq!(
                         ctx.square_free_decomposition(&left).unwrap(),

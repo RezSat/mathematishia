@@ -1,8 +1,7 @@
 use mathema::{Expr, Integer, Rational, Symbol};
 use mathematishia_kernel::{
-    DerivativeRuleId, EvaluationContext, EvaluationError, Relation, ResourceLimitKind,
-    ResourceLimits, RationalPolynomial, SymbolicDifferentiationError,
-    verify_symbolic_derivative,
+    DerivativeRuleId, EvaluationContext, EvaluationError, RationalPolynomial, Relation,
+    ResourceLimitKind, ResourceLimits, SymbolicDifferentiationError, verify_symbolic_derivative,
 };
 
 fn symbol(name: &str) -> Symbol {
@@ -169,12 +168,9 @@ fn symbolic_derivative_agrees_with_independent_polynomial_engine_for_625_cases()
                     let result = ctx
                         .differentiate_expression(&expression, &variable)
                         .unwrap();
-                    let interpreted = RationalPolynomial::try_from_expr(
-                        result.derivative(),
-                        &variable,
-                        32,
-                    )
-                    .unwrap();
+                    let interpreted =
+                        RationalPolynomial::try_from_expr(result.derivative(), &variable, 32)
+                            .unwrap();
                     assert_eq!(
                         interpreted,
                         polynomial.differentiate(),

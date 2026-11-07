@@ -125,6 +125,7 @@ fn linear_solver_preflights_intermediate_rational_quotients() {
         max_intermediate_scalar_bits: 8,
         ..ResourceLimits::default()
     });
+    assert!(ctx.polynomial(equation.left(), &x()).is_ok());
     assert_eq!(
         ctx.solve_linear(&equation, &x()),
         Err(EvaluationError::Limit(

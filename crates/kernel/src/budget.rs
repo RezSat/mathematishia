@@ -119,6 +119,12 @@ impl WorkBudget {
         if a.numerator().is_zero() || b.numerator().is_zero() {
             return Ok(zero());
         }
+        if a.numerator().is_one() && a.denominator().is_one() {
+            return Ok(b.clone());
+        }
+        if b.numerator().is_one() && b.denominator().is_one() {
+            return Ok(a.clone());
+        }
         self.size(
             a.numerator()
                 .bit_len()
@@ -149,6 +155,9 @@ impl WorkBudget {
         }
         if a.numerator().is_zero() {
             return Ok(zero());
+        }
+        if b.numerator().is_one() && b.denominator().is_one() {
+            return Ok(a.clone());
         }
         self.size(
             a.numerator()

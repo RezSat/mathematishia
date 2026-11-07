@@ -10,12 +10,15 @@ use std::fmt;
 use mathema::{Equation, Expr, ExprView, Integer, Rational, Symbol};
 
 use crate::budget::WorkBudget;
+use crate::differentiate_expr::generate_symbolic_derivative;
 
 use crate::{
-    DerivationStep, DistributionResult, LinearSolution, LinearSolveResult,
+    DerivationStep, DerivativeVerificationError, DistributionResult, LinearSolution, LinearSolveResult,
     PolynomialConversionError, RationalPolynomial, SquareFreeDecomposition, SquareFreeError,
+    SymbolicDerivative, SymbolicDifferentiationError,
     SquareFreeVerificationError, VerificationError, ZeroPolynomialDivisor, distribute_first_once,
     expand_distributively, solve_linear_equation, verify_distribution, verify_linear_solution,
+    verify_symbolic_derivative,
 };
 
 /// Explicit, configurable limits. None are process-global.
@@ -30,6 +33,8 @@ pub struct ResourceLimits {
     pub max_work_units: u64,
     /// Conservative maximum bit length of every intermediate scalar integer.
     pub max_intermediate_scalar_bits: u64,
+    /// Explicit upper bound on positive powers differentiated symbolically.
+    pub max_symbolic_power: usize,
 }
 
 impl Default for ResourceLimits {
@@ -42,6 +47,7 @@ impl Default for ResourceLimits {
             max_distribution_steps: 12,
             max_work_units: 1_000_000,
             max_intermediate_scalar_bits: 16_384,
+            max_symbolic_power: 32,
         }
     }
 }
@@ -55,6 +61,7 @@ pub enum ResourceLimitKind {
     DistributionSteps,
     WorkUnits,
     IntermediateScalarBits,
+    SymbolicPower,
 }
 
 /// Typed errors distinguish invalid mathematical input from exhausted limits.
@@ -67,6 +74,8 @@ pub enum EvaluationError {
     SquareFree(SquareFreeError),
     SquareFreeVerification(SquareFreeVerificationError),
     Verification(VerificationError),
+    SymbolicDifferentiation(SymbolicDifferentiationError),
+    DerivativeVerification(DerivativeVerificationError),
 }
 
 impl fmt::Display for EvaluationError {
@@ -81,6 +90,10 @@ impl fmt::Display for EvaluationError {
                 write!(f, "square-free verification failed: {error}")
             }
             Self::Verification(error) => write!(f, "derivation verification failed: {error}"),
+            Self::SymbolicDifferentiation(error) => write!(f, "{error}"),
+            Self::DerivativeVerification(error) => {
+                write!(f, "derivative verification failed: {error}")
+            }
         }
     }
 }
@@ -102,6 +115,18 @@ impl From<crate::LinearSolveError> for EvaluationError {
 impl From<ZeroPolynomialDivisor> for EvaluationError {
     fn from(_: ZeroPolynomialDivisor) -> Self {
         Self::DivisionByZero
+    }
+}
+
+impl From<SymbolicDifferentiationError> for EvaluationError {
+    fn from(value: SymbolicDifferentiationError) -> Self {
+        Self::SymbolicDifferentiation(value)
+    }
+}
+
+impl From<DerivativeVerificationError> for EvaluationError {
+    fn from(value: DerivativeVerificationError) -> Self {
+        Self::DerivativeVerification(value)
     }
 }
 
@@ -323,6 +348,31 @@ impl EvaluationContext {
         self.check_polynomial(polynomial)?;
         let result = WorkBudget::new(self.limits).differentiate(polynomial)?;
         self.check_polynomial(&result)?;
+        Ok(result)
+    }
+
+    /// Computes and independently verifies a formal symbolic derivative.
+    ///
+    /// Supports constants, symbols, sums, products and positive integer
+    /// powers only. Zero/negative/non-integer powers are intentionally
+    /// rejected rather than silently ignoring domain restrictions.
+    pub fn differentiate_expression(
+        &self,
+        original: &Expr,
+        variable: &Symbol,
+    ) -> Result<SymbolicDerivative, EvaluationError> {
+        self.check_expression(original)?;
+        let mut meter = WorkBudget::new(self.limits);
+        let result = generate_symbolic_derivative(
+            original,
+            variable,
+            self.limits.max_symbolic_power,
+            &mut meter,
+            |derivative| self.check_expression(derivative),
+        )?;
+        meter.charge(expression_size(original).saturating_pow(2))?;
+        verify_symbolic_derivative(&result)?;
+        self.check_expression(result.derivative())?;
         Ok(result)
     }
 

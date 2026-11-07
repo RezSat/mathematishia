@@ -60,3 +60,23 @@ Chain verification checks the supplied source, intermediate continuity, result,
 solution classification and narrow completion semantics. An unrecognized or
 unsupported claim is rejected; this is not a general proof assistant, proof
 certificate format, or independent verification of arbitrary symbolic functions.
+
+## Verified symbolic derivative rules (Task 20)
+
+The checked `differentiate_expression(&Expr, &Symbol)` API implements a
+strictly limited exact formal calculus: integer/rational constants, selected
+symbols, independent parameter symbols, sums, products and positive integer
+powers. It records postorder `DifferentiationStep` values with stable
+`calculus.*` rule identifiers. `Relation::DerivativeOf` deliberately does
+**not** imply equality of the original expression and its derivative.
+
+The separate `verify_symbolic_derivative` walks the original expression and
+independently reconstructs every rule's expected derivative, validates the
+claimed relation, enforces complete step order and exact result equality.
+The checker does not delegate to the generation routine and does not compare
+floating-point samples. The context caps positive exponents at
+`max_symbolic_power` and meters traversal/work. Negative, zero, fractional
+and variable exponents are rejected explicitly: extending them requires
+mathematically defined domains, nonzero obligations and an assumption system.
+This does not constitute a general symbolic differentiation/rewrite engine,
+proof calculus, transcendental function library, or integration system.

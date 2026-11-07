@@ -8,6 +8,7 @@ use mathema::{Expr, ExprView, Symbol};
 
 mod budget;
 mod context;
+mod differentiate_expr;
 mod poly_convert;
 mod poly_division;
 mod polynomial;
@@ -16,6 +17,10 @@ mod square_free;
 mod verification;
 
 pub use context::{EvaluationContext, EvaluationError, ResourceLimitKind, ResourceLimits};
+pub use differentiate_expr::{
+    DerivativeRuleId, DerivativeVerificationError, DifferentiationStep,
+    SymbolicDerivative, SymbolicDifferentiationError, verify_symbolic_derivative,
+};
 pub use poly_convert::PolynomialConversionError;
 pub use poly_division::ZeroPolynomialDivisor;
 pub use polynomial::RationalPolynomial;
@@ -60,6 +65,8 @@ pub enum Relation {
     Equal,
     /// The equations have exactly the same solution set in the documented domain.
     Equivalent,
+    /// The result is a formal derivative of the input in the selected variable.
+    DerivativeOf,
 }
 
 /// A single structured transformation step with a typed mathematical justification.

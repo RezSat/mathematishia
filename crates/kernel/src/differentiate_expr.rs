@@ -164,10 +164,14 @@ fn produce(
             (DerivativeRuleId::Product, Expr::add(terms))
         }
         ExprView::Pow { base, exponent } => {
-            let power = positive_power(exponent)?;
-            if power > power_limit {
-                return Err(EvaluationError::Limit(ResourceLimitKind::SymbolicPower));
+            // Reject powers exceeding the budget *before* converting the
+            // arbitrary-precision exponent into machine-sized usize.
+            if let ExprView::Integer(value) = exponent.view() {
+                if value > &Integer::from(power_limit) {
+                    return Err(EvaluationError::Limit(ResourceLimitKind::SymbolicPower));
+                }
             }
+            let power = positive_power(exponent)?;
             let inner = produce(base, selected, power_limit, meter, steps, check)?;
             meter.charge(3)?;
             let reduced = if power == 1 {

@@ -128,6 +128,8 @@ class ExactMathTests(unittest.TestCase):
                 m.differentiate_expression(source, "x")
         with self.assertRaises(m.ResourceLimitError):
             m.differentiate_expression("x^33", "x")
+        with self.assertRaises(m.ResourceLimitError):
+            m.differentiate_expression("x^999999999999999999999999999999999999999", "x")
 
     def test_typed_errors(self):
         with self.assertRaises(m.MathSyntaxError):

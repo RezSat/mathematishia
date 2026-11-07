@@ -120,6 +120,18 @@ fn positive_power_limit_is_distinct_from_unsupported_domain() {
 }
 
 #[test]
+fn arbitrarily_large_positive_power_is_a_limit_not_an_unsupported_domain() {
+    let exponent: Integer = "999999999999999999999999999999999999999999999999"
+        .parse()
+        .unwrap();
+    let expr = Expr::pow(x(), Expr::from(exponent));
+    assert_eq!(
+        EvaluationContext::default().differentiate_expression(&expr, &symbol("x")),
+        Err(EvaluationError::Limit(ResourceLimitKind::SymbolicPower))
+    );
+}
+
+#[test]
 fn work_and_node_limits_are_enforced_without_partial_answers() {
     let expr = Expr::mul([x(), y()]);
     let no_work = EvaluationContext::new(ResourceLimits {

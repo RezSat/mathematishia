@@ -132,6 +132,14 @@ impl WorkBudget {
         Ok(output)
     }
 
+    pub(crate) fn quotient(
+        &mut self,
+        a: &Rational,
+        b: &Rational,
+    ) -> Result<Rational, EvaluationError> {
+        self.divide_scalar(a, b)
+    }
+
     fn divide_scalar(&mut self, a: &Rational, b: &Rational) -> Result<Rational, EvaluationError> {
         self.charge(1)?;
         self.scalar(a)?;

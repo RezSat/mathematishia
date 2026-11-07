@@ -113,6 +113,27 @@ fn high_degree_cancellation_cannot_bypass_preflight() {
 }
 
 #[test]
+fn linear_solver_preflights_intermediate_rational_quotients() {
+    let coefficient = Rational::new(Integer::from(200), Integer::from(199)).unwrap();
+    let variable = Expr::from(x());
+    let equation = Equation::new(
+        Expr::mul([Expr::from(coefficient.clone()), variable]),
+        Expr::from(coefficient),
+    );
+    let ctx = EvaluationContext::new(ResourceLimits {
+        max_scalar_bits: 64,
+        max_intermediate_scalar_bits: 8,
+        ..ResourceLimits::default()
+    });
+    assert_eq!(
+        ctx.solve_linear(&equation, &x()),
+        Err(EvaluationError::Limit(
+            ResourceLimitKind::IntermediateScalarBits
+        ))
+    );
+}
+
+#[test]
 fn expansion_and_solver_have_explicit_work_limits() {
     let variable = Expr::from(x());
     let input = Expr::mul([variable.clone(), Expr::add([variable.clone(), 1.into()])]);

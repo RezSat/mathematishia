@@ -293,11 +293,7 @@ impl EvaluationContext {
             // The solver's unique rational root must be admitted too, before
             // the unmetered legacy solver materializes its trace.
             let constant = residual.coefficients().first().unwrap_or(&zero);
-            let root = Rational::new(
-                (-constant).numerator() * coefficient.denominator(),
-                constant.denominator() * coefficient.numerator(),
-            )
-            .expect("nonzero coefficient");
+            let root = work.quotient(&(-constant), coefficient)?;
             self.check_rational(&root)?;
         }
         let count =

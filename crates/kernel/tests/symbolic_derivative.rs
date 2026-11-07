@@ -1,7 +1,8 @@
 use mathema::{Expr, Integer, Rational, Symbol};
 use mathematishia_kernel::{
     DerivativeRuleId, EvaluationContext, EvaluationError, Relation, ResourceLimitKind,
-    ResourceLimits, SymbolicDifferentiationError, verify_symbolic_derivative,
+    ResourceLimits, RationalPolynomial, SymbolicDifferentiationError,
+    verify_symbolic_derivative,
 };
 
 fn symbol(name: &str) -> Symbol {
@@ -147,4 +148,43 @@ fn power_rule_and_product_rule_have_stable_rule_ids() {
         "calculus.positive_integer_power"
     );
     assert_eq!(DerivativeRuleId::Product.stable_id(), "calculus.product");
+}
+
+#[test]
+fn symbolic_derivative_agrees_with_independent_polynomial_engine_for_625_cases() {
+    let variable = symbol("x");
+    let ctx = EvaluationContext::default();
+    let mut checked = 0;
+    for cubic in -2..=2 {
+        for quadratic in -2..=2 {
+            for linear in -2..=2 {
+                for constant in -2..=2 {
+                    let polynomial = RationalPolynomial::new(
+                        [constant, linear, quadratic, cubic]
+                            .into_iter()
+                            .map(|value| Rational::from(Integer::from(value)))
+                            .collect(),
+                    );
+                    let expression = polynomial.to_expr(&variable);
+                    let result = ctx
+                        .differentiate_expression(&expression, &variable)
+                        .unwrap();
+                    let interpreted = RationalPolynomial::try_from_expr(
+                        result.derivative(),
+                        &variable,
+                        32,
+                    )
+                    .unwrap();
+                    assert_eq!(
+                        interpreted,
+                        polynomial.differentiate(),
+                        "coefficients: {constant}, {linear}, {quadratic}, {cubic}"
+                    );
+                    assert_eq!(verify_symbolic_derivative(&result), Ok(()));
+                    checked += 1;
+                }
+            }
+        }
+    }
+    assert_eq!(checked, 625);
 }

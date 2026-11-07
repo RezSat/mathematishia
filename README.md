@@ -65,10 +65,14 @@ cargo run -p mathematishia-cli -- diffexpr 'x*y+(x+1)^3' x
 ```
 
 The solver currently supports only exact rational-linear equations in one
-selected variable. The CLI uses the explicit checked evaluation context,
-including structural limits and independent derivation checks. Expansion is
-step-limited; these checks are not hard memory, wall-clock or intermediate
-allocation bounds. See [Mathema's initial syntax](docs/design/mathema-surface.md).
+selected variable. The CLI uses the checked evaluation context, including
+per-call operation budgets and conservative intermediate scalar-bit checks.
+The `diffexpr` command supports constants, independent symbols, sums,
+products and positive integer powers (default upper bound 32), and returns
+independently verified derivative steps with `derivative_of` relations.
+Zero, negative, fractional and symbolic exponents are rejected rather than
+assigned implicit domain assumptions. These checks are not hard process memory
+or wall-clock isolation. See [Mathema's initial syntax](docs/design/mathema-surface.md).
 
 ## Python bindings
 

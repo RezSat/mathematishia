@@ -25,3 +25,10 @@ print(answer.steps)
 This is **not yet a general-purpose CAS or stable public Python API**. The
 supported Mathema grammar is deliberately small, all computations use explicit
 checked kernel contexts, and the limits are not hard memory/CPU bounds.
+
+Supported symbolic derivatives are available via
+`m.differentiate_expression("x*y+(x+1)^3", "x")`. The immutable result includes
+its derivative and independently checked rule steps. It is deliberately not
+a general transcendental-function calculus; negative, zero, fractional and
+symbolic exponents are unsupported. Work metering is deterministic and
+context-local, not a hard memory/time guarantee.

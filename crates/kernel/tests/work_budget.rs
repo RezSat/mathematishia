@@ -158,3 +158,36 @@ fn repeated_checked_squarefree_results_are_exact_and_equal() {
     assert_eq!(a, b);
     assert_eq!(a.unit(), &q(-1));
 }
+
+#[test]
+fn metered_division_gcd_and_square_free_match_unmetered_exact_math_grid() {
+    let ctx = EvaluationContext::default();
+    let mut checked = 0;
+    for a in -2..=2 {
+        for b in -2..=2 {
+            for c in -2..=2 {
+                let left = poly(&[a, b, c]);
+                let divisor = poly(&[c, b]);
+                if divisor.is_zero() {
+                    continue;
+                }
+                assert_eq!(
+                    ctx.divide(&left, &divisor).unwrap(),
+                    left.divide_with_remainder(&divisor).unwrap()
+                );
+                assert_eq!(
+                    ctx.gcd(&left, &divisor).unwrap(),
+                    left.monic_gcd(&divisor)
+                );
+                if !left.is_zero() {
+                    assert_eq!(
+                        ctx.square_free_decomposition(&left).unwrap(),
+                        left.square_free_decomposition().unwrap()
+                    );
+                }
+                checked += 1;
+            }
+        }
+    }
+    assert_eq!(checked, 120);
+}

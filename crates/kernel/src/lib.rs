@@ -18,8 +18,8 @@ mod verification;
 
 pub use context::{EvaluationContext, EvaluationError, ResourceLimitKind, ResourceLimits};
 pub use differentiate_expr::{
-    DerivativeRuleId, DerivativeVerificationError, DifferentiationStep,
-    SymbolicDerivative, SymbolicDifferentiationError, verify_symbolic_derivative,
+    DerivativeRuleId, DerivativeVerificationError, DifferentiationStep, SymbolicDerivative,
+    SymbolicDifferentiationError, verify_symbolic_derivative,
 };
 pub use poly_convert::PolynomialConversionError;
 pub use poly_division::ZeroPolynomialDivisor;

@@ -42,7 +42,10 @@ fallible bounded expression-to-polynomial conversion and conversion back to
 semantic expressions are available. Polynomial long division and canonical
 monic GCD are exact, with division-by-zero rejected. Exact formal polynomial
 differentiation and verified square-free multiplicity decomposition are also
-available; full irreducible factorization and arbitrary symbolic calculus are not yet.
+available; full irreducible factorization is not yet. A deliberately scoped
+symbolic derivative supports constants, symbols, sums, products and positive
+integer powers with independently verified typed rules. General function
+calculus, assumptions and symbolic integration remain future work.
 
 ## First CLI commands
 
@@ -58,6 +61,7 @@ cargo run -p mathematishia-cli -- divide 'x^2-1' 'x-1' x
 cargo run -p mathematishia-cli -- gcd 'x^2-1' 'x-1' x
 cargo run -p mathematishia-cli -- diff 'x^3+1/2*x' x
 cargo run -p mathematishia-cli -- sqfree '2*(x-1)^2*(x+2)^3' x
+cargo run -p mathematishia-cli -- diffexpr 'x*y+(x+1)^3' x
 ```
 
 The solver currently supports only exact rational-linear equations in one

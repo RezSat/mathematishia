@@ -131,9 +131,7 @@ fn produce(
 ) -> Result<Expr, EvaluationError> {
     meter.charge(1)?;
     let (rule, derivative) = match original.view() {
-        ExprView::Integer(_) | ExprView::Rational(_) => {
-            (DerivativeRuleId::Constant, Expr::from(0))
-        }
+        ExprView::Integer(_) | ExprView::Rational(_) => (DerivativeRuleId::Constant, Expr::from(0)),
         ExprView::Symbol(name) if name == selected => {
             (DerivativeRuleId::SelectedSymbol, Expr::from(1))
         }
@@ -260,9 +258,7 @@ fn verify_node<'a>(
         return Err(E::DepthLimit);
     }
     let (rule, expected) = match expr.view() {
-        ExprView::Integer(_) | ExprView::Rational(_) => {
-            (DerivativeRuleId::Constant, Expr::from(0))
-        }
+        ExprView::Integer(_) | ExprView::Rational(_) => (DerivativeRuleId::Constant, Expr::from(0)),
         ExprView::Symbol(name) if name == variable => {
             (DerivativeRuleId::SelectedSymbol, Expr::from(1))
         }

@@ -108,6 +108,27 @@ class ExactMathTests(unittest.TestCase):
             ],
         )
 
+    def test_exact_symbolic_derivative_with_checked_rules(self):
+        result = m.differentiate_expression("x*y+x^3", "x")
+        self.assertEqual(result.original, "x*y+x^3")
+        self.assertEqual(result.variable, "x")
+        self.assertIn("y", result.derivative)
+        self.assertIn("3", result.derivative)
+        self.assertTrue(result.steps)
+        self.assertTrue(all(s.relation == "derivative_of" for s in result.steps))
+        self.assertTrue(all(s.rule.startswith("calculus.") for s in result.steps))
+        self.assertEqual(m.differentiate_expression("x*y", "y").derivative, "x")
+        self.assertEqual(m.differentiate_expression("x^2", "x").derivative, "2 * x")
+        with self.assertRaises(FrozenInstanceError):
+            result.derivative = "42"
+
+    def test_symbolic_derivative_domains_are_explicit(self):
+        for source in ["x^-1", "x^0", "x^(1/2)", "x^y"]:
+            with self.assertRaises(m.UnsupportedMathematicsError):
+                m.differentiate_expression(source, "x")
+        with self.assertRaises(m.ResourceLimitError):
+            m.differentiate_expression("x^33", "x")
+
     def test_typed_errors(self):
         with self.assertRaises(m.MathSyntaxError):
             m.expression("x / 2")

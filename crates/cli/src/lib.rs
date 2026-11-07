@@ -23,6 +23,7 @@ Usage:
   mathematishia gcd <LEFT> <RIGHT> <VARIABLE>
   mathematishia diff <POLYNOMIAL> <VARIABLE>
   mathematishia sqfree <POLYNOMIAL> <VARIABLE>
+  mathematishia diffexpr <EXPRESSION> <VARIABLE>
   mathematishia --help
 
 Examples:
@@ -35,6 +36,7 @@ Examples:
   mathematishia gcd 'x^2-1' 'x-1' x
   mathematishia diff 'x^3+1/2*x' x
   mathematishia sqfree '2*(x-1)^2*(x+2)^3' x
+  mathematishia diffexpr 'x*y+(x+1)^3' x
 
 Syntax: integers, exact fraction literals n/d, identifiers, + - * ^ ( ) =.
 Use explicit multiplication. '/' only separates literal integers, not expressions.
@@ -245,6 +247,30 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
                     "\nfactor (multiplicity {}): {}",
                     entry.multiplicity(),
                     entry.polynomial().to_expr(&symbol)
+                )
+                .expect("writing to a String is infallible");
+            }
+            Ok(out)
+        }
+        ["diffexpr", input, name] => {
+            let original = expression(input)?;
+            let symbol = variable(name)?;
+            let result = EvaluationContext::default()
+                .differentiate_expression(&original, &symbol)
+                .map_err(|error| invalid(error.to_string()))?;
+            let mut out = format!(
+                "derivative: {}\nsteps: {}",
+                result.derivative(),
+                result.steps().len()
+            );
+            for (index, step) in result.steps().iter().enumerate() {
+                write!(
+                    &mut out,
+                    "\n{}. d/d{symbol}({}) = {} [{}; derivative_of]",
+                    index + 1,
+                    step.before(),
+                    step.derivative(),
+                    step.rule().stable_id()
                 )
                 .expect("writing to a String is infallible");
             }

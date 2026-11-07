@@ -69,3 +69,31 @@ fn actual_binary_rejects_zero_square_free_decomposition() {
             .contains("undefined for zero")
     );
 }
+
+#[test]
+fn actual_binary_exposes_verified_symbolic_derivatives() {
+    let output = Command::new(env!("CARGO_BIN_EXE_mathematishia"))
+        .args(["diffexpr", "x*y+x^3", "x"])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    assert!(output.stderr.is_empty());
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    assert!(stdout.starts_with("derivative: "));
+    assert!(stdout.contains("calculus.product; derivative_of"));
+}
+
+#[test]
+fn actual_binary_rejects_undefined_negative_powers() {
+    let output = Command::new(env!("CARGO_BIN_EXE_mathematishia"))
+        .args(["diffexpr", "x^-1", "x"])
+        .output()
+        .unwrap();
+    assert!(!output.status.success());
+    assert!(output.stdout.is_empty());
+    assert!(
+        String::from_utf8(output.stderr)
+            .unwrap()
+            .contains("positive integer exponents")
+    );
+}

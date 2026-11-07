@@ -67,8 +67,12 @@ fn differentiation_preserves_input_and_is_deterministic() {
     ]);
     let saved = original.clone();
     let ctx = EvaluationContext::default();
-    let a = ctx.differentiate_expression(&original, &symbol("x")).unwrap();
-    let b = ctx.differentiate_expression(&original, &symbol("x")).unwrap();
+    let a = ctx
+        .differentiate_expression(&original, &symbol("x"))
+        .unwrap();
+    let b = ctx
+        .differentiate_expression(&original, &symbol("x"))
+        .unwrap();
     assert_eq!(a, b);
     assert_eq!(original, saved);
     assert_eq!(verify_symbolic_derivative(&a), Ok(()));
@@ -109,9 +113,10 @@ fn positive_power_limit_is_distinct_from_unsupported_domain() {
         ctx.differentiate_expression(&cubic, &symbol("x")),
         Err(EvaluationError::Limit(ResourceLimitKind::SymbolicPower))
     );
-    assert!(ctx
-        .differentiate_expression(&Expr::pow(x(), 2.into()), &symbol("x"))
-        .is_ok());
+    assert!(
+        ctx.differentiate_expression(&Expr::pow(x(), 2.into()), &symbol("x"))
+            .is_ok()
+    );
 }
 
 #[test]

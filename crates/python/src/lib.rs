@@ -27,9 +27,13 @@ fn map_evaluation_error(error: EvaluationError) -> PyErr {
         EvaluationError::SquareFreeVerification(reason) => {
             VerificationFailure::new_err(reason.to_string())
         }
+        EvaluationError::DerivativeVerification(reason) => {
+            VerificationFailure::new_err(reason.to_string())
+        }
         EvaluationError::Polynomial(_)
         | EvaluationError::Linear(_)
         | EvaluationError::SquareFree(_)
+        | EvaluationError::SymbolicDifferentiation(_)
         | EvaluationError::DivisionByZero => {
             UnsupportedMathematicsError::new_err(error.to_string())
         }
@@ -237,6 +241,31 @@ fn py_square_free(source: &str, variable: &str) -> PyResult<PySquareFreeResult> 
     Ok((result.unit().to_string(), factors))
 }
 
+type PySymbolicStep = (String, String, String, String);
+type PySymbolicDerivative = (String, Vec<PySymbolicStep>);
+
+#[pyfunction(name = "differentiate_expression")]
+fn py_differentiate_expression(source: &str, variable: &str) -> PyResult<PySymbolicDerivative> {
+    let selected = selected_variable(variable)?;
+    let original = checked_expression(source)?;
+    let result = EvaluationContext::default()
+        .differentiate_expression(&original, &selected)
+        .map_err(map_evaluation_error)?;
+    let steps = result
+        .steps()
+        .iter()
+        .map(|step| {
+            (
+                step.before().to_string(),
+                step.derivative().to_string(),
+                step.rule().stable_id().to_owned(),
+                "derivative_of".to_owned(),
+            )
+        })
+        .collect();
+    Ok((result.derivative().to_string(), steps))
+}
+
 #[pymodule]
 fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(py_expression, m)?)?;
@@ -248,6 +277,7 @@ fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(py_gcd, m)?)?;
     m.add_function(wrap_pyfunction!(py_differentiate, m)?)?;
     m.add_function(wrap_pyfunction!(py_square_free, m)?)?;
+    m.add_function(wrap_pyfunction!(py_differentiate_expression, m)?)?;
     m.add("MathSyntaxError", m.py().get_type::<MathSyntaxError>())?;
     m.add(
         "UnsupportedMathematicsError",

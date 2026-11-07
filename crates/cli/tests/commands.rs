@@ -156,3 +156,27 @@ fn square_free_cli_rejects_zero_and_unsupported_domains() {
         assert!(run(&["sqfree", expr, "x"]).is_err());
     }
 }
+
+#[test]
+fn exact_symbolic_derivative_cli_shows_verified_rule_ids() {
+    let result = run(&["diffexpr", "x*y+x^3", "x"]).unwrap();
+    assert!(result.starts_with("derivative: "));
+    assert!(result.contains("steps: "));
+    assert!(result.contains("[calculus.product; derivative_of]"));
+    assert!(result.contains("[calculus.positive_integer_power; derivative_of]"));
+    assert_eq!(
+        run(&["diffexpr", "x*y", "y"]).unwrap().lines().next(),
+        Some("derivative: x")
+    );
+    assert_eq!(
+        run(&["diffexpr", "x^2", "x"]).unwrap().lines().next(),
+        Some("derivative: 2 * x")
+    );
+}
+
+#[test]
+fn symbolic_derivative_cli_rejects_unsupported_exponents() {
+    for expression in ["x^-1", "x^0", "x^(1/2)", "x^y", "x^33"] {
+        assert!(run(&["diffexpr", expression, "x"]).is_err());
+    }
+}

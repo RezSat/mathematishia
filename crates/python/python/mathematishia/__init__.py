@@ -49,6 +49,22 @@ class Polynomial:
 
 
 @dataclass(frozen=True)
+class SymbolicDifferentiationStep:
+    before: str
+    derivative: str
+    rule: str
+    relation: Literal["derivative_of"]
+
+
+@dataclass(frozen=True)
+class SymbolicDerivative:
+    original: str
+    variable: str
+    derivative: str
+    steps: tuple[SymbolicDifferentiationStep, ...]
+
+
+@dataclass(frozen=True)
 class SquareFreeFactor:
     polynomial: Polynomial
     multiplicity: int
@@ -96,6 +112,21 @@ def differentiate(source: str, variable: str) -> Polynomial:
     """Return the formal derivative of a supported exact rational polynomial."""
     return _poly(_native.differentiate(source, variable))
 
+def differentiate_expression(source: str, variable: str) -> SymbolicDerivative:
+    """Differentiate supported symbolic expressions with verified rule steps.
+
+    Zero, negative, fractional and symbolic powers are rejected rather than
+    assigning undocumented domain assumptions.
+    """
+    derivative, steps = _native.differentiate_expression(source, variable)
+    return SymbolicDerivative(
+        source,
+        variable,
+        derivative,
+        tuple(SymbolicDifferentiationStep(*step) for step in steps),
+    )
+
+
 def square_free(source: str, variable: str) -> SquareFreeDecomposition:
     """Separate exact polynomial multiplicity classes, not irreducible factors."""
     unit, factors = _native.square_free(source, variable)
@@ -126,6 +157,7 @@ __all__ = [
     "MathSyntaxError", "ResourceLimitError", "UnsupportedMathematicsError",
     "VerificationFailure", "Step", "Expansion", "LinearResult", "Polynomial",
     "SquareFreeFactor", "SquareFreeDecomposition",
-    "expression", "expand", "solve", "polynomial", "differentiate", "square_free",
+    "SymbolicDifferentiationStep", "SymbolicDerivative",
+    "expression", "expand", "solve", "polynomial", "differentiate", "differentiate_expression", "square_free",
     "evaluate", "divide", "gcd",
 ]

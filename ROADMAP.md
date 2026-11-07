@@ -46,5 +46,8 @@ These phases describe architectural goals, not dates.
    releases remain future work.
 7. Arbitrary-precision numerical work: distinguish approximation from
    certified numerical results.
-8. Calculus and additional domains: add capabilities as their semantics and
-   representations are designed.
+8. Calculus and additional domains: exact rational-polynomial differentiation
+   is implemented. A first independently verified symbolic derivative supports
+   sums, products and positive integer powers over immutable Expr values.
+   Negative/fractional powers, general functions, domains/assumptions and
+   integration remain separate planned milestones.

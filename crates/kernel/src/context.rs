@@ -9,6 +9,8 @@ use std::fmt;
 
 use mathema::{Equation, Expr, ExprView, Integer, Rational, Symbol};
 
+use crate::budget::WorkBudget;
+
 use crate::{
     DerivationStep, DistributionResult, LinearSolution, LinearSolveResult,
     PolynomialConversionError, RationalPolynomial, SquareFreeDecomposition, SquareFreeError,
@@ -25,6 +27,10 @@ pub struct ResourceLimits {
     pub max_scalar_bits: u64,
     pub max_polynomial_degree: usize,
     pub max_distribution_steps: usize,
+    /// Maximum deterministic scalar-operation/node-visit units per checked call.
+    pub max_work_units: u64,
+    /// Conservative maximum bit length of every intermediate scalar integer.
+    pub max_intermediate_scalar_bits: u64,
 }
 
 impl Default for ResourceLimits {
@@ -35,6 +41,8 @@ impl Default for ResourceLimits {
             max_scalar_bits: 4_096,
             max_polynomial_degree: 32,
             max_distribution_steps: 12,
+            max_work_units: 1_000_000,
+            max_intermediate_scalar_bits: 16_384,
         }
     }
 }
@@ -46,6 +54,8 @@ pub enum ResourceLimitKind {
     ScalarBits,
     PolynomialDegree,
     DistributionSteps,
+    WorkUnits,
+    IntermediateScalarBits,
 }
 
 /// Typed errors distinguish invalid mathematical input from exhausted limits.
@@ -122,6 +132,24 @@ impl From<SquareFreeVerificationError> for EvaluationError {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct EvaluationContext {
     limits: ResourceLimits,
+}
+
+/// Counts occurrence nodes without recursion; the context checks depth first.
+fn expression_size(expr: &Expr) -> u64 {
+    let mut count = 0u64;
+    let mut stack = vec![expr];
+    while let Some(current) = stack.pop() {
+        count = count.saturating_add(1);
+        match current.view() {
+            ExprView::Add(children) | ExprView::Mul(children) => stack.extend(children.iter()),
+            ExprView::Pow { base, exponent } => {
+                stack.push(base);
+                stack.push(exponent);
+            }
+            ExprView::Integer(_) | ExprView::Rational(_) | ExprView::Symbol(_) => {}
+        }
+    }
+    count
 }
 
 impl EvaluationContext {
@@ -209,8 +237,8 @@ impl EvaluationContext {
         variable: &Symbol,
     ) -> Result<RationalPolynomial, EvaluationError> {
         self.check_expression(expr)?;
-        let value =
-            RationalPolynomial::try_from_expr(expr, variable, self.limits.max_polynomial_degree)?;
+        let mut work = WorkBudget::new(self.limits);
+        let value = work.convert(expr, variable)?;
         self.check_polynomial(&value)?;
         Ok(value)
     }
@@ -219,9 +247,14 @@ impl EvaluationContext {
     /// expression and verifying the resulting derivation independently.
     pub fn expand(&self, original: &Expr) -> Result<DistributionResult, EvaluationError> {
         self.check_expression(original)?;
+        let mut work = WorkBudget::new(self.limits);
         let mut current = original.clone();
         let mut steps: Vec<DerivationStep> = Vec::new();
         for _ in 0..self.limits.max_distribution_steps {
+            // Budget a conservative cubic upper bound for the traversal and
+            // independent candidate enumeration before constructing a step.
+            let count = expression_size(&current);
+            work.charge(count.saturating_pow(3))?;
             let Some(step) = distribute_first_once(&current) else {
                 break;
             };
@@ -229,6 +262,8 @@ impl EvaluationContext {
             current = step.after().clone();
             steps.push(step);
         }
+        let count = expression_size(&current);
+        work.charge(count.saturating_pow(3))?;
         let complete = expand_distributively(&current, 0).is_complete();
         let result = DistributionResult::from_parts(current, steps, complete);
         verify_distribution(original, &result)?;
@@ -244,8 +279,29 @@ impl EvaluationContext {
         self.check_equation(equation)?;
         // Enforce this context's degree and coefficient policy on *each*
         // input side, even if high-degree terms cancel in the residual.
-        self.polynomial(equation.left(), variable)?;
-        self.polynomial(equation.right(), variable)?;
+        let mut work = WorkBudget::new(self.limits);
+        let left = work.convert(equation.left(), variable)?;
+        let right = work.convert(equation.right(), variable)?;
+        let residual = work.subtract(&left, &right)?;
+        if residual.degree().is_some_and(|degree| degree > 1) {
+            return Err(EvaluationError::Linear(crate::LinearSolveError::NonlinearEquation));
+        }
+        let zero = Rational::from(Integer::zero());
+        let coefficient = residual.coefficients().get(1).unwrap_or(&zero);
+        if !coefficient.numerator().is_zero() {
+            // The solver's unique rational root must be admitted too, before
+            // the unmetered legacy solver materializes its trace.
+            let constant = residual.coefficients().first().unwrap_or(&zero);
+            let root = Rational::new(
+                (-constant).numerator() * coefficient.denominator(),
+                constant.denominator() * coefficient.numerator(),
+            )
+            .expect("nonzero coefficient");
+            self.check_rational(&root)?;
+        }
+        let count = expression_size(equation.left())
+            .saturating_add(expression_size(equation.right()));
+        work.charge(count.saturating_pow(3).saturating_mul(8))?;
         let result = solve_linear_equation(equation, variable)?;
         self.check_polynomial(result.residual())?;
         for step in result.steps() {
@@ -268,7 +324,7 @@ impl EvaluationContext {
         polynomial: &RationalPolynomial,
     ) -> Result<RationalPolynomial, EvaluationError> {
         self.check_polynomial(polynomial)?;
-        let result = polynomial.differentiate();
+        let result = WorkBudget::new(self.limits).differentiate(polynomial)?;
         self.check_polynomial(&result)?;
         Ok(result)
     }
@@ -283,12 +339,13 @@ impl EvaluationContext {
         polynomial: &RationalPolynomial,
     ) -> Result<SquareFreeDecomposition, EvaluationError> {
         self.check_polynomial(polynomial)?;
-        let result = polynomial.square_free_decomposition()?;
+        let mut work = WorkBudget::new(self.limits);
+        let result = work.square_free(polynomial)?;
         self.check_rational(result.unit())?;
         for factor in result.factors() {
             self.check_polynomial(factor.polynomial())?;
         }
-        verify_square_free_decomposition(polynomial, &result)?;
+        work.verify_square_free(polynomial, &result)?;
         Ok(result)
     }
 
@@ -299,7 +356,7 @@ impl EvaluationContext {
     ) -> Result<Rational, EvaluationError> {
         self.check_polynomial(polynomial)?;
         self.check_rational(at)?;
-        let result = polynomial.evaluate(at);
+        let result = WorkBudget::new(self.limits).evaluate(polynomial, at)?;
         self.check_rational(&result)?;
         Ok(result)
     }
@@ -311,7 +368,7 @@ impl EvaluationContext {
     ) -> Result<(RationalPolynomial, RationalPolynomial), EvaluationError> {
         self.check_polynomial(dividend)?;
         self.check_polynomial(divisor)?;
-        let (q, r) = dividend.divide_with_remainder(divisor)?;
+        let (q, r) = WorkBudget::new(self.limits).divide(dividend, divisor)?;
         self.check_polynomial(&q)?;
         self.check_polynomial(&r)?;
         Ok((q, r))
@@ -324,7 +381,7 @@ impl EvaluationContext {
     ) -> Result<RationalPolynomial, EvaluationError> {
         self.check_polynomial(left)?;
         self.check_polynomial(right)?;
-        let result = left.monic_gcd(right);
+        let result = WorkBudget::new(self.limits).gcd(left, right)?;
         self.check_polynomial(&result)?;
         Ok(result)
     }

@@ -6,6 +6,7 @@
 
 use mathema::{Expr, ExprView, Symbol};
 
+mod budget;
 mod context;
 mod poly_convert;
 mod poly_division;

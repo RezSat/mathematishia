@@ -45,6 +45,10 @@ impl SquareFreeFactor {
     pub const fn multiplicity(&self) -> usize {
         self.multiplicity
     }
+
+    pub(crate) fn from_parts(polynomial: RationalPolynomial, multiplicity: usize) -> Self {
+        Self { polynomial, multiplicity }
+    }
 }
 
 /// Exact decomposition of a nonzero polynomial as unit * product(factor^m).
@@ -65,6 +69,10 @@ impl SquareFreeDecomposition {
 
     pub fn factors(&self) -> &[SquareFreeFactor] {
         &self.factors
+    }
+
+    pub(crate) fn from_parts(unit: Rational, factors: Vec<SquareFreeFactor>) -> Self {
+        Self { unit, factors }
     }
 }
 

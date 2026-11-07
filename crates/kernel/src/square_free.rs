@@ -47,7 +47,10 @@ impl SquareFreeFactor {
     }
 
     pub(crate) fn from_parts(polynomial: RationalPolynomial, multiplicity: usize) -> Self {
-        Self { polynomial, multiplicity }
+        Self {
+            polynomial,
+            multiplicity,
+        }
     }
 }
 

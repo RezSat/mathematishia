@@ -63,10 +63,7 @@ impl WorkBudget {
     }
 
     fn scalar(&self, value: &Rational) -> Result<(), EvaluationError> {
-        self.size(
-            value.numerator().bit_len(),
-            value.denominator().bit_len(),
-        )
+        self.size(value.numerator().bit_len(), value.denominator().bit_len())
     }
 
     fn polynomial_shape(&self, polynomial: &RationalPolynomial) -> Result<(), EvaluationError> {
@@ -92,10 +89,19 @@ impl WorkBudget {
         if b.numerator().is_zero() {
             return Ok(a.clone());
         }
-        let first = a.numerator().bit_len().saturating_add(b.denominator().bit_len());
-        let second = b.numerator().bit_len().saturating_add(a.denominator().bit_len());
+        let first = a
+            .numerator()
+            .bit_len()
+            .saturating_add(b.denominator().bit_len());
+        let second = b
+            .numerator()
+            .bit_len()
+            .saturating_add(a.denominator().bit_len());
         let numerator = first.max(second).saturating_add(1);
-        let denominator = a.denominator().bit_len().saturating_add(b.denominator().bit_len());
+        let denominator = a
+            .denominator()
+            .bit_len()
+            .saturating_add(b.denominator().bit_len());
         self.size(numerator, denominator)?;
         let output = a + b;
         self.scalar(&output)?;
@@ -114,8 +120,12 @@ impl WorkBudget {
             return Ok(zero());
         }
         self.size(
-            a.numerator().bit_len().saturating_add(b.numerator().bit_len()),
-            a.denominator().bit_len().saturating_add(b.denominator().bit_len()),
+            a.numerator()
+                .bit_len()
+                .saturating_add(b.numerator().bit_len()),
+            a.denominator()
+                .bit_len()
+                .saturating_add(b.denominator().bit_len()),
         )?;
         let output = a * b;
         self.scalar(&output)?;
@@ -133,8 +143,12 @@ impl WorkBudget {
             return Ok(zero());
         }
         self.size(
-            a.numerator().bit_len().saturating_add(b.denominator().bit_len()),
-            a.denominator().bit_len().saturating_add(b.numerator().bit_len()),
+            a.numerator()
+                .bit_len()
+                .saturating_add(b.denominator().bit_len()),
+            a.denominator()
+                .bit_len()
+                .saturating_add(b.numerator().bit_len()),
         )?;
         let result = Rational::new(
             a.numerator() * b.denominator(),
@@ -153,8 +167,9 @@ impl WorkBudget {
         self.polynomial_shape(a)?;
         self.polynomial_shape(b)?;
         let zero = zero();
-        let mut coefficients = Vec::with_capacity(a.coefficients().len().max(b.coefficients().len()));
-        for index in 0..coefficients.capacity() {
+        let capacity = a.coefficients().len().max(b.coefficients().len());
+        let mut coefficients = Vec::with_capacity(capacity);
+        for index in 0..capacity {
             let left = a.coefficients().get(index).unwrap_or(&zero);
             let right = b.coefficients().get(index).unwrap_or(&zero);
             coefficients.push(self.add_scalar(left, right)?);
@@ -290,7 +305,9 @@ impl WorkBudget {
     ) -> Result<RationalPolynomial, EvaluationError> {
         let (quotient, remainder) = self.divide(a, b)?;
         if !remainder.is_zero() {
-            return Err(EvaluationError::SquareFree(SquareFreeError::NonExactDivision));
+            return Err(EvaluationError::SquareFree(
+                SquareFreeError::NonExactDivision,
+            ));
         }
         Ok(quotient)
     }
@@ -396,7 +413,8 @@ impl WorkBudget {
             if degree > original.degree().unwrap_or(0) {
                 return Err(V::WrongDegree.into());
             }
-            if self.gcd(factor, &self.differentiate(factor)?)? != unity {
+            let derivative = self.differentiate(factor)?;
+            if self.gcd(factor, &derivative)? != unity {
                 return Err(V::NotSquareFree.into());
             }
         }

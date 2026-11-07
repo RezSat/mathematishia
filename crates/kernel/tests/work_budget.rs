@@ -24,7 +24,10 @@ fn default_budgets_are_instance_local_and_nonzero() {
     let options = ResourceLimits::default();
     assert!(options.max_work_units > 0);
     assert!(options.max_intermediate_scalar_bits >= options.max_scalar_bits);
-    assert_eq!(EvaluationContext::default(), EvaluationContext::new(options));
+    assert_eq!(
+        EvaluationContext::default(),
+        EvaluationContext::new(options)
+    );
 }
 
 #[test]
@@ -68,7 +71,9 @@ fn oversized_intermediate_is_rejected_even_if_final_cancels() {
     let polynomial = RationalPolynomial::new(vec![at.clone(), -at.clone()]);
     assert_eq!(
         ctx.evaluate_polynomial(&polynomial, &q(1)),
-        Err(EvaluationError::Limit(ResourceLimitKind::IntermediateScalarBits))
+        Err(EvaluationError::Limit(
+            ResourceLimitKind::IntermediateScalarBits
+        ))
     );
 }
 
@@ -77,8 +82,14 @@ fn checked_gcd_division_and_squarefree_fail_under_small_work_budget() {
     let ctx = limits(2);
     let a = poly(&[1, 2, 1]);
     let b = poly(&[1, 1]);
-    assert_eq!(ctx.divide(&a, &b), Err(EvaluationError::Limit(ResourceLimitKind::WorkUnits)));
-    assert_eq!(ctx.gcd(&a, &b), Err(EvaluationError::Limit(ResourceLimitKind::WorkUnits)));
+    assert_eq!(
+        ctx.divide(&a, &b),
+        Err(EvaluationError::Limit(ResourceLimitKind::WorkUnits))
+    );
+    assert_eq!(
+        ctx.gcd(&a, &b),
+        Err(EvaluationError::Limit(ResourceLimitKind::WorkUnits))
+    );
     assert_eq!(
         ctx.square_free_decomposition(&a),
         Err(EvaluationError::Limit(ResourceLimitKind::WorkUnits))
@@ -93,10 +104,7 @@ fn checked_gcd_division_and_squarefree_fail_under_small_work_budget() {
 fn high_degree_cancellation_cannot_bypass_preflight() {
     let variable = Expr::from(x());
     let large = Expr::pow(variable.clone(), Expr::from(12));
-    let original = Equation::new(
-        Expr::add([large.clone(), variable]),
-        large,
-    );
+    let original = Equation::new(Expr::add([large.clone(), variable]), large);
     let ctx = EvaluationContext::new(ResourceLimits {
         max_polynomial_degree: 2,
         ..ResourceLimits::default()

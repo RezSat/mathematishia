@@ -16,7 +16,6 @@ use crate::{
     PolynomialConversionError, RationalPolynomial, SquareFreeDecomposition, SquareFreeError,
     SquareFreeVerificationError, VerificationError, ZeroPolynomialDivisor, distribute_first_once,
     expand_distributively, solve_linear_equation, verify_distribution, verify_linear_solution,
-    verify_square_free_decomposition,
 };
 
 /// Explicit, configurable limits. None are process-global.
@@ -284,7 +283,9 @@ impl EvaluationContext {
         let right = work.convert(equation.right(), variable)?;
         let residual = work.subtract(&left, &right)?;
         if residual.degree().is_some_and(|degree| degree > 1) {
-            return Err(EvaluationError::Linear(crate::LinearSolveError::NonlinearEquation));
+            return Err(EvaluationError::Linear(
+                crate::LinearSolveError::NonlinearEquation,
+            ));
         }
         let zero = Rational::from(Integer::zero());
         let coefficient = residual.coefficients().get(1).unwrap_or(&zero);
@@ -299,8 +300,8 @@ impl EvaluationContext {
             .expect("nonzero coefficient");
             self.check_rational(&root)?;
         }
-        let count = expression_size(equation.left())
-            .saturating_add(expression_size(equation.right()));
+        let count =
+            expression_size(equation.left()).saturating_add(expression_size(equation.right()));
         work.charge(count.saturating_pow(3).saturating_mul(8))?;
         let result = solve_linear_equation(equation, variable)?;
         self.check_polynomial(result.residual())?;

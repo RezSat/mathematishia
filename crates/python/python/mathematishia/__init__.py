@@ -136,6 +136,55 @@ def _rational(data: tuple[tuple[str, list[str]], tuple[str, list[str]],
     return RationalFunction(_poly(n), _poly(d), tuple(_poly(p) for p in excluded))
 
 
+@dataclass(frozen=True)
+class DomainExpression:
+    expression: str
+    conditions: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class DomainProofNode:
+    id: int
+    kind: str
+    value: str
+    parents: tuple[int, ...]
+    rule: str | None
+
+
+@dataclass(frozen=True)
+class DomainRewrite:
+    status: Literal["applied", "blocked", "refuted", "unchanged"]
+    expression: str
+    conditions: tuple[str, ...]
+    outstanding: tuple[str, ...]
+    rule: str | None
+    proof: tuple[DomainProofNode, ...]
+
+
+def domain_expression(source: str) -> DomainExpression:
+    """Parse an integer-power expression with its original domain restrictions."""
+    value, conditions = _native.domain_expression(source)
+    return DomainExpression(value, tuple(conditions))
+
+
+def rewrite_domain(source: str, nonzero: tuple[str, ...] = ()) -> DomainRewrite:
+    """Attempt one verified inverse cancellation under explicit nonzero premises."""
+    status, value, conditions, outstanding, rule, nodes = _native.rewrite_domain(
+        source, list(nonzero)
+    )
+    return DomainRewrite(
+        status,
+        value,
+        tuple(conditions),
+        tuple(outstanding),
+        rule,
+        tuple(
+            DomainProofNode(node_id, kind, text, tuple(parents), node_rule)
+            for node_id, kind, text, parents, node_rule in nodes
+        ),
+    )
+
+
 def expression(source: str) -> str:
     """Parse and return the conservatively canonicalized expression display."""
     return _native.expression(source)
@@ -288,6 +337,8 @@ def gcd(left: str, right: str, variable: str) -> Polynomial:
 
 
 __all__ = [
+    "DomainExpression", "DomainProofNode", "DomainRewrite",
+    "domain_expression", "rewrite_domain",
     "MathSyntaxError", "ResourceLimitError", "UnsupportedMathematicsError",
     "VerificationFailure", "UndefinedAtPointError", "Step", "Expansion", "LinearResult", "QuadraticResult", "Polynomial",
     "RationalFunction", "RationalQuadraticResult",

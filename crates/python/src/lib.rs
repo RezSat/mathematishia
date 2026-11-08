@@ -3,13 +3,16 @@
 //! Python performs representation and presentation only. All algebraic work
 //! is delegated to the checked core, never reimplemented using Python floats.
 
-use mathema::{Equation, Expr, ExprView, Rational, Symbol};
-use mathema_frontend::{Statement, parse_expression, parse_statement};
+use mathema::{Condition, DomainExpression, Equation, Expr, ExprView, Rational, Symbol};
+use mathema_frontend::{
+    DomainParseError, Statement, parse_domain_expression, parse_expression, parse_statement,
+};
 use mathematishia_kernel::{
     AlgebraicRootEvidence, AlgebraicRootSet, EvaluationContext, EvaluationError,
     ExactQuadraticRoot, LinearSolution, QuadraticBranch, QuadraticRoots, RationalFunction,
     RationalFunctionError, RationalPolynomial, RationalQuadraticRoots, ResourceLimitKind,
-    VerifiedCondition,
+    VerifiedCondition, Assumptions, DefinednessError, DomainOperationError,
+    DomainRewriteOutcome, ProofNodeKind, rewrite_domain_once,
 };
 use pyo3::create_exception;
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
@@ -114,6 +117,157 @@ fn poly_data(poly: &RationalPolynomial, symbol: &Symbol) -> (String, Vec<String>
 
 fn show_equation(eq: &Equation) -> String {
     format!("{} = {}", eq.left(), eq.right())
+}
+
+fn map_domain_parse(error: DomainParseError) -> PyErr {
+    match error {
+        DomainParseError::Syntax(error) => MathSyntaxError::new_err(error.to_string()),
+        DomainParseError::Domain(DefinednessError::UnsupportedExponent) => {
+            UnsupportedMathematicsError::new_err(error.to_string())
+        }
+        DomainParseError::Domain(_) => ResourceLimitError::new_err(error.to_string()),
+    }
+}
+
+fn map_domain_operation(error: DomainOperationError) -> PyErr {
+    match error {
+        DomainOperationError::Definedness(DefinednessError::UnsupportedExponent) => {
+            UnsupportedMathematicsError::new_err(error.to_string())
+        }
+        DomainOperationError::Definedness(_) | DomainOperationError::ProofConstruction(_) => {
+            ResourceLimitError::new_err(error.to_string())
+        }
+        DomainOperationError::ProofVerification(_) => {
+            VerificationFailure::new_err(error.to_string())
+        }
+    }
+}
+
+fn checked_domain(source: &str) -> PyResult<DomainExpression> {
+    let value = parse_domain_expression(source).map_err(map_domain_parse)?;
+    let ctx = EvaluationContext::default();
+    ctx.check_expression(value.expression())
+        .map_err(map_evaluation_error)?;
+    for condition in value.conditions() {
+        ctx.check_expression(condition.expression())
+            .map_err(map_evaluation_error)?;
+    }
+    Ok(value)
+}
+
+fn condition_text(condition: &Condition) -> String {
+    match condition {
+        Condition::NonZero(expr) => format!("{expr} != 0"),
+        Condition::Positive(expr) => format!("{expr} > 0"),
+        Condition::Real(expr) => format!("{expr} in R"),
+        Condition::Integer(expr) => format!("{expr} in Z"),
+        Condition::InDomain { expression, domain } => format!("{expression} in {domain:?}"),
+    }
+}
+
+fn domain_conditions(value: &DomainExpression) -> Vec<String> {
+    value.conditions().iter().map(condition_text).collect()
+}
+
+type PyDomainProofNode = (usize, String, String, Vec<usize>, Option<String>);
+type PyDomainRewrite = (
+    String,
+    String,
+    Vec<String>,
+    Vec<String>,
+    Option<String>,
+    Vec<PyDomainProofNode>,
+);
+
+#[pyfunction(name = "domain_expression")]
+fn py_domain_expression(source: &str) -> PyResult<(String, Vec<String>)> {
+    let value = checked_domain(source)?;
+    Ok((value.expression().to_string(), domain_conditions(&value)))
+}
+
+#[pyfunction(name = "rewrite_domain", signature = (source, nonzero=None))]
+fn py_rewrite_domain(source: &str, nonzero: Option<Vec<String>>) -> PyResult<PyDomainRewrite> {
+    let source = checked_domain(source)?;
+    let mut assumptions = Assumptions::new();
+    let premises = nonzero.unwrap_or_default();
+    if premises.len() > 32 {
+        return Err(ResourceLimitError::new_err("at most 32 nonzero premises are supported"));
+    }
+    for premise in premises {
+        let value = checked_domain(&premise)?;
+        if !value.conditions().is_empty() {
+            return Err(UnsupportedMathematicsError::new_err(
+                "premise expressions must not contain unresolved domain restrictions",
+            ));
+        }
+        assumptions
+            .add(Condition::NonZero(value.expression().clone()))
+            .map_err(|error| UnsupportedMathematicsError::new_err(error.to_string()))?;
+    }
+
+    let outcome = rewrite_domain_once(&source, &assumptions).map_err(map_domain_operation)?;
+    match outcome {
+        DomainRewriteOutcome::Applied(rewrite) => {
+            let mut nodes = Vec::new();
+            for node in rewrite.proof().nodes() {
+                let (kind, value) = match node.kind() {
+                    ProofNodeKind::Input(expr) => ("input", expr.to_string()),
+                    ProofNodeKind::Condition { condition, status } => (
+                        "condition",
+                        format!("{} [{status:?}]", condition_text(condition)),
+                    ),
+                    ProofNodeKind::Distribution { step, .. } => {
+                        ("distribution", step.after().to_string())
+                    }
+                    ProofNodeKind::GuardedCancellation { step, .. } => {
+                        ("guarded_cancellation", step.after().to_string())
+                    }
+                    ProofNodeKind::CompositeCancellation { step, .. } => {
+                        ("composite_cancellation", step.after().to_string())
+                    }
+                };
+                nodes.push((
+                    node.id().index(),
+                    kind.to_owned(),
+                    value,
+                    node.kind().dependencies().iter().map(|id| id.index()).collect(),
+                    node.kind().rule_id().map(str::to_owned),
+                ));
+            }
+            Ok((
+                "applied".to_owned(),
+                rewrite.result().expression().to_string(),
+                domain_conditions(rewrite.result()),
+                Vec::new(),
+                rewrite.rule_id().map(str::to_owned),
+                nodes,
+            ))
+        }
+        DomainRewriteOutcome::Blocked(required) => Ok((
+            "blocked".to_owned(),
+            source.expression().to_string(),
+            domain_conditions(&source),
+            required.iter().map(condition_text).collect(),
+            None,
+            Vec::new(),
+        )),
+        DomainRewriteOutcome::Refuted(condition) => Ok((
+            "refuted".to_owned(),
+            source.expression().to_string(),
+            domain_conditions(&source),
+            vec![condition_text(&condition)],
+            None,
+            Vec::new(),
+        )),
+        DomainRewriteOutcome::NotApplicable => Ok((
+            "unchanged".to_owned(),
+            source.expression().to_string(),
+            domain_conditions(&source),
+            Vec::new(),
+            None,
+            Vec::new(),
+        )),
+    }
 }
 
 #[pyfunction(name = "expression")]
@@ -502,6 +656,8 @@ fn py_algebraic_roots(source: &str, variable: &str) -> PyResult<PyAlgebraicResul
 #[pymodule]
 fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(py_expression, m)?)?;
+    m.add_function(wrap_pyfunction!(py_domain_expression, m)?)?;
+    m.add_function(wrap_pyfunction!(py_rewrite_domain, m)?)?;
     m.add_function(wrap_pyfunction!(py_expand, m)?)?;
     m.add_function(wrap_pyfunction!(py_solve, m)?)?;
     m.add_function(wrap_pyfunction!(py_polynomial, m)?)?;

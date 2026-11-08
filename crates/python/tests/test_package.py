@@ -255,5 +255,48 @@ class ExactMathTests(unittest.TestCase):
             m.expression("5/0")
 
 
+
+class DomainApiTests(unittest.TestCase):
+    def test_domain_values_survive_zero_normalization(self):
+        value = m.domain_expression("0*x^-1")
+        self.assertEqual(value.expression, "0")
+        self.assertEqual(value.conditions, ("x != 0",))
+        with self.assertRaises(FrozenInstanceError):
+            value.expression = "1"
+
+    def test_blocked_and_checked_composite_rewriting(self):
+        expression = "(x+1)*(x+1)^-1"
+        blocked = m.rewrite_domain(expression)
+        self.assertEqual(blocked.status, "blocked")
+        self.assertEqual(blocked.outstanding, ("1 + x != 0",))
+        rewritten = m.rewrite_domain(expression, ("x+1",))
+        self.assertEqual(rewritten.status, "applied")
+        self.assertEqual(rewritten.expression, "1")
+        self.assertEqual(rewritten.conditions, ("1 + x != 0",))
+        self.assertEqual(rewritten.rule, "algebra.cancel_composite_inverse")
+        self.assertEqual(len(rewritten.proof), 3)
+        self.assertEqual(rewritten.proof[-1].parents, (0, 1))
+        self.assertEqual(rewritten.proof[-1].rule, rewritten.rule)
+
+    def test_atomic_rewrite_and_original_holes(self):
+        result = m.rewrite_domain("x*x^-1", ("x",))
+        self.assertEqual(result.status, "applied")
+        self.assertEqual(result.conditions, ("x != 0",))
+        self.assertEqual(result.rule, "algebra.cancel_symbol_inverse")
+        original = m.rewrite_domain("0*x^-1", ("x",))
+        self.assertEqual(original.status, "unchanged")
+        self.assertEqual(original.conditions, ("x != 0",))
+
+    def test_domain_errors_are_typed(self):
+        with self.assertRaises(m.UnsupportedMathematicsError):
+            m.domain_expression("x^(1/2)")
+        with self.assertRaises(m.MathSyntaxError):
+            m.domain_expression("x/2")
+        with self.assertRaises(m.UnsupportedMathematicsError):
+            m.rewrite_domain("x*x^-1", ("0",))
+        with self.assertRaises(m.UnsupportedMathematicsError):
+            m.rewrite_domain("x*x^-1", ("x^-1",))
+
+
 if __name__ == "__main__":
     unittest.main()

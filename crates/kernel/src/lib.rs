@@ -21,6 +21,7 @@ mod polynomial;
 mod polynomial_residue;
 mod proof_graph;
 mod quadratic;
+mod quadratic_field;
 mod rational_equation;
 mod rational_expression;
 mod rational_function;
@@ -68,6 +69,7 @@ pub use quadratic::{
     QuadraticError, QuadraticResult, QuadraticRoots, QuadraticVerificationError,
     verify_quadratic_roots,
 };
+pub use quadratic_field::{QuadraticElement, QuadraticField, QuadraticFieldError};
 pub use rational_equation::{
     RationalEquationError, RationalEquationResult, RationalEquationSolution,
     RationalEquationVerificationError, verify_rational_equation,

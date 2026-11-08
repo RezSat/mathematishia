@@ -9,9 +9,9 @@ use std::fmt::Write as _;
 use mathema::{Condition, DomainExpression, Equation, Expr, ExprView, Rational, Symbol};
 use mathema_frontend::{Statement, parse_domain_expression, parse_expression, parse_statement};
 use mathematishia_kernel::{
-    AlgebraicRootEvidence, AlgebraicRootSet, EvaluationContext, ExactQuadraticRoot, LinearSolution,
-    QuadraticRoots, RationalFunction, RationalPolynomial, RationalQuadraticRoots,
-    VerifiedCondition, Assumptions, DomainRewriteOutcome, rewrite_domain_once,
+    AlgebraicRootEvidence, AlgebraicRootSet, Assumptions, DomainRewriteOutcome, EvaluationContext,
+    ExactQuadraticRoot, LinearSolution, QuadraticRoots, RationalFunction, RationalPolynomial,
+    RationalQuadraticRoots, VerifiedCondition, rewrite_domain_once,
 };
 
 pub const HELP: &str = "Mathematishia (early exact-math CLI)
@@ -88,8 +88,7 @@ fn expression(input: &str) -> Result<Expr, CliError> {
 }
 
 fn domain_expression(input: &str) -> Result<DomainExpression, CliError> {
-    let parsed =
-        parse_domain_expression(input).map_err(|error| invalid(error.to_string()))?;
+    let parsed = parse_domain_expression(input).map_err(|error| invalid(error.to_string()))?;
     let context = EvaluationContext::default();
     context
         .check_expression(parsed.expression())

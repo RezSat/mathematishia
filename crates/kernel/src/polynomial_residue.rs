@@ -95,7 +95,11 @@ impl PolynomialResidue {
 
     pub fn add(&self, other: &Self, ctx: &EvaluationContext) -> Result<Self, ResidueError> {
         self.check_modulus(other)?;
-        Self::new(ctx, self.representative.add(&other.representative), self.modulus.clone())
+        Self::new(
+            ctx,
+            self.representative.add(&other.representative),
+            self.modulus.clone(),
+        )
     }
 
     pub fn subtract(&self, other: &Self, ctx: &EvaluationContext) -> Result<Self, ResidueError> {
@@ -125,9 +129,11 @@ impl PolynomialResidue {
         let value = Self::new(ctx, inverse, self.modulus.clone())?;
         let product = self.multiply(&value, ctx)?;
         if product.representative != RationalPolynomial::new(vec![Rational::from(Integer::one())]) {
-            return Err(ResidueError::Evaluation(EvaluationError::ExtendedGcdVerification(
-                crate::ExtendedGcdVerificationError::InvalidBezout,
-            )));
+            return Err(ResidueError::Evaluation(
+                EvaluationError::ExtendedGcdVerification(
+                    crate::ExtendedGcdVerificationError::InvalidBezout,
+                ),
+            ));
         }
         Ok(Some(value))
     }

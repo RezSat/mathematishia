@@ -8,11 +8,22 @@
 
 use mathema::{Expr, ExprView, Integer, Rational, Symbol};
 
+use crate::rational_function::condition_order;
+use crate::{RationalFunction, RationalFunctionError};
+
 use crate::{
     EvaluationError, PolynomialConversionError, RationalPolynomial, ResourceLimitKind,
     ResourceLimits, SquareFreeDecomposition, SquareFreeError, SquareFreeFactor,
     SquareFreeVerificationError,
 };
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum RationalBinaryOp {
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+}
 
 pub(crate) struct WorkBudget {
     limits: ResourceLimits,
@@ -456,6 +467,187 @@ impl WorkBudget {
             return Err(V::ProductMismatch.into());
         }
         Ok(())
+    }
+
+    fn rational_shape(&self, value: &RationalFunction) -> Result<(), EvaluationError> {
+        self.polynomial_shape(value.numerator())?;
+        self.polynomial_shape(value.denominator())?;
+        if value.excluded_zero_sets().len() > self.limits.max_rational_conditions {
+            return Err(EvaluationError::Limit(ResourceLimitKind::RationalConditions));
+        }
+        for condition in value.excluded_zero_sets() {
+            self.polynomial_shape(condition)?;
+        }
+        Ok(())
+    }
+
+    fn scale_polynomial(
+        &mut self,
+        polynomial: &RationalPolynomial,
+        divisor: &Rational,
+    ) -> Result<RationalPolynomial, EvaluationError> {
+        let mut coefficients = Vec::with_capacity(polynomial.coefficients().len());
+        for coefficient in polynomial.coefficients() {
+            coefficients.push(self.quotient(coefficient, divisor)?);
+        }
+        let result = RationalPolynomial::new(coefficients);
+        self.polynomial_shape(&result)?;
+        Ok(result)
+    }
+
+    fn divide_exact_rational(
+        &mut self,
+        numerator: &RationalPolynomial,
+        denominator: &RationalPolynomial,
+    ) -> Result<RationalPolynomial, EvaluationError> {
+        let (quotient, remainder) = self.divide(numerator, denominator)?;
+        if !remainder.is_zero() {
+            return Err(RationalFunctionError::NonExactReduction.into());
+        }
+        Ok(quotient)
+    }
+
+    fn rational_exclusions(
+        &mut self,
+        exclusions: Vec<RationalPolynomial>,
+    ) -> Result<Vec<RationalPolynomial>, EvaluationError> {
+        if exclusions.len() > self.limits.max_rational_conditions.saturating_mul(2).saturating_add(1) {
+            return Err(EvaluationError::Limit(ResourceLimitKind::RationalConditions));
+        }
+        let mut result = Vec::new();
+        for condition in exclusions {
+            self.charge(1)?;
+            self.polynomial_shape(&condition)?;
+            let Some(degree) = condition.degree() else {
+                continue;
+            };
+            if degree == 0 {
+                continue;
+            }
+            let lead = condition.coefficients().last().expect("nonconstant polynomial");
+            result.push(self.scale_polynomial(&condition, lead)?);
+        }
+        result.sort_by(condition_order);
+        result.dedup();
+        if result.len() > self.limits.max_rational_conditions {
+            return Err(EvaluationError::Limit(ResourceLimitKind::RationalConditions));
+        }
+        Ok(result)
+    }
+
+    fn rational_reduce(
+        &mut self,
+        numerator: RationalPolynomial,
+        denominator: RationalPolynomial,
+        exclusions: Vec<RationalPolynomial>,
+    ) -> Result<RationalFunction, EvaluationError> {
+        self.polynomial_shape(&numerator)?;
+        self.polynomial_shape(&denominator)?;
+        if denominator.is_zero() {
+            return Err(RationalFunctionError::ZeroDenominator.into());
+        }
+        let gcd = self.gcd(&numerator, &denominator)?;
+        let n = self.divide_exact_rational(&numerator, &gcd)?;
+        let d = self.divide_exact_rational(&denominator, &gcd)?;
+        let lead = d.coefficients().last().expect("nonzero divisor quotient");
+        let normalized_n = self.scale_polynomial(&n, lead)?;
+        let normalized_d = self.scale_polynomial(&d, lead)?;
+        let conditions = self.rational_exclusions(exclusions)?;
+        Ok(RationalFunction::from_canonical(
+            normalized_n,
+            normalized_d,
+            conditions,
+        ))
+    }
+
+    pub(crate) fn rational_function(
+        &mut self,
+        numerator: &RationalPolynomial,
+        denominator: &RationalPolynomial,
+    ) -> Result<RationalFunction, EvaluationError> {
+        self.rational_reduce(
+            numerator.clone(),
+            denominator.clone(),
+            vec![denominator.clone()],
+        )
+    }
+
+    pub(crate) fn rational_binary(
+        &mut self,
+        left: &RationalFunction,
+        right: &RationalFunction,
+        operation: RationalBinaryOp,
+    ) -> Result<RationalFunction, EvaluationError> {
+        self.rational_shape(left)?;
+        self.rational_shape(right)?;
+        let mut exclusions = left.excluded_zero_sets().to_vec();
+        exclusions.extend_from_slice(right.excluded_zero_sets());
+        let (numerator, denominator) = match operation {
+            RationalBinaryOp::Add | RationalBinaryOp::Subtract => {
+                let lhs = self.multiply(left.numerator(), right.denominator())?;
+                let rhs = self.multiply(right.numerator(), left.denominator())?;
+                let n = if operation == RationalBinaryOp::Add {
+                    self.add(&lhs, &rhs)?
+                } else {
+                    self.subtract(&lhs, &rhs)?
+                };
+                let d = self.multiply(left.denominator(), right.denominator())?;
+                (n, d)
+            }
+            RationalBinaryOp::Multiply => (
+                self.multiply(left.numerator(), right.numerator())?,
+                self.multiply(left.denominator(), right.denominator())?,
+            ),
+            RationalBinaryOp::Divide => {
+                if right.numerator().is_zero() {
+                    return Err(RationalFunctionError::ZeroDivisor.into());
+                }
+                exclusions.push(right.numerator().clone());
+                (
+                    self.multiply(left.numerator(), right.denominator())?,
+                    self.multiply(left.denominator(), right.numerator())?,
+                )
+            }
+        };
+        self.rational_reduce(numerator, denominator, exclusions)
+    }
+
+    pub(crate) fn differentiate_rational(
+        &mut self,
+        input: &RationalFunction,
+    ) -> Result<RationalFunction, EvaluationError> {
+        self.rational_shape(input)?;
+        let dn = self.differentiate(input.numerator())?;
+        let dd = self.differentiate(input.denominator())?;
+        let left = self.multiply(&dn, input.denominator())?;
+        let right = self.multiply(input.numerator(), &dd)?;
+        let numerator = self.subtract(&left, &right)?;
+        let denominator = self.multiply(input.denominator(), input.denominator())?;
+        self.rational_reduce(
+            numerator,
+            denominator,
+            input.excluded_zero_sets().to_vec(),
+        )
+    }
+
+    pub(crate) fn evaluate_rational(
+        &mut self,
+        input: &RationalFunction,
+        at: &Rational,
+    ) -> Result<Rational, EvaluationError> {
+        self.rational_shape(input)?;
+        self.scalar(at)?;
+        for condition in input.excluded_zero_sets() {
+            if self.evaluate(condition, at)?.numerator().is_zero() {
+                return Err(RationalFunctionError::UndefinedAtPoint.into());
+            }
+        }
+        let numerator = self.evaluate(input.numerator(), at)?;
+        let denominator = self.evaluate(input.denominator(), at)?;
+        if denominator.numerator().is_zero() {
+            return Err(RationalFunctionError::UndefinedAtPoint.into());
+        }
+        self.quotient(&numerator, &denominator)
     }
 
     /// Bounded exact conversion over Q[x]; rejects nonpolynomial structure and

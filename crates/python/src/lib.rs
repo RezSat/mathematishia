@@ -34,6 +34,7 @@ fn map_evaluation_error(error: EvaluationError) -> PyErr {
         | EvaluationError::Linear(_)
         | EvaluationError::SquareFree(_)
         | EvaluationError::SymbolicDifferentiation(_)
+        | EvaluationError::RationalFunction(_)
         | EvaluationError::DivisionByZero => {
             UnsupportedMathematicsError::new_err(error.to_string())
         }

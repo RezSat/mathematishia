@@ -9,12 +9,13 @@ use std::fmt;
 
 use mathema::{Equation, Expr, ExprView, Integer, Rational, Symbol};
 
-use crate::budget::WorkBudget;
+use crate::budget::{RationalBinaryOp, WorkBudget};
 use crate::differentiate_expr::generate_symbolic_derivative;
 
 use crate::{
     DerivationStep, DerivativeVerificationError, DistributionResult, LinearSolution,
-    LinearSolveResult, PolynomialConversionError, RationalPolynomial, SquareFreeDecomposition,
+    LinearSolveResult, PolynomialConversionError, RationalFunction, RationalFunctionError,
+    RationalPolynomial, SquareFreeDecomposition,
     SquareFreeError, SquareFreeVerificationError, SymbolicDerivative, SymbolicDifferentiationError,
     VerificationError, ZeroPolynomialDivisor, distribute_first_once, expand_distributively,
     solve_linear_equation, verify_distribution, verify_linear_solution, verify_symbolic_derivative,
@@ -34,6 +35,7 @@ pub struct ResourceLimits {
     pub max_intermediate_scalar_bits: u64,
     /// Explicit upper bound on positive powers differentiated symbolically.
     pub max_symbolic_power: usize,
+    pub max_rational_conditions: usize,
 }
 
 impl Default for ResourceLimits {
@@ -47,6 +49,7 @@ impl Default for ResourceLimits {
             max_work_units: 1_000_000,
             max_intermediate_scalar_bits: 16_384,
             max_symbolic_power: 32,
+            max_rational_conditions: 32,
         }
     }
 }
@@ -61,6 +64,7 @@ pub enum ResourceLimitKind {
     WorkUnits,
     IntermediateScalarBits,
     SymbolicPower,
+    RationalConditions,
 }
 
 /// Typed errors distinguish invalid mathematical input from exhausted limits.
@@ -75,6 +79,7 @@ pub enum EvaluationError {
     Verification(VerificationError),
     SymbolicDifferentiation(SymbolicDifferentiationError),
     DerivativeVerification(DerivativeVerificationError),
+    RationalFunction(RationalFunctionError),
 }
 
 impl fmt::Display for EvaluationError {
@@ -93,6 +98,7 @@ impl fmt::Display for EvaluationError {
             Self::DerivativeVerification(error) => {
                 write!(f, "derivative verification failed: {error}")
             }
+            Self::RationalFunction(error) => write!(f, "{error}"),
         }
     }
 }
@@ -126,6 +132,12 @@ impl From<SymbolicDifferentiationError> for EvaluationError {
 impl From<DerivativeVerificationError> for EvaluationError {
     fn from(value: DerivativeVerificationError) -> Self {
         Self::DerivativeVerification(value)
+    }
+}
+
+impl From<RationalFunctionError> for EvaluationError {
+    fn from(value: RationalFunctionError) -> Self {
+        Self::RationalFunction(value)
     }
 }
 
@@ -418,6 +430,101 @@ impl EvaluationContext {
         self.check_polynomial(&q)?;
         self.check_polynomial(&r)?;
         Ok((q, r))
+    }
+
+    /// Constructs p/q while remembering every original denominator zero.
+    pub fn rational_function(
+        &self,
+        numerator: &RationalPolynomial,
+        denominator: &RationalPolynomial,
+    ) -> Result<RationalFunction, EvaluationError> {
+        self.check_polynomial(numerator)?;
+        self.check_polynomial(denominator)?;
+        let result = WorkBudget::new(self.limits).rational_function(numerator, denominator)?;
+        self.check_rational_function(&result)?;
+        Ok(result)
+    }
+
+    /// Checks the admitted exact fraction and all inherited domain conditions.
+    pub fn check_rational_function(&self, value: &RationalFunction) -> Result<(), EvaluationError> {
+        self.check_polynomial(value.numerator())?;
+        self.check_polynomial(value.denominator())?;
+        if value.excluded_zero_sets().len() > self.limits.max_rational_conditions {
+            return Err(EvaluationError::Limit(ResourceLimitKind::RationalConditions));
+        }
+        for condition in value.excluded_zero_sets() {
+            self.check_polynomial(condition)?;
+        }
+        Ok(())
+    }
+
+    fn rational_binary(
+        &self,
+        left: &RationalFunction,
+        right: &RationalFunction,
+        operation: RationalBinaryOp,
+    ) -> Result<RationalFunction, EvaluationError> {
+        self.check_rational_function(left)?;
+        self.check_rational_function(right)?;
+        let result = WorkBudget::new(self.limits).rational_binary(left, right, operation)?;
+        self.check_rational_function(&result)?;
+        Ok(result)
+    }
+
+    pub fn add_rational_functions(
+        &self,
+        left: &RationalFunction,
+        right: &RationalFunction,
+    ) -> Result<RationalFunction, EvaluationError> {
+        self.rational_binary(left, right, RationalBinaryOp::Add)
+    }
+
+    pub fn subtract_rational_functions(
+        &self,
+        left: &RationalFunction,
+        right: &RationalFunction,
+    ) -> Result<RationalFunction, EvaluationError> {
+        self.rational_binary(left, right, RationalBinaryOp::Subtract)
+    }
+
+    pub fn multiply_rational_functions(
+        &self,
+        left: &RationalFunction,
+        right: &RationalFunction,
+    ) -> Result<RationalFunction, EvaluationError> {
+        self.rational_binary(left, right, RationalBinaryOp::Multiply)
+    }
+
+    pub fn divide_rational_functions(
+        &self,
+        left: &RationalFunction,
+        right: &RationalFunction,
+    ) -> Result<RationalFunction, EvaluationError> {
+        self.rational_binary(left, right, RationalBinaryOp::Divide)
+    }
+
+    /// Quotient rule with explicit source-domain preservation.
+    pub fn differentiate_rational_function(
+        &self,
+        value: &RationalFunction,
+    ) -> Result<RationalFunction, EvaluationError> {
+        self.check_rational_function(value)?;
+        let result = WorkBudget::new(self.limits).differentiate_rational(value)?;
+        self.check_rational_function(&result)?;
+        Ok(result)
+    }
+
+    /// Exact evaluation rejects excluded points even after cancellation.
+    pub fn evaluate_rational_function(
+        &self,
+        value: &RationalFunction,
+        at: &Rational,
+    ) -> Result<Rational, EvaluationError> {
+        self.check_rational_function(value)?;
+        self.check_rational(at)?;
+        let result = WorkBudget::new(self.limits).evaluate_rational(value, at)?;
+        self.check_rational(&result)?;
+        Ok(result)
     }
 
     pub fn gcd(

@@ -299,7 +299,10 @@ mod tests {
         let f = RationalFunction::new(p(&[]), p(&[-2, 1])).unwrap();
         assert!(f.is_zero());
         assert_eq!(f.denominator(), &p(&[1]));
-        assert_eq!(f.evaluate(&at(2)), Err(RationalFunctionError::UndefinedAtPoint));
+        assert_eq!(
+            f.evaluate(&at(2)),
+            Err(RationalFunctionError::UndefinedAtPoint)
+        );
     }
 
     #[test]
@@ -318,7 +321,7 @@ mod tests {
         let quotient = a.divide(&b).unwrap();
         assert_eq!(quotient.numerator(), &p(&[1]));
         assert_eq!(quotient.denominator(), &p(&[-1, 1]));
-        assert_eq!(quotient.excluded_zero_sets(), &[p(&[0, 1]), p(&[-1, 1])]);
+        assert_eq!(quotient.excluded_zero_sets(), &[p(&[-1, 1]), p(&[0, 1])]);
         assert_eq!(
             quotient.evaluate(&at(0)),
             Err(RationalFunctionError::UndefinedAtPoint)

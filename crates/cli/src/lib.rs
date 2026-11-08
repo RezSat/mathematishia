@@ -31,6 +31,8 @@ Usage:
   mathematishia eval <POLYNOMIAL> <VARIABLE> <RATIONAL>
   mathematishia divide <DIVIDEND> <DIVISOR> <VARIABLE>
   mathematishia gcd <LEFT> <RIGHT> <VARIABLE>
+  mathematishia egcd <LEFT> <RIGHT> <VARIABLE>
+  mathematishia modinv <VALUE> <MODULUS> <VARIABLE>
   mathematishia diff <POLYNOMIAL> <VARIABLE>
   mathematishia sqfree <POLYNOMIAL> <VARIABLE>
   mathematishia diffexpr <EXPRESSION> <VARIABLE>
@@ -59,6 +61,8 @@ Examples:
   mathematishia eval 'x^2+1/2' x '1/2'
   mathematishia divide 'x^2-1' 'x-1' x
   mathematishia gcd 'x^2-1' 'x-1' x
+  mathematishia egcd 'x^3-1' 'x^2-1' x
+  mathematishia modinv x 'x^2+1' x
   mathematishia diff 'x^3+1/2*x' x
   mathematishia sqfree '2*(x-1)^2*(x+2)^3' x
   mathematishia diffexpr 'x*y+(x+1)^3' x
@@ -525,6 +529,46 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
                     .map_err(|error| invalid(error.to_string()))?
                     .to_expr(&symbol)
             ))
+        }
+        ["egcd", left, right, name] => {
+            let symbol = variable(name)?;
+            let first = polynomial(left, &symbol)?;
+            let second = polynomial(right, &symbol)?;
+            let result = EvaluationContext::default()
+                .extended_gcd(&first, &second)
+                .map_err(|error| invalid(error.to_string()))?;
+            let mut output = format!(
+                "gcd: {}\nleft_coefficient: {}\nright_coefficient: {}\ndivisions: {}",
+                result.gcd().to_expr(&symbol),
+                result.left_coefficient().to_expr(&symbol),
+                result.right_coefficient().to_expr(&symbol),
+                result.divisions().len(),
+            );
+            for (index, step) in result.divisions().iter().enumerate() {
+                write!(
+                    &mut output,
+                    "\n{}. {} = ({})*({}) + ({})",
+                    index + 1,
+                    step.dividend().to_expr(&symbol),
+                    step.quotient().to_expr(&symbol),
+                    step.divisor().to_expr(&symbol),
+                    step.remainder().to_expr(&symbol),
+                )
+                .expect("writing to String is infallible");
+            }
+            Ok(output)
+        }
+        ["modinv", input, modulus, name] => {
+            let symbol = variable(name)?;
+            let value = polynomial(input, &symbol)?;
+            let modulus = polynomial(modulus, &symbol)?;
+            let inverse = EvaluationContext::default()
+                .inverse_mod_polynomial(&value, &modulus)
+                .map_err(|error| invalid(error.to_string()))?;
+            Ok(match inverse {
+                Some(value) => format!("inverse: {}", value.to_expr(&symbol)),
+                None => "inverse: none (noncoprime polynomials)".to_owned(),
+            })
         }
         ["diff", input, name] => {
             let symbol = variable(name)?;

@@ -6,17 +6,19 @@
 use std::fmt;
 use std::fmt::Write as _;
 
-use mathema::{Equation, Expr, ExprView, Rational, Symbol};
-use mathema_frontend::{Statement, parse_expression, parse_statement};
+use mathema::{Condition, DomainExpression, Equation, Expr, ExprView, Rational, Symbol};
+use mathema_frontend::{Statement, parse_domain_expression, parse_expression, parse_statement};
 use mathematishia_kernel::{
     AlgebraicRootEvidence, AlgebraicRootSet, EvaluationContext, ExactQuadraticRoot, LinearSolution,
     QuadraticRoots, RationalFunction, RationalPolynomial, RationalQuadraticRoots,
-    VerifiedCondition,
+    VerifiedCondition, Assumptions, DomainRewriteOutcome, rewrite_domain_once,
 };
 
 pub const HELP: &str = "Mathematishia (early exact-math CLI)
 Usage:
   mathematishia expr <EXPRESSION>
+  mathematishia domain <EXPRESSION>
+  mathematishia rewrite <EXPRESSION> [NONZERO_PREMISE ...]
   mathematishia expand <EXPRESSION> [MAX_STEPS]
   mathematishia solve <EQUATION> <VARIABLE>
   mathematishia solveq <POLYNOMIAL> <VARIABLE>
@@ -37,6 +39,8 @@ Usage:
 
 Examples:
   mathematishia expr '(x+1)^2'
+  mathematishia domain '0*x^-1'
+  mathematishia rewrite '(x+1)*(x+1)^-1' 'x+1'
   mathematishia expand '2*(x+3)' 4
   mathematishia solve '2*x+4=10' x
   mathematishia solveq 'x^2-5*x+6' x
@@ -81,6 +85,44 @@ fn expression(input: &str) -> Result<Expr, CliError> {
         .check_expression(&parsed)
         .map_err(|error| invalid(error.to_string()))?;
     Ok(parsed)
+}
+
+fn domain_expression(input: &str) -> Result<DomainExpression, CliError> {
+    let parsed =
+        parse_domain_expression(input).map_err(|error| invalid(error.to_string()))?;
+    let context = EvaluationContext::default();
+    context
+        .check_expression(parsed.expression())
+        .map_err(|error| invalid(error.to_string()))?;
+    for condition in parsed.conditions() {
+        context
+            .check_expression(condition.expression())
+            .map_err(|error| invalid(error.to_string()))?;
+    }
+    Ok(parsed)
+}
+
+fn condition_text(condition: &Condition) -> String {
+    match condition {
+        Condition::NonZero(expression) => format!("{expression} != 0"),
+        Condition::Positive(expression) => format!("{expression} > 0"),
+        Condition::Real(expression) => format!("{expression} in R"),
+        Condition::Integer(expression) => format!("{expression} in Z"),
+        Condition::InDomain { expression, domain } => {
+            format!("{expression} in {domain:?}")
+        }
+    }
+}
+
+fn append_conditions(output: &mut String, conditions: &[Condition]) {
+    if conditions.is_empty() {
+        output.push_str("\nconditions: none");
+    } else {
+        for condition in conditions {
+            write!(output, "\ncondition: {}", condition_text(condition))
+                .expect("writing to a String is infallible");
+        }
+    }
 }
 
 fn variable(input: &str) -> Result<Symbol, CliError> {
@@ -158,6 +200,80 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
     match args {
         [] | ["--help" | "-h" | "help"] => Ok(HELP.to_owned()),
         ["expr", input] => Ok(format!("expression: {}", expression(input)?)),
+        ["domain", input] => {
+            let value = domain_expression(input)?;
+            let mut output = format!("expression: {}", value.expression());
+            append_conditions(&mut output, value.conditions());
+            Ok(output)
+        }
+        ["rewrite", input, premises @ ..] => {
+            if premises.len() > 32 {
+                return Err(invalid("at most 32 nonzero premises are supported"));
+            }
+            let original = domain_expression(input)?;
+            let mut assumptions = Assumptions::new();
+            for premise in premises {
+                let value = domain_expression(premise)?;
+                if !value.conditions().is_empty() {
+                    return Err(invalid(
+                        "premise expressions must not contain unresolved domain restrictions",
+                    ));
+                }
+                assumptions
+                    .add(Condition::NonZero(value.expression().clone()))
+                    .map_err(|error| invalid(error.to_string()))?;
+            }
+            let outcome = rewrite_domain_once(&original, &assumptions)
+                .map_err(|error| invalid(error.to_string()))?;
+            let mut output = String::new();
+            match outcome {
+                DomainRewriteOutcome::Applied(rewrite) => {
+                    write!(
+                        &mut output,
+                        "status: applied\nexpression: {}\nrule: {}\nproof_nodes: {}",
+                        rewrite.result().expression(),
+                        rewrite.rule_id().unwrap_or("unknown"),
+                        rewrite.proof().nodes().len(),
+                    )
+                    .expect("writing to a String is infallible");
+                    append_conditions(&mut output, rewrite.result().conditions());
+                }
+                DomainRewriteOutcome::Blocked(required) => {
+                    write!(
+                        &mut output,
+                        "status: blocked\nexpression: {}",
+                        original.expression()
+                    )
+                    .expect("writing to a String is infallible");
+                    append_conditions(&mut output, original.conditions());
+                    for condition in required {
+                        write!(&mut output, "\nrequired: {}", condition_text(&condition))
+                            .expect("writing to a String is infallible");
+                    }
+                }
+                DomainRewriteOutcome::Refuted(condition) => {
+                    write!(
+                        &mut output,
+                        "status: refuted\nexpression: {}\nrefuted: {}",
+                        original.expression(),
+                        condition_text(&condition),
+                    )
+                    .expect("writing to a String is infallible");
+                    append_conditions(&mut output, original.conditions());
+                }
+                DomainRewriteOutcome::NotApplicable => {
+                    write!(
+                        &mut output,
+                        "status: unchanged\nexpression: {}",
+                        original.expression(),
+                    )
+                    .expect("writing to a String is infallible");
+                    append_conditions(&mut output, original.conditions());
+                }
+            }
+            Ok(output)
+        }
+
         ["expand", input] | ["expand", input, _] => {
             let budget = match args {
                 ["expand", _, value] => value

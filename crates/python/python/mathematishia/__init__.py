@@ -302,6 +302,31 @@ def square_free(source: str, variable: str) -> SquareFreeDecomposition:
     )
 
 
+def rational_simplify(source: str, variable: str) -> RationalFunction:
+    """Reduce a univariate rational expression over Q with original domain holes."""
+    return _rational(_native.rational_simplify(source, variable))
+
+
+def rational_derivative(source: str, variable: str) -> RationalFunction:
+    """Differentiate a rational expression without filling removed poles."""
+    return _rational(_native.rational_derivative(source, variable))
+
+
+def rational_value(source: str, variable: str, at: str) -> Fraction:
+    """Evaluate a rational expression exactly on its original domain."""
+    return Fraction(_native.rational_value(source, variable, at))
+
+
+def rational_solve(source: str, variable: str) -> RationalQuadraticResult:
+    """Return admissible rational roots for equations of residual degree <= 2."""
+    kind, roots, excluded = _native.rational_solve(source, variable)
+    return RationalQuadraticResult(
+        kind,
+        tuple(Fraction(root) for root in roots),
+        tuple(_poly(condition) for condition in excluded),
+    )
+
+
 def rational_function(numerator: str, denominator: str, variable: str) -> RationalFunction:
     """Reduce Q(x) exactly while retaining the input denominator's zero set."""
     return _rational(_native.rational_function(numerator, denominator, variable))
@@ -373,4 +398,5 @@ __all__ = [
     "expression", "expand", "solve", "solve_quadratic", "algebraic_roots", "polynomial", "differentiate", "differentiate_expression", "square_free",
     "evaluate", "divide", "gcd", "rational_function", "rational_evaluate",
     "rational_differentiate", "rational_operation", "rational_solve_quadratic",
+    "rational_simplify", "rational_derivative", "rational_value", "rational_solve",
 ]

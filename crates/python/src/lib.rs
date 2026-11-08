@@ -12,7 +12,7 @@ use mathematishia_kernel::{
     AlgebraicRootEvidence, AlgebraicRootSet, Assumptions, DefinednessError, DomainOperationError,
     DomainRewriteOutcome, EvaluationContext, EvaluationError, ExactQuadraticRoot, LinearSolution,
     ProofNodeKind, QuadraticBranch, QuadraticRoots, RationalFunction, RationalFunctionError,
-    RationalPolynomial, RationalQuadraticRoots, ResourceLimitKind, VerifiedCondition,
+    RationalExpressionError, RationalPolynomial, RationalQuadraticRoots, ResourceLimitKind, VerifiedCondition,
     rewrite_domain_once, substitute_domain,
 };
 use pyo3::create_exception;
@@ -123,9 +123,9 @@ fn show_equation(eq: &Equation) -> String {
 fn map_domain_parse(error: DomainParseError) -> PyErr {
     match error {
         DomainParseError::Syntax(error) => MathSyntaxError::new_err(error.to_string()),
-        DomainParseError::Domain(DefinednessError::UnsupportedExponent) => {
-            UnsupportedMathematicsError::new_err(error.to_string())
-        }
+        DomainParseError::Domain(
+            DefinednessError::UnsupportedExponent | DefinednessError::ZeroDenominator,
+        ) => UnsupportedMathematicsError::new_err(error.to_string()),
         DomainParseError::Domain(_) => ResourceLimitError::new_err(error.to_string()),
     }
 }
@@ -517,6 +517,90 @@ fn selected_rational(
         .map_err(map_evaluation_error)
 }
 
+fn map_rational_expression(error: RationalExpressionError) -> PyErr {
+    match error {
+        RationalExpressionError::Evaluation(reason) => map_evaluation_error(reason),
+        RationalExpressionError::RationalFunction(_)
+        | RationalExpressionError::OtherSymbol
+        | RationalExpressionError::UnsupportedExponent
+        | RationalExpressionError::ExponentLimitExceeded
+        | RationalExpressionError::UnsupportedCondition => {
+            UnsupportedMathematicsError::new_err(error.to_string())
+        }
+    }
+}
+
+fn selected_rational_expression(source: &str, variable: &Symbol) -> PyResult<RationalFunction> {
+    let parsed = checked_domain(source)?;
+    EvaluationContext::default()
+        .rational_expression(&parsed, variable)
+        .map_err(map_rational_expression)
+}
+
+#[pyfunction(name = "rational_simplify")]
+fn py_rational_simplify(source: &str, variable: &str) -> PyResult<PyRationalFunctionData> {
+    let symbol = selected_variable(variable)?;
+    let value = selected_rational_expression(source, &symbol)?;
+    Ok(rational_data(&value, &symbol))
+}
+
+#[pyfunction(name = "rational_derivative")]
+fn py_rational_derivative(source: &str, variable: &str) -> PyResult<PyRationalFunctionData> {
+    let symbol = selected_variable(variable)?;
+    let value = selected_rational_expression(source, &symbol)?;
+    let result = EvaluationContext::default()
+        .differentiate_rational_function(&value)
+        .map_err(map_evaluation_error)?;
+    Ok(rational_data(&result, &symbol))
+}
+
+#[pyfunction(name = "rational_value")]
+fn py_rational_value(source: &str, variable: &str, at: &str) -> PyResult<String> {
+    let symbol = selected_variable(variable)?;
+    let value = selected_rational_expression(source, &symbol)?;
+    let point = selected_scalar(at)?;
+    EvaluationContext::default()
+        .evaluate_rational_function(&value, &point)
+        .map(|result| result.to_string())
+        .map_err(map_evaluation_error)
+}
+
+type PyRationalRoots = (String, Vec<String>, Vec<PyPolynomialData>);
+
+#[pyfunction(name = "rational_solve")]
+fn py_rational_solve(source: &str, variable: &str) -> PyResult<PyRationalRoots> {
+    let symbol = selected_variable(variable)?;
+    let parsed = parse_domain_statement(source).map_err(map_domain_parse)?;
+    let DomainStatement::Equation { left, right } = parsed else {
+        return Err(MathSyntaxError::new_err("expected an equation containing '='"));
+    };
+    let ctx = EvaluationContext::default();
+    let lhs = ctx
+        .rational_expression(&left, &symbol)
+        .map_err(map_rational_expression)?;
+    let rhs = ctx
+        .rational_expression(&right, &symbol)
+        .map_err(map_rational_expression)?;
+    let result = ctx
+        .solve_rational_quadratic_equation(&lhs, &rhs)
+        .map_err(map_evaluation_error)?;
+    let (status, roots) = match result.roots() {
+        RationalQuadraticRoots::AllAdmissibleRationals => {
+            ("all_admissible".to_owned(), Vec::new())
+        }
+        RationalQuadraticRoots::Finite(values) => (
+            "finite".to_owned(),
+            values.iter().map(ToString::to_string).collect(),
+        ),
+    };
+    let exclusions = result
+        .domain_conditions()
+        .iter()
+        .map(|polynomial| poly_data(polynomial, &symbol))
+        .collect();
+    Ok((status, roots, exclusions))
+}
+
 #[pyfunction(name = "rational_function")]
 fn py_rational_function(
     numerator: &str,
@@ -723,6 +807,10 @@ fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(py_square_free, m)?)?;
     m.add_function(wrap_pyfunction!(py_differentiate_expression, m)?)?;
     m.add_function(wrap_pyfunction!(py_rational_function, m)?)?;
+    m.add_function(wrap_pyfunction!(py_rational_simplify, m)?)?;
+    m.add_function(wrap_pyfunction!(py_rational_derivative, m)?)?;
+    m.add_function(wrap_pyfunction!(py_rational_value, m)?)?;
+    m.add_function(wrap_pyfunction!(py_rational_solve, m)?)?;
     m.add_function(wrap_pyfunction!(py_rational_evaluate, m)?)?;
     m.add_function(wrap_pyfunction!(py_rational_differentiate, m)?)?;
     m.add_function(wrap_pyfunction!(py_rational_operation, m)?)?;

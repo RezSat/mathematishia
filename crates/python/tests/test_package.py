@@ -316,5 +316,56 @@ class DomainApiTests(unittest.TestCase):
             m.rewrite_domain("x*x^-1", ("x^-1",))
 
 
+
+class RationalExpressionApiTests(unittest.TestCase):
+    def test_reduces_full_expression_and_preserves_canceled_domain(self):
+        result = m.rational_simplify("(x^2-1)/(x-1)", "x")
+        self.assertEqual(result.numerator.coefficients, (Fraction(1), Fraction(1)))
+        self.assertEqual(result.denominator.coefficients, (Fraction(1),))
+        self.assertEqual(
+            [poly.coefficients for poly in result.excluded_zero_sets],
+            [(Fraction(-1), Fraction(1))],
+        )
+        zero = m.rational_simplify("0/(x-1)", "x")
+        self.assertEqual(zero.numerator.coefficients, ())
+        self.assertEqual(len(zero.excluded_zero_sets), 1)
+
+    def test_exact_calculus_and_evaluation_reject_removed_poles(self):
+        self.assertEqual(
+            m.rational_value("(x^2-1)/(x-1)", "x", "2"),
+            Fraction(3),
+        )
+        with self.assertRaises(m.UndefinedAtPointError):
+            m.rational_value("(x^2-1)/(x-1)", "x", "1")
+        derivative = m.rational_derivative("(x^2-1)/(x-1)", "x")
+        self.assertEqual(derivative.numerator.coefficients, (Fraction(1),))
+        self.assertEqual(
+            derivative.excluded_zero_sets[0].coefficients,
+            (Fraction(-1), Fraction(1)),
+        )
+
+    def test_equations_keep_original_domain(self):
+        excluded = m.rational_solve("(x^2-1)/(x-1)=2", "x")
+        self.assertEqual(excluded.kind, "finite")
+        self.assertEqual(excluded.roots, ())
+        self.assertEqual(
+            excluded.excluded_zero_sets[0].coefficients,
+            (Fraction(-1), Fraction(1)),
+        )
+        self.assertEqual(m.rational_solve("(x^2-1)/(x-1)=3", "x").roots,
+                         (Fraction(2),))
+        identity = m.rational_solve("0/(x-1)=0", "x")
+        self.assertEqual(identity.kind, "all_admissible")
+        self.assertEqual(len(identity.excluded_zero_sets), 1)
+
+    def test_rejects_unsupported_domains(self):
+        with self.assertRaises(m.UnsupportedMathematicsError):
+            m.rational_simplify("1/(x-x)", "x")
+        with self.assertRaises(m.UnsupportedMathematicsError):
+            m.rational_simplify("1/(x+y)", "x")
+        with self.assertRaises(m.MathSyntaxError):
+            m.rational_solve("x+1", "x")
+
+
 if __name__ == "__main__":
     unittest.main()

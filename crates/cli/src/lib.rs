@@ -196,15 +196,17 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
                 .solve_quadratic(&poly)
                 .map_err(|error| invalid(error.to_string()))?;
             let out = match solved.roots() {
-                QuadraticRoots::AllRationals => {
-                    "rational roots: all rational values".to_owned()
-                }
+                QuadraticRoots::AllRationals => "rational roots: all rational values".to_owned(),
                 QuadraticRoots::Finite(roots) if roots.is_empty() => {
                     "rational roots: none (other roots may exist)".to_owned()
                 }
                 QuadraticRoots::Finite(roots) => format!(
                     "rational roots: {}",
-                    roots.iter().map(ToString::to_string).collect::<Vec<_>>().join(", ")
+                    roots
+                        .iter()
+                        .map(ToString::to_string)
+                        .collect::<Vec<_>>()
+                        .join(", ")
                 ),
             };
             Ok(out)

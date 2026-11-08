@@ -9,12 +9,14 @@ use std::fmt;
 
 use mathema::{Equation, Expr, ExprView, Integer, Rational, Symbol};
 
+use crate::algebraic::checked_algebraic_roots;
 use crate::budget::{RationalBinaryOp, WorkBudget};
 use crate::differentiate_expr::generate_symbolic_derivative;
 use crate::quadratic::checked_quadratic;
 use crate::rational_quadratic::{RationalQuadraticResult, RationalQuadraticRoots};
 
 use crate::{
+    AlgebraicRootEvidence, AlgebraicRootResult, AlgebraicRootSet, AlgebraicVerificationError,
     DerivationStep, DerivativeVerificationError, DistributionResult, LinearSolution,
     LinearSolveResult, PolynomialConversionError, QuadraticError, QuadraticResult,
     QuadraticVerificationError, RationalEquationError, RationalEquationResult,
@@ -23,7 +25,8 @@ use crate::{
     SquareFreeVerificationError, SymbolicDerivative, SymbolicDifferentiationError,
     VerificationError, ZeroPolynomialDivisor, distribute_first_once, expand_distributively,
     solve_linear_equation, verify_distribution, verify_linear_solution, verify_quadratic_roots,
-    verify_rational_equation, verify_rational_quadratic_equation, verify_symbolic_derivative,
+    verify_algebraic_roots, verify_rational_equation, verify_rational_quadratic_equation,
+    verify_symbolic_derivative,
 };
 
 /// Explicit, configurable limits. None are process-global.
@@ -89,6 +92,7 @@ pub enum EvaluationError {
     RationalEquationVerification(RationalEquationVerificationError),
     Quadratic(QuadraticError),
     QuadraticVerification(QuadraticVerificationError),
+    AlgebraicVerification(AlgebraicVerificationError),
 }
 
 impl fmt::Display for EvaluationError {
@@ -112,6 +116,9 @@ impl fmt::Display for EvaluationError {
             Self::Quadratic(error) => write!(f, "{error}"),
             Self::QuadraticVerification(error) => {
                 write!(f, "quadratic verification failed: {error}")
+            }
+            Self::AlgebraicVerification(error) => {
+                write!(f, "algebraic root verification failed: {error}")
             }
             Self::RationalEquationVerification(error) => {
                 write!(f, "rational equation verification failed: {error}")
@@ -167,6 +174,12 @@ impl From<RationalEquationError> for EvaluationError {
 impl From<RationalEquationVerificationError> for EvaluationError {
     fn from(value: RationalEquationVerificationError) -> Self {
         Self::RationalEquationVerification(value)
+    }
+}
+
+impl From<AlgebraicVerificationError> for EvaluationError {
+    fn from(value: AlgebraicVerificationError) -> Self {
+        Self::AlgebraicVerification(value)
     }
 }
 
@@ -476,6 +489,38 @@ impl EvaluationContext {
         // The independent exact check is not a process-time or memory bound.
         work.charge(128)?;
         verify_rational_quadratic_equation(&result)?;
+        Ok(result)
+    }
+
+    /// Computes exact complex roots for polynomials over Q through degree two.
+    /// Evidence is independently reconstructed before being returned.
+    pub fn algebraic_roots(
+        &self,
+        original: &RationalPolynomial,
+    ) -> Result<AlgebraicRootResult, EvaluationError> {
+        self.check_polynomial(original)?;
+        let mut work = WorkBudget::new(self.limits);
+        let result = checked_algebraic_roots(original, &mut work)?;
+        for item in result.evidence() {
+            match item {
+                AlgebraicRootEvidence::MonicNormalization(poly) => self.check_polynomial(poly)?,
+                AlgebraicRootEvidence::Discriminant(value) => self.check_rational(value)?,
+                AlgebraicRootEvidence::Classification(_) => {}
+            }
+        }
+        if let AlgebraicRootSet::Finite(roots) = result.roots() {
+            for root in roots {
+                match root {
+                    crate::ExactQuadraticRoot::Rational(value) => self.check_rational(value)?,
+                    crate::ExactQuadraticRoot::Algebraic { minimal_polynomial, .. } => {
+                        self.check_polynomial(minimal_polynomial)?;
+                    }
+                }
+            }
+        }
+        // Like other checked verification paths, not hard process isolation.
+        work.charge(128)?;
+        verify_algebraic_roots(&result)?;
         Ok(result)
     }
 

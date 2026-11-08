@@ -6,6 +6,7 @@
 
 use mathema::{Expr, ExprView, Symbol};
 
+mod algebraic;
 mod budget;
 mod context;
 mod differentiate_expr;
@@ -20,6 +21,10 @@ mod solve_linear;
 mod square_free;
 mod verification;
 
+pub use algebraic::{
+    AlgebraicRootEvidence, AlgebraicRootResult, AlgebraicRootRule, AlgebraicRootSet,
+    AlgebraicVerificationError, ExactQuadraticRoot, QuadraticBranch, verify_algebraic_roots,
+};
 pub use context::{EvaluationContext, EvaluationError, ResourceLimitKind, ResourceLimits};
 pub use differentiate_expr::{
     DerivativeRuleId, DerivativeVerificationError, DifferentiationStep, SymbolicDerivative,

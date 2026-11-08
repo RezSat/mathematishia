@@ -7,7 +7,7 @@ use mathema::{Equation, Expr, ExprView, Rational, Symbol};
 use mathema_frontend::{Statement, parse_expression, parse_statement};
 use mathematishia_kernel::{
     EvaluationContext, EvaluationError, LinearSolution, RationalFunction, RationalFunctionError,
-    RationalPolynomial, ResourceLimitKind, VerifiedCondition,
+    RationalPolynomial, ResourceLimitKind, VerifiedCondition, QuadraticRoots,
 };
 use pyo3::create_exception;
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
@@ -31,6 +31,9 @@ fn map_evaluation_error(error: EvaluationError) -> PyErr {
         EvaluationError::DerivativeVerification(reason) => {
             VerificationFailure::new_err(reason.to_string())
         }
+        EvaluationError::QuadraticVerification(reason) => {
+            VerificationFailure::new_err(reason.to_string())
+        }
         EvaluationError::RationalEquationVerification(reason) => {
             VerificationFailure::new_err(reason.to_string())
         }
@@ -42,6 +45,7 @@ fn map_evaluation_error(error: EvaluationError) -> PyErr {
         | EvaluationError::SquareFree(_)
         | EvaluationError::SymbolicDifferentiation(_)
         | EvaluationError::RationalFunction(_)
+        | EvaluationError::Quadratic(_)
         | EvaluationError::RationalEquation(_)
         | EvaluationError::DivisionByZero => {
             UnsupportedMathematicsError::new_err(error.to_string())
@@ -372,6 +376,23 @@ fn py_rational_operation(
     Ok(rational_data(&result, &symbol))
 }
 
+#[pyfunction(name = "solve_quadratic")]
+fn py_solve_quadratic(source: &str, variable: &str) -> PyResult<(String, Vec<String>)> {
+    let symbol = selected_variable(variable)?;
+    let polynomial = selected_polynomial(source, &symbol)?;
+    let result = EvaluationContext::default()
+        .solve_quadratic(&polynomial)
+        .map_err(map_evaluation_error)?;
+    let (kind, roots) = match result.roots() {
+        QuadraticRoots::AllRationals => ("all_rationals".to_owned(), Vec::new()),
+        QuadraticRoots::Finite(roots) => (
+            "finite".to_owned(),
+            roots.iter().map(ToString::to_string).collect(),
+        ),
+    };
+    Ok((kind, roots))
+}
+
 #[pymodule]
 fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(py_expression, m)?)?;
@@ -388,6 +409,7 @@ fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(py_rational_evaluate, m)?)?;
     m.add_function(wrap_pyfunction!(py_rational_differentiate, m)?)?;
     m.add_function(wrap_pyfunction!(py_rational_operation, m)?)?;
+    m.add_function(wrap_pyfunction!(py_solve_quadratic, m)?)?;
     m.add("MathSyntaxError", m.py().get_type::<MathSyntaxError>())?;
     m.add(
         "UndefinedAtPointError",

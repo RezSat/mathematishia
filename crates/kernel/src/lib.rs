@@ -12,6 +12,7 @@ mod differentiate_expr;
 mod poly_convert;
 mod poly_division;
 mod polynomial;
+mod quadratic;
 mod rational_equation;
 mod rational_function;
 mod solve_linear;
@@ -26,6 +27,10 @@ pub use differentiate_expr::{
 pub use poly_convert::PolynomialConversionError;
 pub use poly_division::ZeroPolynomialDivisor;
 pub use polynomial::RationalPolynomial;
+pub use quadratic::{
+    QuadraticError, QuadraticResult, QuadraticRoots, QuadraticVerificationError,
+    verify_quadratic_roots,
+};
 pub use rational_equation::{
     RationalEquationError, RationalEquationResult, RationalEquationSolution,
     RationalEquationVerificationError, verify_rational_equation,

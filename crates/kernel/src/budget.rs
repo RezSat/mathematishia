@@ -90,7 +90,7 @@ impl WorkBudget {
         Ok(())
     }
 
-    fn add_scalar(&mut self, a: &Rational, b: &Rational) -> Result<Rational, EvaluationError> {
+    pub(crate) fn add_scalar(&mut self, a: &Rational, b: &Rational) -> Result<Rational, EvaluationError> {
         self.charge(1)?;
         self.scalar(a)?;
         self.scalar(b)?;
@@ -119,11 +119,11 @@ impl WorkBudget {
         Ok(output)
     }
 
-    fn subtract_scalar(&mut self, a: &Rational, b: &Rational) -> Result<Rational, EvaluationError> {
+    pub(crate) fn subtract_scalar(&mut self, a: &Rational, b: &Rational) -> Result<Rational, EvaluationError> {
         self.add_scalar(a, &(-b))
     }
 
-    fn multiply_scalar(&mut self, a: &Rational, b: &Rational) -> Result<Rational, EvaluationError> {
+    pub(crate) fn multiply_scalar(&mut self, a: &Rational, b: &Rational) -> Result<Rational, EvaluationError> {
         self.charge(1)?;
         self.scalar(a)?;
         self.scalar(b)?;

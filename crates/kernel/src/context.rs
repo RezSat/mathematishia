@@ -11,16 +11,18 @@ use mathema::{Equation, Expr, ExprView, Integer, Rational, Symbol};
 
 use crate::budget::{RationalBinaryOp, WorkBudget};
 use crate::differentiate_expr::generate_symbolic_derivative;
+use crate::quadratic::checked_quadratic;
 
 use crate::{
     DerivationStep, DerivativeVerificationError, DistributionResult, LinearSolution,
-    LinearSolveResult, PolynomialConversionError, RationalEquationError, RationalEquationResult,
+    LinearSolveResult, PolynomialConversionError, QuadraticError, QuadraticResult,
+    QuadraticVerificationError, RationalEquationError, RationalEquationResult,
     RationalEquationSolution, RationalEquationVerificationError, RationalFunction,
     RationalFunctionError, RationalPolynomial, SquareFreeDecomposition, SquareFreeError,
     SquareFreeVerificationError, SymbolicDerivative, SymbolicDifferentiationError,
     VerificationError, ZeroPolynomialDivisor, distribute_first_once, expand_distributively,
     solve_linear_equation, verify_distribution, verify_linear_solution, verify_rational_equation,
-    verify_symbolic_derivative,
+    verify_symbolic_derivative, verify_quadratic_roots,
 };
 
 /// Explicit, configurable limits. None are process-global.
@@ -84,6 +86,8 @@ pub enum EvaluationError {
     RationalFunction(RationalFunctionError),
     RationalEquation(RationalEquationError),
     RationalEquationVerification(RationalEquationVerificationError),
+    Quadratic(QuadraticError),
+    QuadraticVerification(QuadraticVerificationError),
 }
 
 impl fmt::Display for EvaluationError {
@@ -104,6 +108,8 @@ impl fmt::Display for EvaluationError {
             }
             Self::RationalFunction(error) => write!(f, "{error}"),
             Self::RationalEquation(error) => write!(f, "{error}"),
+            Self::Quadratic(error) => write!(f, "{error}"),
+            Self::QuadraticVerification(error) => write!(f, "quadratic verification failed: {error}"),
             Self::RationalEquationVerification(error) => {
                 write!(f, "rational equation verification failed: {error}")
             }
@@ -159,6 +165,14 @@ impl From<RationalEquationVerificationError> for EvaluationError {
     fn from(value: RationalEquationVerificationError) -> Self {
         Self::RationalEquationVerification(value)
     }
+}
+
+impl From<QuadraticError> for EvaluationError {
+    fn from(value: QuadraticError) -> Self { Self::Quadratic(value) }
+}
+
+impl From<QuadraticVerificationError> for EvaluationError {
+    fn from(value: QuadraticVerificationError) -> Self { Self::QuadraticVerification(value) }
 }
 
 impl From<VerificationError> for EvaluationError {
@@ -404,6 +418,25 @@ impl EvaluationContext {
         meter.charge(expression_size(original).saturating_pow(2))?;
         verify_symbolic_derivative(&result)?;
         self.check_expression(result.derivative())?;
+        Ok(result)
+    }
+
+    /// Exact rational roots (degree <= 2), with independent checking.
+    /// No rational roots does not mean no real or complex roots.
+    pub fn solve_quadratic(
+        &self,
+        polynomial: &RationalPolynomial,
+    ) -> Result<QuadraticResult, EvaluationError> {
+        self.check_polynomial(polynomial)?;
+        let mut work = WorkBudget::new(self.limits);
+        let result = checked_quadratic(polynomial, &mut work)?;
+        if let crate::QuadraticRoots::Finite(roots) = result.roots() {
+            for root in roots {
+                self.check_rational(root)?;
+            }
+        }
+        work.charge(16)?;
+        verify_quadratic_roots(&result)?;
         Ok(result)
     }
 

@@ -10,8 +10,7 @@ use mathema::{Equation, Expr, ExprView, Rational, Symbol};
 use mathema_frontend::{Statement, parse_expression, parse_statement};
 use mathematishia_kernel::{
     EvaluationContext, LinearSolution, QuadraticRoots, RationalFunction, RationalPolynomial,
-    RationalQuadraticRoots,
-    VerifiedCondition,
+    RationalQuadraticRoots, VerifiedCondition,
 };
 
 pub const HELP: &str = "Mathematishia (early exact-math CLI)

@@ -409,9 +409,7 @@ fn py_rational_solve_quadratic(
         .solve_rational_quadratic_equation(&lhs, &rhs)
         .map_err(map_evaluation_error)?;
     let (kind, roots) = match result.roots() {
-        RationalQuadraticRoots::AllAdmissibleRationals => {
-            ("all_admissible".to_owned(), Vec::new())
-        }
+        RationalQuadraticRoots::AllAdmissibleRationals => ("all_admissible".to_owned(), Vec::new()),
         RationalQuadraticRoots::Finite(roots) => (
             "finite".to_owned(),
             roots.iter().map(ToString::to_string).collect(),

@@ -439,5 +439,50 @@ class PolynomialBezoutTests(unittest.TestCase):
             m.modular_inverse("x", "0", "x")
 
 
+
+class QuadraticFieldArithmeticTests(unittest.TestCase):
+    def test_sqrt_two_arithmetic_and_exact_invariants(self):
+        value = m.quadratic_value("x^2-2", "x", "upper_real", "1", "2")
+        self.assertEqual(value.constant, Fraction(1))
+        self.assertEqual(value.coefficient, Fraction(2))
+        self.assertEqual(value.minimal_polynomial.coefficients,
+                         (Fraction(-7), Fraction(-2), Fraction(1)))
+        self.assertEqual(value.trace, Fraction(2))
+        self.assertEqual(value.norm, Fraction(-7))
+        self.assertEqual(value.root_branch, "upper_real")
+
+        square = m.quadratic_operation(
+            "mul", "x^2-2", "x", "upper_real", "0", "1", "0", "1"
+        )
+        self.assertEqual((square.constant, square.coefficient),
+                         (Fraction(2), Fraction(0)))
+        inverse = m.quadratic_inverse("x^2-2", "x", "upper_real", "0", "1")
+        self.assertEqual((inverse.constant, inverse.coefficient),
+                         (Fraction(0), Fraction(1, 2)))
+        with self.assertRaises(FrozenInstanceError):
+            inverse.constant = Fraction(0)
+
+    def test_complex_arithmetic_and_rejected_inputs(self):
+        square = m.quadratic_operation(
+            "mul", "x^2+1", "x", "positive_imaginary",
+            "0", "1", "0", "1",
+        )
+        self.assertEqual((square.constant, square.coefficient),
+                         (Fraction(-1), Fraction(0)))
+        self.assertIsNone(square.root_branch)
+        negative = m.quadratic_value(
+            "x^2+1", "x", "positive_imaginary", "0", "-1"
+        )
+        self.assertEqual(negative.root_branch, "negative_imaginary")
+
+        for polynomial, branch in [
+            ("x^2-4", "upper_real"), ("x^2+1", "upper_real"),
+        ]:
+            with self.assertRaises(m.UnsupportedMathematicsError):
+                m.quadratic_value(polynomial, "x", branch, "1", "1")
+        with self.assertRaises(m.UnsupportedMathematicsError):
+            m.quadratic_inverse("x^2+1", "x", "positive_imaginary", "0", "0")
+
+
 if __name__ == "__main__":
     unittest.main()

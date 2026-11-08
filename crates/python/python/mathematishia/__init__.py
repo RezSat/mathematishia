@@ -240,6 +240,61 @@ def solve_quadratic(source: str, variable: str) -> QuadraticResult:
     return QuadraticResult(kind, tuple(Fraction(root) for root in roots))
 
 
+@dataclass(frozen=True)
+class QuadraticFieldValue:
+    field_polynomial: Polynomial
+    embedding: Literal[
+        "lower_real", "upper_real", "negative_imaginary", "positive_imaginary"
+    ]
+    constant: Fraction
+    coefficient: Fraction
+    minimal_polynomial: Polynomial
+    root_branch: str | None
+    trace: Fraction
+    norm: Fraction
+
+
+def _quad(data) -> QuadraticFieldValue:
+    field, branch, coefficients, minimal, root_branch, invariants = data
+    a, b = coefficients
+    trace, norm = invariants
+    return QuadraticFieldValue(
+        _poly(field), branch, Fraction(a), Fraction(b),
+        _poly(minimal), root_branch, Fraction(trace), Fraction(norm),
+    )
+
+
+def quadratic_value(
+    polynomial: str, variable: str, branch: str,
+    constant: str, coefficient: str,
+) -> QuadraticFieldValue:
+    """Represent a+b*alpha in a certified quadratic field with a selected embedding."""
+    return _quad(_native.quadratic_value(
+        polynomial, variable, branch, constant, coefficient
+    ))
+
+
+def quadratic_operation(
+    operation: Literal["add", "sub", "mul", "div"],
+    polynomial: str, variable: str, branch: str,
+    a: str, b: str, c: str, d: str,
+) -> QuadraticFieldValue:
+    """Combine two elements in the same embedded quadratic field exactly."""
+    return _quad(_native.quadratic_operation(
+        operation, polynomial, variable, branch, a, b, c, d
+    ))
+
+
+def quadratic_inverse(
+    polynomial: str, variable: str, branch: str,
+    constant: str, coefficient: str,
+) -> QuadraticFieldValue:
+    """Return the inverse of a nonzero quadratic algebraic value."""
+    return _quad(_native.quadratic_inverse(
+        polynomial, variable, branch, constant, coefficient
+    ))
+
+
 def algebraic_roots(source: str, variable: str) -> AlgebraicRootsResult:
     """Return complete exact complex roots through degree two with proof steps.
 
@@ -427,6 +482,7 @@ __all__ = [
     "RationalFunction", "RationalQuadraticResult",
     "EuclideanDivision", "ExtendedGcd", "extended_gcd", "modular_inverse",
     "ExactQuadraticRoot", "AlgebraicRootStep", "AlgebraicRootsResult",
+    "QuadraticFieldValue", "quadratic_value", "quadratic_operation", "quadratic_inverse",
     "SquareFreeFactor", "SquareFreeDecomposition",
     "SymbolicDifferentiationStep", "SymbolicDerivative",
     "expression", "expand", "solve", "solve_quadratic", "algebraic_roots", "polynomial", "differentiate", "differentiate_expression", "square_free",

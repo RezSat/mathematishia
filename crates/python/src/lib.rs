@@ -11,7 +11,7 @@ use mathema_frontend::{
 use mathematishia_kernel::{
     AlgebraicRootEvidence, AlgebraicRootSet, Assumptions, DefinednessError, DomainOperationError,
     DomainRewriteOutcome, EvaluationContext, EvaluationError, ExactQuadraticRoot, LinearSolution,
-    ProofNodeKind, QuadraticBranch, QuadraticRoots, RationalExpressionError, RationalFunction,
+    ProofNodeKind, QuadraticBranch, QuadraticElement, QuadraticField, QuadraticFieldError, QuadraticRoots, RationalExpressionError, RationalFunction,
     RationalFunctionError, RationalPolynomial, RationalQuadraticRoots, ResourceLimitKind,
     VerifiedCondition, rewrite_domain_once, substitute_domain,
 };
@@ -786,6 +786,126 @@ type PyAlgebraicValue = (
 type PyAlgebraicStep = (String, Option<PyPolynomialData>, Option<String>);
 type PyAlgebraicResult = (String, Vec<PyAlgebraicValue>, Vec<PyAlgebraicStep>);
 
+fn map_quadratic_field_error(error: QuadraticFieldError) -> PyErr {
+    match error {
+        QuadraticFieldError::Evaluation(reason) => map_evaluation_error(reason),
+        _ => UnsupportedMathematicsError::new_err(error.to_string()),
+    }
+}
+
+fn selected_quadratic_branch(branch: &str) -> PyResult<QuadraticBranch> {
+    match branch {
+        "lower_real" => Ok(QuadraticBranch::LowerReal),
+        "upper_real" => Ok(QuadraticBranch::UpperReal),
+        "negative_imaginary" => Ok(QuadraticBranch::NegativeImaginary),
+        "positive_imaginary" => Ok(QuadraticBranch::PositiveImaginary),
+        _ => Err(UnsupportedMathematicsError::new_err("invalid quadratic root branch")),
+    }
+}
+
+fn selected_quadratic_element(
+    polynomial: &str,
+    variable: &str,
+    branch: &str,
+    constant: &str,
+    coefficient: &str,
+) -> PyResult<(QuadraticElement, Symbol)> {
+    let ctx = EvaluationContext::default();
+    let symbol = selected_variable(variable)?;
+    let minimal = selected_polynomial(polynomial, &symbol)?;
+    let field = QuadraticField::new(&ctx, minimal, selected_quadratic_branch(branch)?)
+        .map_err(map_quadratic_field_error)?;
+    let value = QuadraticElement::new(
+        &ctx,
+        field,
+        selected_scalar(constant)?,
+        selected_scalar(coefficient)?,
+    )
+    .map_err(map_quadratic_field_error)?;
+    Ok((value, symbol))
+}
+
+type PyQuadraticValue = (
+    PyPolynomialData,
+    String,
+    (String, String),
+    PyPolynomialData,
+    Option<String>,
+    (String, String),
+);
+
+fn quadratic_value_data(
+    value: &QuadraticElement,
+    symbol: &Symbol,
+) -> PyResult<PyQuadraticValue> {
+    let ctx = EvaluationContext::default();
+    let minimal = value.minimal_polynomial(&ctx).map_err(map_quadratic_field_error)?;
+    let selected = value.as_exact_root(&ctx).map_err(map_quadratic_field_error)?;
+    let trace = value.trace(&ctx).map_err(map_quadratic_field_error)?;
+    let norm = value.norm(&ctx).map_err(map_quadratic_field_error)?;
+    Ok((
+        poly_data(value.field().polynomial(), symbol),
+        value.field().branch().stable_id().to_owned(),
+        (value.constant().to_string(), value.coefficient().to_string()),
+        poly_data(&minimal, symbol),
+        selected.branch().map(|branch| branch.stable_id().to_owned()),
+        (trace.to_string(), norm.to_string()),
+    ))
+}
+
+#[pyfunction(name = "quadratic_value")]
+fn py_quadratic_value(
+    polynomial: &str,
+    variable: &str,
+    branch: &str,
+    constant: &str,
+    coefficient: &str,
+) -> PyResult<PyQuadraticValue> {
+    let (value, symbol) =
+        selected_quadratic_element(polynomial, variable, branch, constant, coefficient)?;
+    quadratic_value_data(&value, &symbol)
+}
+
+#[pyfunction(name = "quadratic_operation")]
+fn py_quadratic_operation(
+    operation: &str,
+    polynomial: &str,
+    variable: &str,
+    branch: &str,
+    a: &str,
+    b: &str,
+    c: &str,
+    d: &str,
+) -> PyResult<PyQuadraticValue> {
+    let (left, symbol) = selected_quadratic_element(polynomial, variable, branch, a, b)?;
+    let (right, _) = selected_quadratic_element(polynomial, variable, branch, c, d)?;
+    let ctx = EvaluationContext::default();
+    let result = match operation {
+        "add" => left.add(&right, &ctx),
+        "sub" => left.subtract(&right, &ctx),
+        "mul" => left.multiply(&right, &ctx),
+        "div" => left.divide(&right, &ctx),
+        _ => return Err(UnsupportedMathematicsError::new_err("expected add, sub, mul or div")),
+    }
+    .map_err(map_quadratic_field_error)?;
+    quadratic_value_data(&result, &symbol)
+}
+
+#[pyfunction(name = "quadratic_inverse")]
+fn py_quadratic_inverse(
+    polynomial: &str,
+    variable: &str,
+    branch: &str,
+    constant: &str,
+    coefficient: &str,
+) -> PyResult<PyQuadraticValue> {
+    let (value, symbol) =
+        selected_quadratic_element(polynomial, variable, branch, constant, coefficient)?;
+    let inverse = value.inverse(&EvaluationContext::default())
+        .map_err(map_quadratic_field_error)?;
+    quadratic_value_data(&inverse, &symbol)
+}
+
 #[pyfunction(name = "algebraic_roots")]
 fn py_algebraic_roots(source: &str, variable: &str) -> PyResult<PyAlgebraicResult> {
     let selected = selected_variable(variable)?;
@@ -877,6 +997,9 @@ fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(py_rational_operation, m)?)?;
     m.add_function(wrap_pyfunction!(py_solve_quadratic, m)?)?;
     m.add_function(wrap_pyfunction!(py_algebraic_roots, m)?)?;
+    m.add_function(wrap_pyfunction!(py_quadratic_value, m)?)?;
+    m.add_function(wrap_pyfunction!(py_quadratic_operation, m)?)?;
+    m.add_function(wrap_pyfunction!(py_quadratic_inverse, m)?)?;
     m.add_function(wrap_pyfunction!(py_rational_solve_quadratic, m)?)?;
     m.add("MathSyntaxError", m.py().get_type::<MathSyntaxError>())?;
     m.add(

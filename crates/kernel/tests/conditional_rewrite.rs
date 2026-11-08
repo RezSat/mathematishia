@@ -1,7 +1,7 @@
 use mathema::{Condition, Expr, Integer, Rational, Symbol};
 use mathematishia_kernel::{
-    Assumptions, ConditionStatus, ConditionalRewriteOutcome, DefinednessError,
-    ProofGraph, ProofGraphVerificationError, ProofNodeId, cancel_composite_inverse_once,
+    Assumptions, ConditionStatus, ConditionalRewriteOutcome, DefinednessError, ProofGraph,
+    ProofGraphVerificationError, ProofNodeId, cancel_composite_inverse_once,
     verify_composite_inverse_step, verify_proof_graph,
 };
 
@@ -17,9 +17,9 @@ fn composite_cancellation_requires_an_explicit_nonzero_fact() {
     let empty = Assumptions::new();
     assert_eq!(
         cancel_composite_inverse_once(&expression, &empty),
-        Ok(ConditionalRewriteOutcome::Blocked(vec![Condition::NonZero(
-            base.clone()
-        )]))
+        Ok(ConditionalRewriteOutcome::Blocked(vec![
+            Condition::NonZero(base.clone())
+        ]))
     );
     let assumptions = Assumptions::from_conditions([Condition::NonZero(base.clone())]).unwrap();
     let step = match cancel_composite_inverse_once(&expression, &assumptions).unwrap() {
@@ -42,7 +42,10 @@ fn composite_cancellation_requires_an_explicit_nonzero_fact() {
         .add_composite_cancellation(ProofNodeId::new(0), vec![condition_id], step)
         .unwrap();
     graph.select_conclusion(conclusion);
-    assert_eq!(verify_proof_graph(&expression, &assumptions, &graph), Ok(()));
+    assert_eq!(
+        verify_proof_graph(&expression, &assumptions, &graph),
+        Ok(())
+    );
     assert_eq!(
         graph.nodes()[conclusion.index()].kind().rule_id(),
         Some("algebra.cancel_composite_inverse")
@@ -50,12 +53,14 @@ fn composite_cancellation_requires_an_explicit_nonzero_fact() {
 
     let mut missing = graph.clone();
     let invalid = missing
-        .add_composite_cancellation(ProofNodeId::new(0), vec![], match
-            cancel_composite_inverse_once(&expression, &assumptions).unwrap()
-        {
-            ConditionalRewriteOutcome::Applied(step) => step,
-            other => panic!("unexpected result: {other:?}"),
-        })
+        .add_composite_cancellation(
+            ProofNodeId::new(0),
+            vec![],
+            match cancel_composite_inverse_once(&expression, &assumptions).unwrap() {
+                ConditionalRewriteOutcome::Applied(step) => step,
+                other => panic!("unexpected result: {other:?}"),
+            },
+        )
         .unwrap();
     missing.select_conclusion(invalid);
     assert_eq!(
@@ -68,10 +73,7 @@ fn composite_cancellation_requires_an_explicit_nonzero_fact() {
 fn nested_reciprocals_propagate_both_conditions() {
     let x = symbol("x");
     let inner = Expr::pow(x.clone(), (-1).into());
-    let expr = Expr::mul([
-        inner.clone(),
-        Expr::pow(inner.clone(), (-1).into()),
-    ]);
+    let expr = Expr::mul([inner.clone(), Expr::pow(inner.clone(), (-1).into())]);
     let assumptions = Assumptions::from_conditions([Condition::NonZero(x.clone())]).unwrap();
 
     let step = match cancel_composite_inverse_once(&expr, &assumptions).unwrap() {
@@ -134,8 +136,8 @@ fn refuses_to_guess_a_sum_is_nonzero() {
     let assumptions = Assumptions::from_conditions([Condition::NonZero(x)]).unwrap();
     assert_eq!(
         cancel_composite_inverse_once(&expression, &assumptions),
-        Ok(ConditionalRewriteOutcome::Blocked(vec![Condition::NonZero(
-            base
-        )]))
+        Ok(ConditionalRewriteOutcome::Blocked(vec![
+            Condition::NonZero(base)
+        ]))
     );
 }

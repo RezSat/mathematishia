@@ -5,9 +5,7 @@ use std::fmt;
 
 use mathema::{Condition, Expr, ExprView};
 
-use crate::{
-    Assumptions, ConditionStatus, DefinednessError, Relation, definedness_obligations,
-};
+use crate::{Assumptions, ConditionStatus, DefinednessError, Relation, definedness_obligations};
 
 const MAX_INSPECTED_NODES: usize = 2_048;
 
@@ -104,7 +102,10 @@ fn candidate(expression: &Expr) -> Option<(&[Expr], usize, usize, &Expr)> {
         return None;
     };
     for (left, base) in factors.iter().enumerate() {
-        if !matches!(base.view(), ExprView::Add(_) | ExprView::Mul(_) | ExprView::Pow { .. }) {
+        if !matches!(
+            base.view(),
+            ExprView::Add(_) | ExprView::Mul(_) | ExprView::Pow { .. }
+        ) {
             continue;
         }
         for (right, reciprocal) in factors.iter().enumerate() {
@@ -194,7 +195,10 @@ pub fn verify_composite_inverse_step(
     };
 
     for (left, base) in factors.iter().enumerate() {
-        if !matches!(base.view(), ExprView::Add(_) | ExprView::Mul(_) | ExprView::Pow { .. }) {
+        if !matches!(
+            base.view(),
+            ExprView::Add(_) | ExprView::Mul(_) | ExprView::Pow { .. }
+        ) {
             continue;
         }
         for (right, reciprocal) in factors.iter().enumerate() {
@@ -247,10 +251,7 @@ mod tests {
     fn rejects_forged_composite_rewrite_evidence() {
         let x = Expr::from(Symbol::new("x").unwrap());
         let base = Expr::add([x, 1.into()]);
-        let expression = Expr::mul([
-            base.clone(),
-            Expr::pow(base.clone(), (-1).into()),
-        ]);
+        let expression = Expr::mul([base.clone(), Expr::pow(base.clone(), (-1).into())]);
         let assumptions = Assumptions::from_conditions([Condition::NonZero(base)]).unwrap();
         let valid = match cancel_composite_inverse_once(&expression, &assumptions).unwrap() {
             ConditionalRewriteOutcome::Applied(step) => step,

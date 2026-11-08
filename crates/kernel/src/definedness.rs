@@ -16,15 +16,18 @@ pub enum DefinednessError {
 impl fmt::Display for DefinednessError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::UnsupportedExponent => f.write_str("definedness is unsupported for this exponent"),
-            Self::NodeLimitExceeded => f.write_str("definedness inspection exceeded the node limit"),
+            Self::UnsupportedExponent => {
+                f.write_str("definedness is unsupported for this exponent")
+            }
+            Self::NodeLimitExceeded => {
+                f.write_str("definedness inspection exceeded the node limit")
+            }
             Self::ConditionLimitExceeded => f.write_str("definedness condition limit exceeded"),
         }
     }
 }
 
 impl Error for DefinednessError {}
-
 
 /// A normalized expression together with the domain restrictions of its
 /// construction history.
@@ -38,10 +41,7 @@ pub struct DomainExpression {
 }
 
 impl DomainExpression {
-    pub fn from_expr(
-        expression: Expr,
-        max_nodes: usize,
-    ) -> Result<Self, DefinednessError> {
+    pub fn from_expr(expression: Expr, max_nodes: usize) -> Result<Self, DefinednessError> {
         let conditions = definedness_obligations(&expression, max_nodes)?;
         Ok(Self {
             expression,

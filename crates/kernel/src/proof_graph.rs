@@ -100,7 +100,9 @@ impl ProofNodeKind {
             } => vec![*source, *condition],
             Self::CompositeCancellation {
                 source, conditions, ..
-            } => std::iter::once(*source).chain(conditions.iter().copied()).collect(),
+            } => std::iter::once(*source)
+                .chain(conditions.iter().copied())
+                .collect(),
         }
     }
 }
@@ -348,7 +350,8 @@ pub fn verify_proof_graph(
                     }
                     match prior.kind() {
                         ProofNodeKind::Condition { condition, status }
-                            if condition == required.condition() && *status == required.status() => {}
+                            if condition == required.condition()
+                                && *status == required.status() => {}
                         _ => return Err(E::InvalidDependency),
                     }
                 }

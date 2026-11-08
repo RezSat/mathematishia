@@ -100,9 +100,7 @@ impl Assumptions {
             return ConditionStatus::Unknown;
         };
         match expression.view() {
-            ExprView::Pow { base, exponent }
-                if matches!(exponent.view(), ExprView::Integer(_)) =>
-            {
+            ExprView::Pow { base, exponent } if matches!(exponent.view(), ExprView::Integer(_)) => {
                 self.assess_bounded(&Condition::NonZero(base.clone()), depth + 1)
             }
             ExprView::Mul(factors) => {

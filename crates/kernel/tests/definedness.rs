@@ -84,8 +84,7 @@ fn powers_and_products_inherit_nonzero_premises() {
 fn retains_domain_holes_through_zero_multiplication() {
     let x = symbol("x");
     let zero = DomainExpression::from_expr(Expr::from(0), 32).unwrap();
-    let reciprocal = DomainExpression::from_expr(Expr::pow(x.clone(), (-1).into()), 32)
-        .unwrap();
+    let reciprocal = DomainExpression::from_expr(Expr::pow(x.clone(), (-1).into()), 32).unwrap();
     let product = DomainExpression::multiply([zero, reciprocal], 4).unwrap();
 
     assert_eq!(product.expression(), &Expr::from(0));
@@ -117,8 +116,5 @@ fn composition_keeps_restrictions_after_folding() {
     assert_eq!(sum.conditions(), &[Condition::NonZero(x.clone())]);
     let inverse = sum.pow_integer(Integer::from(-1), 4).unwrap();
     assert_eq!(inverse.conditions().len(), 2);
-    assert_eq!(
-        inverse.conditions().first(),
-        Some(&Condition::NonZero(x))
-    );
+    assert_eq!(inverse.conditions().first(), Some(&Condition::NonZero(x)));
 }

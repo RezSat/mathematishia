@@ -20,6 +20,7 @@ mod polynomial;
 mod proof_graph;
 mod quadratic;
 mod rational_equation;
+mod rational_expression;
 mod rational_function;
 mod rational_quadratic;
 mod solve_linear;
@@ -65,6 +66,7 @@ pub use rational_equation::{
     RationalEquationError, RationalEquationResult, RationalEquationSolution,
     RationalEquationVerificationError, verify_rational_equation,
 };
+pub use rational_expression::RationalExpressionError;
 pub use rational_function::{RationalFunction, RationalFunctionError};
 pub use rational_quadratic::{
     RationalQuadraticResult, RationalQuadraticRoots, verify_rational_quadratic_equation,

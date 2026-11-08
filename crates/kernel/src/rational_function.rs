@@ -17,6 +17,7 @@ use crate::poly_division::rational_quotient;
 pub enum RationalFunctionError {
     ZeroDenominator,
     ZeroDivisor,
+    EmptyDomain,
     UndefinedAtPoint,
     NonExactReduction,
 }
@@ -26,6 +27,7 @@ impl fmt::Display for RationalFunctionError {
         match self {
             Self::ZeroDenominator => f.write_str("rational-function denominator is zero"),
             Self::ZeroDivisor => f.write_str("cannot divide by the zero rational function"),
+            Self::EmptyDomain => f.write_str("no points satisfy the source domain restrictions"),
             Self::UndefinedAtPoint => f.write_str("rational function is undefined at this point"),
             Self::NonExactReduction => f.write_str("rational-function GCD reduction was not exact"),
         }
@@ -129,6 +131,24 @@ impl RationalFunction {
     /// Each polynomial represents the exact side condition p(x) != 0.
     pub fn excluded_zero_sets(&self) -> &[RationalPolynomial] {
         &self.excluded
+    }
+
+    /// Adds a polynomial nonzero restriction without changing the reduced
+    /// rational value. A zero restriction has an empty domain and is rejected.
+    pub fn restrict_nonzero(
+        &self,
+        polynomial: RationalPolynomial,
+    ) -> Result<Self, RationalFunctionError> {
+        if polynomial.is_zero() {
+            return Err(RationalFunctionError::EmptyDomain);
+        }
+        let mut exclusions = self.excluded.clone();
+        exclusions.push(polynomial);
+        Ok(Self {
+            numerator: self.numerator.clone(),
+            denominator: self.denominator.clone(),
+            excluded: normalize_conditions(exclusions),
+        })
     }
 
     pub fn is_zero(&self) -> bool {

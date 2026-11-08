@@ -7,8 +7,7 @@ use mathema::{Integer, Rational};
 
 use crate::poly_division::rational_quotient;
 use crate::{
-    EvaluationContext, EvaluationError, ExactQuadraticRoot, QuadraticBranch,
-    RationalPolynomial,
+    EvaluationContext, EvaluationError, ExactQuadraticRoot, QuadraticBranch, RationalPolynomial,
 };
 
 fn zero() -> Rational {
@@ -35,8 +34,12 @@ impl fmt::Display for QuadraticFieldError {
         match self {
             Self::Evaluation(error) => write!(f, "{error}"),
             Self::NotQuadratic => f.write_str("the minimal polynomial must have degree two"),
-            Self::ReduciblePolynomial => f.write_str("the quadratic polynomial is reducible over Q"),
-            Self::InvalidBranch => f.write_str("the root branch is incompatible with the discriminant"),
+            Self::ReduciblePolynomial => {
+                f.write_str("the quadratic polynomial is reducible over Q")
+            }
+            Self::InvalidBranch => {
+                f.write_str("the root branch is incompatible with the discriminant")
+            }
             Self::MismatchedFields => f.write_str("quadratic elements use different embeddings"),
             Self::RationalRoot => f.write_str("a rational root does not define a quadratic field"),
             Self::DivisionByZero => f.write_str("cannot invert zero in a quadratic field"),
@@ -94,7 +97,10 @@ impl QuadraticField {
                 QuadraticBranch::NegativeImaginary | QuadraticBranch::PositiveImaginary
             )
         } else {
-            matches!(branch, QuadraticBranch::LowerReal | QuadraticBranch::UpperReal)
+            matches!(
+                branch,
+                QuadraticBranch::LowerReal | QuadraticBranch::UpperReal
+            )
         };
         if !valid {
             return Err(QuadraticFieldError::InvalidBranch);
@@ -153,7 +159,8 @@ impl QuadraticElement {
         let ExactQuadraticRoot::Algebraic {
             minimal_polynomial,
             branch,
-        } = root else {
+        } = root
+        else {
             return Err(QuadraticFieldError::RationalRoot);
         };
         let field = QuadraticField::new(ctx, minimal_polynomial.clone(), *branch)?;

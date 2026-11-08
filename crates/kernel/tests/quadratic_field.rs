@@ -1,12 +1,15 @@
 use mathema::{Integer, Rational};
 use mathematishia_kernel::{
-    EvaluationContext, ExactQuadraticRoot, QuadraticBranch, QuadraticElement,
-    QuadraticField, QuadraticFieldError, RationalPolynomial,
+    EvaluationContext, ExactQuadraticRoot, QuadraticBranch, QuadraticElement, QuadraticField,
+    QuadraticFieldError, RationalPolynomial,
 };
 
 fn p(values: &[i64]) -> RationalPolynomial {
     RationalPolynomial::new(
-        values.iter().map(|&value| Rational::from(Integer::from(value))).collect(),
+        values
+            .iter()
+            .map(|&value| Rational::from(Integer::from(value)))
+            .collect(),
     )
 }
 
@@ -31,8 +34,13 @@ fn sqrt_two_field_exact_arithmetic() {
 
     let shifted = QuadraticElement::new(&ctx, field, q(1, 1), q(2, 1)).unwrap();
     assert_eq!(shifted.minimal_polynomial(&ctx).unwrap(), p(&[-7, -2, 1]));
-    let ExactQuadraticRoot::Algebraic { minimal_polynomial, branch } =
-        shifted.as_exact_root(&ctx).unwrap() else { panic!("must be irrational") };
+    let ExactQuadraticRoot::Algebraic {
+        minimal_polynomial,
+        branch,
+    } = shifted.as_exact_root(&ctx).unwrap()
+    else {
+        panic!("must be irrational")
+    };
     assert_eq!(minimal_polynomial, p(&[-7, -2, 1]));
     assert_eq!(branch, QuadraticBranch::UpperReal);
 }
@@ -41,13 +49,32 @@ fn sqrt_two_field_exact_arithmetic() {
 fn negative_coefficients_flip_real_and_complex_branches() {
     let ctx = EvaluationContext::default();
     for (poly, selected, flipped) in [
-        (p(&[-2, 0, 1]), QuadraticBranch::LowerReal, QuadraticBranch::UpperReal),
-        (p(&[1, 0, 1]), QuadraticBranch::PositiveImaginary, QuadraticBranch::NegativeImaginary),
+        (
+            p(&[-2, 0, 1]),
+            QuadraticBranch::LowerReal,
+            QuadraticBranch::UpperReal,
+        ),
+        (
+            p(&[1, 0, 1]),
+            QuadraticBranch::PositiveImaginary,
+            QuadraticBranch::NegativeImaginary,
+        ),
     ] {
         let f = QuadraticField::new(&ctx, poly, selected).unwrap();
         let negative = QuadraticElement::new(&ctx, f, q(0, 1), q(-1, 1)).unwrap();
-        assert_eq!(negative.as_exact_root(&ctx).unwrap().branch(), Some(flipped));
-        assert_eq!(negative.inverse(&ctx).unwrap().multiply(&negative, &ctx).unwrap().constant(), &q(1,1));
+        assert_eq!(
+            negative.as_exact_root(&ctx).unwrap().branch(),
+            Some(flipped)
+        );
+        assert_eq!(
+            negative
+                .inverse(&ctx)
+                .unwrap()
+                .multiply(&negative, &ctx)
+                .unwrap()
+                .constant(),
+            &q(1, 1)
+        );
     }
 }
 
@@ -73,8 +100,8 @@ fn different_embeddings_are_not_implicitly_mixed() {
     let ctx = EvaluationContext::default();
     let upper = QuadraticField::new(&ctx, p(&[-2, 0, 1]), QuadraticBranch::UpperReal).unwrap();
     let lower = QuadraticField::new(&ctx, p(&[-2, 0, 1]), QuadraticBranch::LowerReal).unwrap();
-    let a = QuadraticElement::new(&ctx, upper, q(0,1), q(1,1)).unwrap();
-    let b = QuadraticElement::new(&ctx, lower, q(0,1), q(1,1)).unwrap();
+    let a = QuadraticElement::new(&ctx, upper, q(0, 1), q(1, 1)).unwrap();
+    let b = QuadraticElement::new(&ctx, lower, q(0, 1), q(1, 1)).unwrap();
     assert_eq!(a.add(&b, &ctx), Err(QuadraticFieldError::MismatchedFields));
 }
 
@@ -89,7 +116,7 @@ fn irrational_roots_construct_quadratic_elements() {
     assert_eq!(alpha.as_exact_root(&ctx).unwrap(), root);
     assert_eq!(alpha.multiply(&alpha, &ctx).unwrap().constant(), &q(-1, 1));
     assert_eq!(
-        QuadraticElement::from_root(&ctx, &ExactQuadraticRoot::Rational(q(2,1))),
+        QuadraticElement::from_root(&ctx, &ExactQuadraticRoot::Rational(q(2, 1))),
         Err(QuadraticFieldError::RationalRoot),
     );
 }

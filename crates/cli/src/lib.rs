@@ -9,7 +9,7 @@ use std::fmt::Write as _;
 use mathema::{Equation, Expr, ExprView, Rational, Symbol};
 use mathema_frontend::{Statement, parse_expression, parse_statement};
 use mathematishia_kernel::{
-    EvaluationContext, LinearSolution, RationalPolynomial, VerifiedCondition,
+    EvaluationContext, LinearSolution, RationalFunction, RationalPolynomial, VerifiedCondition,
 };
 
 pub const HELP: &str = "Mathematishia (early exact-math CLI)
@@ -24,6 +24,10 @@ Usage:
   mathematishia diff <POLYNOMIAL> <VARIABLE>
   mathematishia sqfree <POLYNOMIAL> <VARIABLE>
   mathematishia diffexpr <EXPRESSION> <VARIABLE>
+  mathematishia rat <NUMERATOR> <DENOMINATOR> <VARIABLE>
+  mathematishia rateval <NUMERATOR> <DENOMINATOR> <VARIABLE> <VALUE>
+  mathematishia ratdiff <NUMERATOR> <DENOMINATOR> <VARIABLE>
+  mathematishia ratop <add|sub|mul|div> <N1> <D1> <N2> <D2> <VARIABLE>
   mathematishia --help
 
 Examples:
@@ -37,10 +41,14 @@ Examples:
   mathematishia diff 'x^3+1/2*x' x
   mathematishia sqfree '2*(x-1)^2*(x+2)^3' x
   mathematishia diffexpr 'x*y+(x+1)^3' x
+  mathematishia rat 'x^2-1' 'x-1' x
+  mathematishia rateval 'x^2-1' 'x-1' x 2
+  mathematishia ratdiff '1' 'x-1' x
 
 Syntax: integers, exact fraction literals n/d, identifiers, + - * ^ ( ) =.
 Use explicit multiplication. '/' only separates literal integers, not expressions.
-The parser and solver are deliberately bounded; this is not a general CAS.";
+Rational operations take separate polynomial numerator and denominator inputs.
+Canceled denominator zeros remain excluded. This is not a general CAS.";
 
 const MAX_DISTRIBUTION_STEPS: usize = 12;
 
@@ -87,6 +95,35 @@ fn polynomial(input: &str, name: &Symbol) -> Result<RationalPolynomial, CliError
     EvaluationContext::default()
         .polynomial(&parsed, name)
         .map_err(|error| invalid(error.to_string()))
+}
+
+fn rational_function(
+    numerator: &str,
+    denominator: &str,
+    variable: &Symbol,
+) -> Result<RationalFunction, CliError> {
+    let n = polynomial(numerator, variable)?;
+    let d = polynomial(denominator, variable)?;
+    EvaluationContext::default()
+        .rational_function(&n, &d)
+        .map_err(|error| invalid(error.to_string()))
+}
+
+fn show_rational(function: &RationalFunction, variable: &Symbol) -> String {
+    let mut out = format!(
+        "numerator: {}\ndenominator: {}",
+        function.numerator().to_expr(variable),
+        function.denominator().to_expr(variable)
+    );
+    if function.excluded_zero_sets().is_empty() {
+        out.push_str("\nconditions: none");
+    } else {
+        for condition in function.excluded_zero_sets() {
+            write!(&mut out, "\ncondition: {} != 0", condition.to_expr(variable))
+                .expect("writing to a String is infallible");
+        }
+    }
+    out
 }
 
 fn scalar(input: &str) -> Result<Rational, CliError> {
@@ -275,6 +312,43 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
                 .expect("writing to a String is infallible");
             }
             Ok(out)
+        }
+        ["rat", numerator, denominator, name] => {
+            let symbol = variable(name)?;
+            let result = rational_function(numerator, denominator, &symbol)?;
+            Ok(show_rational(&result, &symbol))
+        }
+        ["rateval", numerator, denominator, name, value] => {
+            let symbol = variable(name)?;
+            let f = rational_function(numerator, denominator, &symbol)?;
+            let at = scalar(value)?;
+            let answer = EvaluationContext::default()
+                .evaluate_rational_function(&f, &at)
+                .map_err(|error| invalid(error.to_string()))?;
+            Ok(format!("value: {answer}"))
+        }
+        ["ratdiff", numerator, denominator, name] => {
+            let symbol = variable(name)?;
+            let f = rational_function(numerator, denominator, &symbol)?;
+            let derivative = EvaluationContext::default()
+                .differentiate_rational_function(&f)
+                .map_err(|error| invalid(error.to_string()))?;
+            Ok(show_rational(&derivative, &symbol))
+        }
+        ["ratop", operation, n1, d1, n2, d2, name] => {
+            let symbol = variable(name)?;
+            let lhs = rational_function(n1, d1, &symbol)?;
+            let rhs = rational_function(n2, d2, &symbol)?;
+            let ctx = EvaluationContext::default();
+            let result = match *operation {
+                "add" => ctx.add_rational_functions(&lhs, &rhs),
+                "sub" => ctx.subtract_rational_functions(&lhs, &rhs),
+                "mul" => ctx.multiply_rational_functions(&lhs, &rhs),
+                "div" => ctx.divide_rational_functions(&lhs, &rhs),
+                _ => return Err(invalid("expected ratop add, sub, mul or div")),
+            }
+            .map_err(|error| invalid(error.to_string()))?;
+            Ok(show_rational(&result, &symbol))
         }
         _ => Err(invalid("invalid command or argument count; use --help")),
     }

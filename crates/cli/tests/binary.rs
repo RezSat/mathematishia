@@ -97,3 +97,18 @@ fn actual_binary_rejects_undefined_negative_powers() {
             .contains("positive integer exponents")
     );
 }
+
+#[test]
+fn actual_binary_respects_canceled_rational_holes() {
+    let output = Command::new(env!("CARGO_BIN_EXE_mathematishia"))
+        .args(["rateval", "x^2-1", "x-1", "x", "1"])
+        .output()
+        .unwrap();
+    assert!(!output.status.success());
+    assert!(output.stdout.is_empty());
+    assert!(
+        String::from_utf8(output.stderr)
+            .unwrap()
+            .contains("undefined at this point")
+    );
+}

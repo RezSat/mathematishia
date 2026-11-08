@@ -180,3 +180,39 @@ fn symbolic_derivative_cli_rejects_unsupported_exponents() {
         assert!(run(&["diffexpr", expression, "x"]).is_err());
     }
 }
+
+#[test]
+fn rational_cli_displays_removed_poles_and_exact_values() {
+    let fraction = run(&["rat", "x^2-1", "x-1", "x"]).unwrap();
+    assert!(fraction.contains("numerator: "));
+    assert!(fraction.contains("denominator: 1"));
+    assert!(fraction.contains("condition: "));
+    assert!(fraction.contains("!= 0"));
+    assert_eq!(
+        run(&["rateval", "x^2-1", "x-1", "x", "2"]).unwrap(),
+        "value: 3"
+    );
+    assert!(run(&["rateval", "x^2-1", "x-1", "x", "1"]).is_err());
+}
+
+#[test]
+fn rational_cli_supports_all_four_exact_binary_operations() {
+    for operation in ["add", "sub", "mul", "div"] {
+        let args = ["ratop", operation, "x+1", "x-1", "1", "x", "x"];
+        let result = run(&args).unwrap();
+        assert!(result.starts_with("numerator: "));
+        assert!(result.contains("denominator: "));
+        assert!(result.contains("condition: "));
+    }
+    assert!(run(&["ratop", "div", "1", "1", "0", "1", "x"]).is_err());
+    assert!(run(&["ratop", "bad", "1", "1", "1", "1", "x"]).is_err());
+}
+
+#[test]
+fn rational_cli_uses_quotient_rule_and_rejects_zero_denominator() {
+    let derivative = run(&["ratdiff", "1", "x-1", "x"]).unwrap();
+    assert!(derivative.contains("numerator: -1"));
+    assert!(derivative.contains("denominator: "));
+    assert!(derivative.contains("condition: "));
+    assert!(run(&["rat", "x", "0", "x"]).is_err());
+}

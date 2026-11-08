@@ -20,7 +20,9 @@ fn at(value: i64) -> Rational {
 #[test]
 fn checked_normalization_preserves_removable_holes_and_exact_values() {
     let ctx = EvaluationContext::default();
-    let f = ctx.rational_function(&p(&[-1, 0, 1]), &p(&[-1, 1])).unwrap();
+    let f = ctx
+        .rational_function(&p(&[-1, 0, 1]), &p(&[-1, 1]))
+        .unwrap();
     assert_eq!(f.numerator(), &p(&[1, 1]));
     assert_eq!(f.denominator(), &p(&[1]));
     assert_eq!(f.excluded_zero_sets(), &[p(&[-1, 1])]);
@@ -90,7 +92,9 @@ fn checked_work_budget_and_intermediate_degree_are_enforced() {
         max_polynomial_degree: 2,
         ..ResourceLimits::default()
     });
-    let f = small.rational_function(&p(&[1, 1, 1]), &p(&[-1, 1])).unwrap();
+    let f = small
+        .rational_function(&p(&[1, 1, 1]), &p(&[-1, 1]))
+        .unwrap();
     assert_eq!(
         small.multiply_rational_functions(&f, &f),
         Err(EvaluationError::Limit(ResourceLimitKind::PolynomialDegree))

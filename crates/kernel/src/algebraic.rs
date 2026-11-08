@@ -53,7 +53,9 @@ impl ExactQuadraticRoot {
     pub fn minimal_polynomial(&self) -> Option<&RationalPolynomial> {
         match self {
             Self::Rational(_) => None,
-            Self::Algebraic { minimal_polynomial, .. } => Some(minimal_polynomial),
+            Self::Algebraic {
+                minimal_polynomial, ..
+            } => Some(minimal_polynomial),
         }
     }
 
@@ -145,16 +147,22 @@ fn coefficient(p: &RationalPolynomial, index: usize) -> Rational {
 }
 fn algebraic_pair(p: &RationalPolynomial, complex: bool) -> AlgebraicRootSet {
     let branches = if complex {
-        [QuadraticBranch::NegativeImaginary, QuadraticBranch::PositiveImaginary]
+        [
+            QuadraticBranch::NegativeImaginary,
+            QuadraticBranch::PositiveImaginary,
+        ]
     } else {
         [QuadraticBranch::LowerReal, QuadraticBranch::UpperReal]
     };
-    AlgebraicRootSet::Finite(branches.into_iter().map(|branch| {
-        ExactQuadraticRoot::Algebraic {
-            minimal_polynomial: p.clone(),
-            branch,
-        }
-    }).collect())
+    AlgebraicRootSet::Finite(
+        branches
+            .into_iter()
+            .map(|branch| ExactQuadraticRoot::Algebraic {
+                minimal_polynomial: p.clone(),
+                branch,
+            })
+            .collect(),
+    )
 }
 
 pub(crate) fn checked_algebraic_roots(
@@ -167,7 +175,9 @@ pub(crate) fn checked_algebraic_roots(
     work.charge(1)?;
     let mut evidence = Vec::new();
     let roots = if original.is_zero() {
-        evidence.push(AlgebraicRootEvidence::Classification(AlgebraicRootRule::ZeroPolynomial));
+        evidence.push(AlgebraicRootEvidence::Classification(
+            AlgebraicRootRule::ZeroPolynomial,
+        ));
         AlgebraicRootSet::AllComplexNumbers
     } else {
         let leading = original.coefficients().last().expect("nonzero polynomial");
@@ -179,12 +189,18 @@ pub(crate) fn checked_algebraic_roots(
         evidence.push(AlgebraicRootEvidence::MonicNormalization(monic.clone()));
         match monic.degree() {
             Some(0) => {
-                evidence.push(AlgebraicRootEvidence::Classification(AlgebraicRootRule::NonzeroConstant));
+                evidence.push(AlgebraicRootEvidence::Classification(
+                    AlgebraicRootRule::NonzeroConstant,
+                ));
                 AlgebraicRootSet::Finite(Vec::new())
             }
             Some(1) => {
-                evidence.push(AlgebraicRootEvidence::Classification(AlgebraicRootRule::Linear));
-                AlgebraicRootSet::Finite(vec![ExactQuadraticRoot::Rational(-coefficient(&monic, 0))])
+                evidence.push(AlgebraicRootEvidence::Classification(
+                    AlgebraicRootRule::Linear,
+                ));
+                AlgebraicRootSet::Finite(vec![ExactQuadraticRoot::Rational(-coefficient(
+                    &monic, 0,
+                ))])
             }
             Some(2) => {
                 let b = coefficient(&monic, 1);
@@ -193,14 +209,22 @@ pub(crate) fn checked_algebraic_roots(
                 let four_c = work.multiply_scalar(&Rational::from(Integer::from(4)), &c)?;
                 let delta = work.subtract_scalar(&b2, &four_c)?;
                 evidence.push(AlgebraicRootEvidence::Discriminant(delta.clone()));
-                let bits = delta.numerator().bit_len().saturating_add(delta.denominator().bit_len());
-                work.charge(bits.saturating_mul(bits).saturating_div(64).saturating_add(1))?;
+                let bits = delta
+                    .numerator()
+                    .bit_len()
+                    .saturating_add(delta.denominator().bit_len());
+                work.charge(
+                    bits.saturating_mul(bits)
+                        .saturating_div(64)
+                        .saturating_add(1),
+                )?;
                 if let Some(sqrt) = delta.exact_sqrt() {
                     let negative_b = -&b;
                     let less = work.subtract_scalar(&negative_b, &sqrt)?;
                     let greater = work.add_scalar(&negative_b, &sqrt)?;
                     let two = Rational::from(Integer::from(2));
-                    let mut roots = vec![work.quotient(&less, &two)?, work.quotient(&greater, &two)?];
+                    let mut roots =
+                        vec![work.quotient(&less, &two)?, work.quotient(&greater, &two)?];
                     roots.sort();
                     roots.dedup();
                     let rule = if roots.len() == 1 {
@@ -209,13 +233,19 @@ pub(crate) fn checked_algebraic_roots(
                         AlgebraicRootRule::DistinctRationalRoots
                     };
                     evidence.push(AlgebraicRootEvidence::Classification(rule));
-                    AlgebraicRootSet::Finite(roots.into_iter().map(ExactQuadraticRoot::Rational).collect())
+                    AlgebraicRootSet::Finite(
+                        roots
+                            .into_iter()
+                            .map(ExactQuadraticRoot::Rational)
+                            .collect(),
+                    )
                 } else {
                     let complex = delta < zero();
-                    evidence.push(AlgebraicRootEvidence::Classification(
-                        if complex { AlgebraicRootRule::NonrealConjugatePair }
-                        else { AlgebraicRootRule::IrrationalRealPair }
-                    ));
+                    evidence.push(AlgebraicRootEvidence::Classification(if complex {
+                        AlgebraicRootRule::NonrealConjugatePair
+                    } else {
+                        AlgebraicRootRule::IrrationalRealPair
+                    }));
                     algebraic_pair(&monic, complex)
                 }
             }
@@ -249,7 +279,9 @@ impl Error for AlgebraicVerificationError {}
 /// Independent reference reconstruction using trusted exact rational math.
 /// Verifies proof order, monic identity, discriminant, complete root set, and
 /// direct substitution of all rational solutions.
-pub fn verify_algebraic_roots(claim: &AlgebraicRootResult) -> Result<(), AlgebraicVerificationError> {
+pub fn verify_algebraic_roots(
+    claim: &AlgebraicRootResult,
+) -> Result<(), AlgebraicVerificationError> {
     use AlgebraicVerificationError as E;
     let original = &claim.original;
     if original.degree().is_some_and(|degree| degree > 2) {
@@ -257,23 +289,36 @@ pub fn verify_algebraic_roots(claim: &AlgebraicRootResult) -> Result<(), Algebra
     }
     let mut evidence = Vec::new();
     let expected = if original.is_zero() {
-        evidence.push(AlgebraicRootEvidence::Classification(AlgebraicRootRule::ZeroPolynomial));
+        evidence.push(AlgebraicRootEvidence::Classification(
+            AlgebraicRootRule::ZeroPolynomial,
+        ));
         AlgebraicRootSet::AllComplexNumbers
     } else {
         let leading = original.coefficients().last().ok_or(E::IncorrectEvidence)?;
-        let normalized = RationalPolynomial::new(original.coefficients().iter()
-            .map(|value| rational_quotient(value, leading)).collect());
-        evidence.push(AlgebraicRootEvidence::MonicNormalization(normalized.clone()));
+        let normalized = RationalPolynomial::new(
+            original
+                .coefficients()
+                .iter()
+                .map(|value| rational_quotient(value, leading))
+                .collect(),
+        );
+        evidence.push(AlgebraicRootEvidence::MonicNormalization(
+            normalized.clone(),
+        ));
         match normalized.degree() {
             Some(0) => {
-                evidence.push(AlgebraicRootEvidence::Classification(AlgebraicRootRule::NonzeroConstant));
+                evidence.push(AlgebraicRootEvidence::Classification(
+                    AlgebraicRootRule::NonzeroConstant,
+                ));
                 AlgebraicRootSet::Finite(Vec::new())
             }
             Some(1) => {
-                evidence.push(AlgebraicRootEvidence::Classification(AlgebraicRootRule::Linear));
-                AlgebraicRootSet::Finite(vec![
-                    ExactQuadraticRoot::Rational(-&normalized.coefficients()[0])
-                ])
+                evidence.push(AlgebraicRootEvidence::Classification(
+                    AlgebraicRootRule::Linear,
+                ));
+                AlgebraicRootSet::Finite(vec![ExactQuadraticRoot::Rational(
+                    -&normalized.coefficients()[0],
+                )])
             }
             Some(2) => {
                 let b = &normalized.coefficients()[1];
@@ -291,18 +336,25 @@ pub fn verify_algebraic_roots(claim: &AlgebraicRootResult) -> Result<(), Algebra
                         ];
                         roots.sort();
                         roots.dedup();
-                        evidence.push(AlgebraicRootEvidence::Classification(
-                            if roots.len() == 1 { AlgebraicRootRule::RepeatedRationalRoot }
-                            else { AlgebraicRootRule::DistinctRationalRoots }
-                        ));
-                        AlgebraicRootSet::Finite(roots.into_iter().map(ExactQuadraticRoot::Rational).collect())
+                        evidence.push(AlgebraicRootEvidence::Classification(if roots.len() == 1 {
+                            AlgebraicRootRule::RepeatedRationalRoot
+                        } else {
+                            AlgebraicRootRule::DistinctRationalRoots
+                        }));
+                        AlgebraicRootSet::Finite(
+                            roots
+                                .into_iter()
+                                .map(ExactQuadraticRoot::Rational)
+                                .collect(),
+                        )
                     }
                     None => {
                         let complex = delta < zero();
-                        evidence.push(AlgebraicRootEvidence::Classification(
-                            if complex { AlgebraicRootRule::NonrealConjugatePair }
-                            else { AlgebraicRootRule::IrrationalRealPair }
-                        ));
+                        evidence.push(AlgebraicRootEvidence::Classification(if complex {
+                            AlgebraicRootRule::NonrealConjugatePair
+                        } else {
+                            AlgebraicRootRule::IrrationalRealPair
+                        }));
                         algebraic_pair(&normalized, complex)
                     }
                 }
@@ -334,15 +386,25 @@ mod adversarial {
     use crate::EvaluationContext;
 
     fn p(values: &[i64]) -> RationalPolynomial {
-        RationalPolynomial::new(values.iter().map(|&v| Rational::from(Integer::from(v))).collect())
+        RationalPolynomial::new(
+            values
+                .iter()
+                .map(|&v| Rational::from(Integer::from(v)))
+                .collect(),
+        )
     }
 
     #[test]
     fn independently_rejects_forged_evidence_roots_and_order() {
-        let genuine = EvaluationContext::default().algebraic_roots(&p(&[-2, 0, 1])).unwrap();
+        let genuine = EvaluationContext::default()
+            .algebraic_roots(&p(&[-2, 0, 1]))
+            .unwrap();
         let mut forged = genuine.clone();
         forged.evidence.pop();
-        assert_eq!(verify_algebraic_roots(&forged), Err(AlgebraicVerificationError::IncorrectEvidence));
+        assert_eq!(
+            verify_algebraic_roots(&forged),
+            Err(AlgebraicVerificationError::IncorrectEvidence)
+        );
         let mut forged = genuine.clone();
         if let AlgebraicRootSet::Finite(ref mut roots) = forged.roots {
             roots[0] = ExactQuadraticRoot::Algebraic {
@@ -350,11 +412,17 @@ mod adversarial {
                 branch: QuadraticBranch::LowerReal,
             };
         }
-        assert_eq!(verify_algebraic_roots(&forged), Err(AlgebraicVerificationError::IncorrectRoots));
+        assert_eq!(
+            verify_algebraic_roots(&forged),
+            Err(AlgebraicVerificationError::IncorrectRoots)
+        );
         let mut forged = genuine;
         if let AlgebraicRootSet::Finite(ref mut roots) = forged.roots {
             roots.swap(0, 1);
         }
-        assert_eq!(verify_algebraic_roots(&forged), Err(AlgebraicVerificationError::IncorrectRoots));
+        assert_eq!(
+            verify_algebraic_roots(&forged),
+            Err(AlgebraicVerificationError::IncorrectRoots)
+        );
     }
 }

@@ -51,7 +51,7 @@ fn scalar_multiples_have_identical_canonical_roots() {
 }
 
 #[test]
-fn 343_exact_grid_cases_match_existing_rational_solver() {
+fn exact_343_grid_cases_match_existing_rational_solver() {
     let ctx = EvaluationContext::default();
     let mut checked = 0;
     for a in -3..=3 {

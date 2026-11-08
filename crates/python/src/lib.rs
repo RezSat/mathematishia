@@ -35,6 +35,9 @@ fn map_evaluation_error(error: EvaluationError) -> PyErr {
         EvaluationError::QuadraticVerification(reason) => {
             VerificationFailure::new_err(reason.to_string())
         }
+        EvaluationError::AlgebraicVerification(reason) => {
+            VerificationFailure::new_err(reason.to_string())
+        }
         EvaluationError::RationalEquationVerification(reason) => {
             VerificationFailure::new_err(reason.to_string())
         }

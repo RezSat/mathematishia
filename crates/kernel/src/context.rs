@@ -24,8 +24,8 @@ use crate::{
     RationalFunctionError, RationalPolynomial, SquareFreeDecomposition, SquareFreeError,
     SquareFreeVerificationError, SymbolicDerivative, SymbolicDifferentiationError,
     VerificationError, ZeroPolynomialDivisor, distribute_first_once, expand_distributively,
-    solve_linear_equation, verify_distribution, verify_linear_solution, verify_quadratic_roots,
-    verify_algebraic_roots, verify_rational_equation, verify_rational_quadratic_equation,
+    solve_linear_equation, verify_algebraic_roots, verify_distribution, verify_linear_solution,
+    verify_quadratic_roots, verify_rational_equation, verify_rational_quadratic_equation,
     verify_symbolic_derivative,
 };
 
@@ -512,7 +512,9 @@ impl EvaluationContext {
             for root in roots {
                 match root {
                     crate::ExactQuadraticRoot::Rational(value) => self.check_rational(value)?,
-                    crate::ExactQuadraticRoot::Algebraic { minimal_polynomial, .. } => {
+                    crate::ExactQuadraticRoot::Algebraic {
+                        minimal_polynomial, ..
+                    } => {
                         self.check_polynomial(minimal_polynomial)?;
                     }
                 }

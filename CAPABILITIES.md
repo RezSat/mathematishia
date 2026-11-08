@@ -4,6 +4,7 @@
 | --- | --- |
 | Exact scalars, expressions and conditions | `crates/mathema/src/` |
 | Polynomial arithmetic, division and GCD | `crates/kernel/src/polynomial.rs`, `poly_division.rs` |
+| Extended polynomial GCD, Bézout verification, modular inverses | `crates/kernel/src/extended_gcd.rs` |
 | Square-free factorization | `crates/kernel/src/square_free.rs` |
 | Rational functions with domain exclusions | `crates/kernel/src/rational_function.rs` |
 | Rational-expression conversion and simplification over Q(x) | `crates/kernel/src/rational_expression.rs` |

@@ -30,6 +30,8 @@ cargo run -p mathematishia-cli -- solve '2*x+4=10' x
 cargo run -p mathematishia-cli -- roots2 'x^2-2' x
 cargo run -p mathematishia-cli -- roots2 'x^2+1' x
 cargo run -p mathematishia-cli -- divide 'x^2-1' 'x-1' x
+cargo run -p mathematishia-cli -- egcd 'x^3-1' 'x^2-1' x
+cargo run -p mathematishia-cli -- modinv x 'x^2+1' x
 cargo run -p mathematishia-cli -- sqfree '2*(x-1)^2*(x+2)^3' x
 cargo run -p mathematishia-cli -- diffexpr 'x*y+(x+1)^3' x
 ```

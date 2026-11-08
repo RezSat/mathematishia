@@ -25,7 +25,7 @@ for root in roots.roots:
 ## Supported operations
 
 - `solve`, `solve_quadratic` and `rational_solve_quadratic`: selected exact equation domains. The quadratic rational solver retains excluded denominator zeros.
-- `evaluate`, `differentiate`, `square_free`: exact rational-polynomial operations.
+- `evaluate`, `differentiate`, `square_free`, `extended_gcd`, `modular_inverse`: exact rational-polynomial operations and independently checked Bézout coefficients.
 - `differentiate_expression`: formal differentiation of sums, products and positive integer powers, with verified derivation steps.
 - `rational_function`, `rational_evaluate`, `rational_differentiate`, `rational_operation`: partial rational functions with recorded domain restrictions.
 - `rational_simplify`, `rational_derivative`, `rational_value`, `rational_solve`: full univariate rational expressions and equations over Q, preserving source-domain exclusions.
@@ -78,3 +78,20 @@ The rational solver currently returns rational roots only and requires a
 residual numerator of degree at most two. An empty finite root list does
 not rule out irrational or complex roots. See
 [the rational-expression design](../../docs/design/rational-expressions.md).
+
+## Polynomial Bézout identity
+
+```python
+import mathematishia as m
+
+result = m.extended_gcd("x^3-1", "x^2-1", "x")
+assert result.gcd.expression == "-1 + x"
+
+inverse = m.modular_inverse("x", "x^2+1", "x")
+assert inverse is not None
+```
+
+The result records a complete Euclidean division chain and coefficients
+`s` and `t` satisfying `s*a+t*b=gcd(a,b)`. The Rust verifier checks
+each division identity, the terminating remainder, the monic gcd, and
+the Bézout identity. A modular inverse is returned only when the gcd is 1.

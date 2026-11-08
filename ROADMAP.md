@@ -83,3 +83,14 @@ full univariate factorization; exact polynomial/algebraic solving; analytic
 functions and calculus; certified numerics; a human-friendly renderer; and
 then hardened release/distribution. Progress is measured by passing semantic
 contracts and capability coverage, not commit count.
+
+### Initial scalar assumptions and guarded rewrite
+
+Typed scalar conditions and a conservative assumptions collection now
+distinguish exact facts, premises, unresolved obligations and refuted literal
+conditions. The first independently verified conditional transformation
+cancels an atomic symbolic inverse only with a nonzero justification.
+Composite definedness, general proof graphs and a conditional rewrite
+framework remain planned; see [docs/design/assumptions.md](docs/design/assumptions.md).
+
+For a module-level implementation map, see [CAPABILITIES.md](CAPABILITIES.md).

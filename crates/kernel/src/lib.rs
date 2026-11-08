@@ -7,9 +7,11 @@
 use mathema::{Expr, ExprView, Symbol};
 
 mod algebraic;
+mod assumptions;
 mod budget;
 mod context;
 mod differentiate_expr;
+mod guarded_rewrite;
 mod poly_convert;
 mod poly_division;
 mod polynomial;
@@ -25,7 +27,12 @@ pub use algebraic::{
     AlgebraicRootEvidence, AlgebraicRootResult, AlgebraicRootRule, AlgebraicRootSet,
     AlgebraicVerificationError, ExactQuadraticRoot, QuadraticBranch, verify_algebraic_roots,
 };
+pub use assumptions::{AssumptionError, Assumptions, ConditionStatus};
 pub use context::{EvaluationContext, EvaluationError, ResourceLimitKind, ResourceLimits};
+pub use guarded_rewrite::{
+    GuardedRewriteOutcome, GuardedRewriteStep, GuardedRewriteVerificationError,
+    GuardedRuleId, cancel_symbol_inverse_once, verify_guarded_rewrite_step,
+};
 pub use differentiate_expr::{
     DerivativeRuleId, DerivativeVerificationError, DifferentiationStep, SymbolicDerivative,
     SymbolicDifferentiationError, verify_symbolic_derivative,

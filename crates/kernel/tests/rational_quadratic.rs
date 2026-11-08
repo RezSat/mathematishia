@@ -1,7 +1,7 @@
 use mathema::{Integer, Rational};
 use mathematishia_kernel::{
-    EvaluationContext, EvaluationError, QuadraticError, RationalFunction,
-    RationalPolynomial, RationalQuadraticRoots, verify_rational_quadratic_equation,
+    EvaluationContext, EvaluationError, QuadraticError, RationalFunction, RationalPolynomial,
+    RationalQuadraticRoots, verify_rational_quadratic_equation,
 };
 
 fn p(values: &[i64]) -> RationalPolynomial {
@@ -46,7 +46,9 @@ fn two_distinct_roots_or_no_rational_roots_with_denominators() {
     assert_eq!(result.roots(), &roots(&[2, 3]));
     assert_eq!(verify_rational_quadratic_equation(&result), Ok(()));
     let irrational = rational(&[-2, 0, 1], &[0, 1]);
-    let result = ctx.solve_rational_quadratic_equation(&irrational, &zero).unwrap();
+    let result = ctx
+        .solve_rational_quadratic_equation(&irrational, &zero)
+        .unwrap();
     assert_eq!(result.roots(), &roots(&[]));
     assert_eq!(verify_rational_quadratic_equation(&result), Ok(()));
 }
@@ -57,7 +59,10 @@ fn identity_is_all_admissible_values_not_all_q() {
     let lhs = rational(&[-1, 1], &[-1, 1]);
     let rhs = RationalFunction::from_polynomial(p(&[1]));
     let result = ctx.solve_rational_quadratic_equation(&lhs, &rhs).unwrap();
-    assert_eq!(result.roots(), &RationalQuadraticRoots::AllAdmissibleRationals);
+    assert_eq!(
+        result.roots(),
+        &RationalQuadraticRoots::AllAdmissibleRationals
+    );
     assert_eq!(result.domain_conditions(), &[p(&[-1, 1])]);
     assert_eq!(verify_rational_quadratic_equation(&result), Ok(()));
 }

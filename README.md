@@ -62,6 +62,9 @@ cargo run -p mathematishia-cli -- gcd 'x^2-1' 'x-1' x
 cargo run -p mathematishia-cli -- diff 'x^3+1/2*x' x
 cargo run -p mathematishia-cli -- sqfree '2*(x-1)^2*(x+2)^3' x
 cargo run -p mathematishia-cli -- diffexpr 'x*y+(x+1)^3' x
+cargo run -p mathematishia-cli -- rat 'x^2-1' 'x-1' x
+cargo run -p mathematishia-cli -- rateval 'x^2-1' 'x-1' x 2
+cargo run -p mathematishia-cli -- ratdiff '1' 'x-1' x
 ```
 
 The solver currently supports only exact rational-linear equations in one
@@ -99,3 +102,12 @@ cargo test --workspace --all-features --locked
 ```
 
 Licensed under Apache-2.0; see [LICENSE](LICENSE).
+
+### Exact rational functions and original domains
+
+The CLI `rat`, `rateval`, `ratdiff` and `ratop` commands accept separate
+polynomial numerator and denominator inputs. GCD cancellation does not
+silently fill domain holes: `(x^2-1)/(x-1)` is undefined at `x=1`, even
+when its reduced numerator is `x+1`. The result lists explicit polynomial
+nonzero conditions. General `/` expression syntax and multivariate rational
+functions remain future work.

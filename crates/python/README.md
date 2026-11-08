@@ -32,3 +32,10 @@ its derivative and independently checked rule steps. It is deliberately not
 a general transcendental-function calculus; negative, zero, fractional and
 symbolic exponents are unsupported. Work metering is deterministic and
 context-local, not a hard memory/time guarantee.
+
+### Exact rational functions
+
+`rational_function("x^2-1", "x-1", "x")` returns an immutable normalized
+numerator, monic denominator and excluded-zero-set polynomials. The functions
+`rational_evaluate`, `rational_differentiate` and `rational_operation` share
+the same exact Rust domain rules and preserve canceled poles.

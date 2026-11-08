@@ -131,6 +131,41 @@ class ExactMathTests(unittest.TestCase):
         with self.assertRaises(m.ResourceLimitError):
             m.differentiate_expression("x^999999999999999999999999999999999999999", "x")
 
+    def test_domain_aware_rational_function_and_holes(self):
+        result = m.rational_function("x^2-1", "x-1", "x")
+        self.assertEqual(result.numerator.coefficients, (Fraction(1), Fraction(1)))
+        self.assertEqual(result.denominator.coefficients, (Fraction(1),))
+        self.assertEqual(
+            [p.coefficients for p in result.excluded_zero_sets],
+            [(Fraction(-1), Fraction(1))],
+        )
+        self.assertEqual(m.rational_evaluate("x^2-1", "x-1", "x", "2"), Fraction(3))
+        with self.assertRaises(m.UndefinedAtPointError):
+            m.rational_evaluate("x^2-1", "x-1", "x", "1")
+        with self.assertRaises(FrozenInstanceError):
+            result.denominator = m.polynomial("1", "x")
+
+    def test_exact_quotient_rule_on_rational_functions(self):
+        result = m.rational_differentiate("1", "x-1", "x")
+        self.assertEqual(result.numerator.coefficients, (Fraction(-1),))
+        self.assertEqual(
+            result.denominator.coefficients,
+            (Fraction(1), Fraction(-2), Fraction(1)),
+        )
+        self.assertEqual(len(result.excluded_zero_sets), 1)
+
+    def test_rational_arithmetic_and_typed_invalid_domains(self):
+        for operation in ["add", "sub", "mul", "div"]:
+            result = m.rational_operation(operation, "x+1", "x-1", "1", "x", "x")
+            self.assertIsInstance(result, m.RationalFunction)
+            self.assertTrue(result.excluded_zero_sets)
+        with self.assertRaises(m.UnsupportedMathematicsError):
+            m.rational_function("x", "0", "x")
+        with self.assertRaises(m.UnsupportedMathematicsError):
+            m.rational_operation("div", "1", "1", "0", "1", "x")
+        with self.assertRaises(m.UnsupportedMathematicsError):
+            m.rational_operation("??", "1", "1", "1", "1", "x")
+
     def test_typed_errors(self):
         with self.assertRaises(m.MathSyntaxError):
             m.expression("x / 2")

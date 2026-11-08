@@ -12,7 +12,8 @@ from typing import Literal
 
 from . import _native
 from ._native import (MathSyntaxError, ResourceLimitError,
-                      UnsupportedMathematicsError, VerificationFailure)
+                      UnsupportedMathematicsError, UndefinedAtPointError,
+                      VerificationFailure)
 
 
 @dataclass(frozen=True)
@@ -81,6 +82,19 @@ def _poly(data: tuple[str, list[str]]) -> Polynomial:
     return Polynomial(expression_text, tuple(Fraction(c) for c in coefficients))
 
 
+@dataclass(frozen=True)
+class RationalFunction:
+    numerator: Polynomial
+    denominator: Polynomial
+    excluded_zero_sets: tuple[Polynomial, ...]
+
+
+def _rational(data: tuple[tuple[str, list[str]], tuple[str, list[str]],
+                          list[tuple[str, list[str]]]]) -> RationalFunction:
+    n, d, excluded = data
+    return RationalFunction(_poly(n), _poly(d), tuple(_poly(p) for p in excluded))
+
+
 def expression(source: str) -> str:
     """Parse and return the conservatively canonicalized expression display."""
     return _native.expression(source)
@@ -137,6 +151,34 @@ def square_free(source: str, variable: str) -> SquareFreeDecomposition:
     )
 
 
+def rational_function(numerator: str, denominator: str, variable: str) -> RationalFunction:
+    """Reduce Q(x) exactly while retaining the input denominator's zero set."""
+    return _rational(_native.rational_function(numerator, denominator, variable))
+
+
+def rational_evaluate(numerator: str, denominator: str,
+                      variable: str, at: str) -> Fraction:
+    """Evaluate exactly; canceled poles remain undefined."""
+    return Fraction(_native.rational_evaluate(numerator, denominator, variable, at))
+
+
+def rational_differentiate(numerator: str, denominator: str,
+                           variable: str) -> RationalFunction:
+    """Apply the exact quotient rule without altering the input domain."""
+    return _rational(_native.rational_differentiate(numerator, denominator, variable))
+
+
+def rational_operation(operation: Literal["add", "sub", "mul", "div"],
+                       left_numerator: str, left_denominator: str,
+                       right_numerator: str, right_denominator: str,
+                       variable: str) -> RationalFunction:
+    """Add, subtract, multiply or divide Q(x) partial functions exactly."""
+    return _rational(_native.rational_operation(
+        operation, left_numerator, left_denominator,
+        right_numerator, right_denominator, variable,
+    ))
+
+
 def evaluate(source: str, variable: str, at: str) -> Fraction:
     """Evaluate a rational polynomial at an exact rational input string."""
     return Fraction(_native.evaluate(source, variable, at))
@@ -155,9 +197,11 @@ def gcd(left: str, right: str, variable: str) -> Polynomial:
 
 __all__ = [
     "MathSyntaxError", "ResourceLimitError", "UnsupportedMathematicsError",
-    "VerificationFailure", "Step", "Expansion", "LinearResult", "Polynomial",
+    "VerificationFailure", "UndefinedAtPointError", "Step", "Expansion", "LinearResult", "Polynomial",
+    "RationalFunction",
     "SquareFreeFactor", "SquareFreeDecomposition",
     "SymbolicDifferentiationStep", "SymbolicDerivative",
     "expression", "expand", "solve", "polynomial", "differentiate", "differentiate_expression", "square_free",
-    "evaluate", "divide", "gcd",
+    "evaluate", "divide", "gcd", "rational_function", "rational_evaluate",
+    "rational_differentiate", "rational_operation",
 ]

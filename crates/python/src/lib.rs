@@ -6,7 +6,8 @@
 use mathema::{Equation, Expr, ExprView, Rational, Symbol};
 use mathema_frontend::{Statement, parse_expression, parse_statement};
 use mathematishia_kernel::{
-    EvaluationContext, EvaluationError, LinearSolution, RationalPolynomial, ResourceLimitKind,
+    EvaluationContext, EvaluationError, LinearSolution, RationalFunction, RationalFunctionError,
+    RationalPolynomial, ResourceLimitKind,
     VerifiedCondition,
 };
 use pyo3::create_exception;
@@ -17,6 +18,7 @@ create_exception!(_native, MathSyntaxError, PyValueError);
 create_exception!(_native, UnsupportedMathematicsError, PyValueError);
 create_exception!(_native, ResourceLimitError, PyRuntimeError);
 create_exception!(_native, VerificationFailure, PyRuntimeError);
+create_exception!(_native, UndefinedAtPointError, PyValueError);
 
 fn map_evaluation_error(error: EvaluationError) -> PyErr {
     match error {
@@ -29,6 +31,9 @@ fn map_evaluation_error(error: EvaluationError) -> PyErr {
         }
         EvaluationError::DerivativeVerification(reason) => {
             VerificationFailure::new_err(reason.to_string())
+        }
+        EvaluationError::RationalFunction(RationalFunctionError::UndefinedAtPoint) => {
+            UndefinedAtPointError::new_err(error.to_string())
         }
         EvaluationError::Polynomial(_)
         | EvaluationError::Linear(_)
@@ -267,6 +272,103 @@ fn py_differentiate_expression(source: &str, variable: &str) -> PyResult<PySymbo
     Ok((result.derivative().to_string(), steps))
 }
 
+type PyRationalFunctionData = (
+    PyPolynomialData,
+    PyPolynomialData,
+    Vec<PyPolynomialData>,
+);
+
+fn rational_data(value: &RationalFunction, variable: &Symbol) -> PyRationalFunctionData {
+    (
+        poly_data(value.numerator(), variable),
+        poly_data(value.denominator(), variable),
+        value
+            .excluded_zero_sets()
+            .iter()
+            .map(|condition| poly_data(condition, variable))
+            .collect(),
+    )
+}
+
+fn selected_rational(
+    numerator: &str,
+    denominator: &str,
+    variable: &Symbol,
+) -> PyResult<RationalFunction> {
+    let n = selected_polynomial(numerator, variable)?;
+    let d = selected_polynomial(denominator, variable)?;
+    EvaluationContext::default()
+        .rational_function(&n, &d)
+        .map_err(map_evaluation_error)
+}
+
+#[pyfunction(name = "rational_function")]
+fn py_rational_function(
+    numerator: &str,
+    denominator: &str,
+    variable: &str,
+) -> PyResult<PyRationalFunctionData> {
+    let symbol = selected_variable(variable)?;
+    Ok(rational_data(
+        &selected_rational(numerator, denominator, &symbol)?,
+        &symbol,
+    ))
+}
+
+#[pyfunction(name = "rational_evaluate")]
+fn py_rational_evaluate(
+    numerator: &str,
+    denominator: &str,
+    variable: &str,
+    at: &str,
+) -> PyResult<String> {
+    let symbol = selected_variable(variable)?;
+    let function = selected_rational(numerator, denominator, &symbol)?;
+    let point = selected_scalar(at)?;
+    EvaluationContext::default()
+        .evaluate_rational_function(&function, &point)
+        .map(|value| value.to_string())
+        .map_err(map_evaluation_error)
+}
+
+#[pyfunction(name = "rational_differentiate")]
+fn py_rational_differentiate(
+    numerator: &str,
+    denominator: &str,
+    variable: &str,
+) -> PyResult<PyRationalFunctionData> {
+    let symbol = selected_variable(variable)?;
+    let function = selected_rational(numerator, denominator, &symbol)?;
+    let derivative = EvaluationContext::default()
+        .differentiate_rational_function(&function)
+        .map_err(map_evaluation_error)?;
+    Ok(rational_data(&derivative, &symbol))
+}
+
+#[pyfunction(name = "rational_operation")]
+fn py_rational_operation(
+    operation: &str,
+    left_numerator: &str,
+    left_denominator: &str,
+    right_numerator: &str,
+    right_denominator: &str,
+    variable: &str,
+) -> PyResult<PyRationalFunctionData> {
+    let symbol = selected_variable(variable)?;
+    let left = selected_rational(left_numerator, left_denominator, &symbol)?;
+    let right = selected_rational(right_numerator, right_denominator, &symbol)?;
+    let context = EvaluationContext::default();
+    let result = match operation {
+        "add" => context.add_rational_functions(&left, &right),
+        "sub" => context.subtract_rational_functions(&left, &right),
+        "mul" => context.multiply_rational_functions(&left, &right),
+        "div" => context.divide_rational_functions(&left, &right),
+        _ => return Err(UnsupportedMathematicsError::new_err("expected add, sub, mul or div")),
+    }
+    .map_err(map_evaluation_error)?;
+    Ok(rational_data(&result, &symbol))
+}
+
 #[pymodule]
 fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(py_expression, m)?)?;
@@ -279,7 +381,15 @@ fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(py_differentiate, m)?)?;
     m.add_function(wrap_pyfunction!(py_square_free, m)?)?;
     m.add_function(wrap_pyfunction!(py_differentiate_expression, m)?)?;
+    m.add_function(wrap_pyfunction!(py_rational_function, m)?)?;
+    m.add_function(wrap_pyfunction!(py_rational_evaluate, m)?)?;
+    m.add_function(wrap_pyfunction!(py_rational_differentiate, m)?)?;
+    m.add_function(wrap_pyfunction!(py_rational_operation, m)?)?;
     m.add("MathSyntaxError", m.py().get_type::<MathSyntaxError>())?;
+    m.add(
+        "UndefinedAtPointError",
+        m.py().get_type::<UndefinedAtPointError>(),
+    )?;
     m.add(
         "UnsupportedMathematicsError",
         m.py().get_type::<UnsupportedMathematicsError>(),

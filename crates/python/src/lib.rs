@@ -8,11 +8,11 @@ use mathema_frontend::{
     DomainParseError, Statement, parse_domain_expression, parse_expression, parse_statement,
 };
 use mathematishia_kernel::{
-    AlgebraicRootEvidence, AlgebraicRootSet, EvaluationContext, EvaluationError,
-    ExactQuadraticRoot, LinearSolution, QuadraticBranch, QuadraticRoots, RationalFunction,
-    RationalFunctionError, RationalPolynomial, RationalQuadraticRoots, ResourceLimitKind,
-    VerifiedCondition, Assumptions, DefinednessError, DomainOperationError,
-    DomainRewriteOutcome, ProofNodeKind, rewrite_domain_once,
+    AlgebraicRootEvidence, AlgebraicRootSet, Assumptions, DefinednessError, DomainOperationError,
+    DomainRewriteOutcome, EvaluationContext, EvaluationError, ExactQuadraticRoot, LinearSolution,
+    ProofNodeKind, QuadraticBranch, QuadraticRoots, RationalFunction, RationalFunctionError,
+    RationalPolynomial, RationalQuadraticRoots, ResourceLimitKind, VerifiedCondition,
+    rewrite_domain_once,
 };
 use pyo3::create_exception;
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
@@ -191,7 +191,9 @@ fn py_rewrite_domain(source: &str, nonzero: Option<Vec<String>>) -> PyResult<PyD
     let mut assumptions = Assumptions::new();
     let premises = nonzero.unwrap_or_default();
     if premises.len() > 32 {
-        return Err(ResourceLimitError::new_err("at most 32 nonzero premises are supported"));
+        return Err(ResourceLimitError::new_err(
+            "at most 32 nonzero premises are supported",
+        ));
     }
     for premise in premises {
         let value = checked_domain(&premise)?;
@@ -230,7 +232,11 @@ fn py_rewrite_domain(source: &str, nonzero: Option<Vec<String>>) -> PyResult<PyD
                     node.id().index(),
                     kind.to_owned(),
                     value,
-                    node.kind().dependencies().iter().map(|id| id.index()).collect(),
+                    node.kind()
+                        .dependencies()
+                        .iter()
+                        .map(|id| id.index())
+                        .collect(),
                     node.kind().rule_id().map(str::to_owned),
                 ));
             }

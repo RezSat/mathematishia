@@ -87,7 +87,11 @@ pub(crate) fn checked_quadratic(
                 .numerator()
                 .bit_len()
                 .saturating_add(delta.denominator().bit_len());
-            work.charge(bits.saturating_mul(bits).saturating_div(64).saturating_add(1))?;
+            work.charge(
+                bits.saturating_mul(bits)
+                    .saturating_div(64)
+                    .saturating_add(1),
+            )?;
             if let Some(square_root) = delta.exact_sqrt() {
                 let denominator = work.multiply_scalar(&Rational::from(Integer::from(2)), &a)?;
                 let negative_b = -&b;
@@ -140,9 +144,7 @@ fn quotient(a: &Rational, b: &Rational) -> Rational {
 ///
 /// It does not call the metered generator and also checks every claimed root
 /// by exact polynomial substitution (no numerical tolerance).
-pub fn verify_quadratic_roots(
-    result: &QuadraticResult,
-) -> Result<(), QuadraticVerificationError> {
+pub fn verify_quadratic_roots(result: &QuadraticResult) -> Result<(), QuadraticVerificationError> {
     use QuadraticVerificationError as V;
     let original = result.original();
     let expected = match original.degree() {
@@ -206,10 +208,18 @@ mod adversarial {
 
     #[test]
     fn checker_rejects_missing_or_forged_rational_roots() {
-        let mut result = EvaluationContext::default().solve_quadratic(&p(&[6, -5, 1])).unwrap();
+        let mut result = EvaluationContext::default()
+            .solve_quadratic(&p(&[6, -5, 1]))
+            .unwrap();
         result.roots = QuadraticRoots::Finite(vec![Rational::from(Integer::from(2))]);
-        assert_eq!(verify_quadratic_roots(&result), Err(QuadraticVerificationError::IncorrectRoots));
+        assert_eq!(
+            verify_quadratic_roots(&result),
+            Err(QuadraticVerificationError::IncorrectRoots)
+        );
         result.roots = QuadraticRoots::AllRationals;
-        assert_eq!(verify_quadratic_roots(&result), Err(QuadraticVerificationError::IncorrectRoots));
+        assert_eq!(
+            verify_quadratic_roots(&result),
+            Err(QuadraticVerificationError::IncorrectRoots)
+        );
     }
 }

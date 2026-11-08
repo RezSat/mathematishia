@@ -83,7 +83,16 @@ fn deterministic_125_quadratic_coefficient_combinations() {
 #[test]
 fn degree_and_work_limits_are_typed() {
     let ctx = EvaluationContext::default();
-    assert_eq!(ctx.solve_quadratic(&p(&[1, 2, 3, 4])), Err(EvaluationError::Quadratic(QuadraticError::DegreeExceeded)));
-    let tiny = EvaluationContext::new(ResourceLimits { max_work_units: 0, ..ResourceLimits::default() });
-    assert_eq!(tiny.solve_quadratic(&p(&[1, -2, 1])), Err(EvaluationError::Limit(ResourceLimitKind::WorkUnits)));
+    assert_eq!(
+        ctx.solve_quadratic(&p(&[1, 2, 3, 4])),
+        Err(EvaluationError::Quadratic(QuadraticError::DegreeExceeded))
+    );
+    let tiny = EvaluationContext::new(ResourceLimits {
+        max_work_units: 0,
+        ..ResourceLimits::default()
+    });
+    assert_eq!(
+        tiny.solve_quadratic(&p(&[1, -2, 1])),
+        Err(EvaluationError::Limit(ResourceLimitKind::WorkUnits))
+    );
 }

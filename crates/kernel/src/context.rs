@@ -21,8 +21,8 @@ use crate::{
     RationalFunctionError, RationalPolynomial, SquareFreeDecomposition, SquareFreeError,
     SquareFreeVerificationError, SymbolicDerivative, SymbolicDifferentiationError,
     VerificationError, ZeroPolynomialDivisor, distribute_first_once, expand_distributively,
-    solve_linear_equation, verify_distribution, verify_linear_solution, verify_rational_equation,
-    verify_symbolic_derivative, verify_quadratic_roots,
+    solve_linear_equation, verify_distribution, verify_linear_solution, verify_quadratic_roots,
+    verify_rational_equation, verify_symbolic_derivative,
 };
 
 /// Explicit, configurable limits. None are process-global.
@@ -109,7 +109,9 @@ impl fmt::Display for EvaluationError {
             Self::RationalFunction(error) => write!(f, "{error}"),
             Self::RationalEquation(error) => write!(f, "{error}"),
             Self::Quadratic(error) => write!(f, "{error}"),
-            Self::QuadraticVerification(error) => write!(f, "quadratic verification failed: {error}"),
+            Self::QuadraticVerification(error) => {
+                write!(f, "quadratic verification failed: {error}")
+            }
             Self::RationalEquationVerification(error) => {
                 write!(f, "rational equation verification failed: {error}")
             }
@@ -168,11 +170,15 @@ impl From<RationalEquationVerificationError> for EvaluationError {
 }
 
 impl From<QuadraticError> for EvaluationError {
-    fn from(value: QuadraticError) -> Self { Self::Quadratic(value) }
+    fn from(value: QuadraticError) -> Self {
+        Self::Quadratic(value)
+    }
 }
 
 impl From<QuadraticVerificationError> for EvaluationError {
-    fn from(value: QuadraticVerificationError) -> Self { Self::QuadraticVerification(value) }
+    fn from(value: QuadraticVerificationError) -> Self {
+        Self::QuadraticVerification(value)
+    }
 }
 
 impl From<VerificationError> for EvaluationError {

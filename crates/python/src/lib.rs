@@ -6,8 +6,8 @@
 use mathema::{Equation, Expr, ExprView, Rational, Symbol};
 use mathema_frontend::{Statement, parse_expression, parse_statement};
 use mathematishia_kernel::{
-    EvaluationContext, EvaluationError, LinearSolution, RationalFunction, RationalFunctionError,
-    RationalPolynomial, ResourceLimitKind, VerifiedCondition, QuadraticRoots,
+    EvaluationContext, EvaluationError, LinearSolution, QuadraticRoots, RationalFunction,
+    RationalFunctionError, RationalPolynomial, ResourceLimitKind, VerifiedCondition,
 };
 use pyo3::create_exception;
 use pyo3::exceptions::{PyRuntimeError, PyValueError};

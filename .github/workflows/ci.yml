@@ -57,3 +57,22 @@ jobs:
           "$PY" -m pip install wheels/*.whl
           "$PY" -m pip check
           "$PY" -m unittest discover -s crates/python/tests -v
+  python-sdist:
+    name: source distribution rebuild (Python 3.12)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build source distribution and install rebuilt wheel
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install --upgrade pip 'maturin>=1.9.4,<2'
+          .venv/bin/python -m maturin build --sdist --manifest-path crates/python/Cargo.toml --locked --interpreter .venv/bin/python --out dist
+          .venv/bin/python -c "from glob import glob; assert len(glob('dist/*.tar.gz')) == 1, 'expected exactly one sdist'"
+          .venv/bin/python -m pip install dist/*.whl
+          .venv/bin/python -m pip check
+      - name: Test package built from source distribution
+        run: .venv/bin/python -m unittest discover -s crates/python/tests -v

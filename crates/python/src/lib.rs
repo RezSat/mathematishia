@@ -427,7 +427,12 @@ fn py_rational_solve_quadratic(
     Ok((kind, roots, excluded))
 }
 
-type PyAlgebraicValue = (String, Option<String>, Option<PyPolynomialData>, Option<String>);
+type PyAlgebraicValue = (
+    String,
+    Option<String>,
+    Option<PyPolynomialData>,
+    Option<String>,
+);
 type PyAlgebraicStep = (String, Option<PyPolynomialData>, Option<String>);
 type PyAlgebraicResult = (String, Vec<PyAlgebraicValue>, Vec<PyAlgebraicStep>);
 

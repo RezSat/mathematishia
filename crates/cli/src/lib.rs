@@ -9,8 +9,8 @@ use std::fmt::Write as _;
 use mathema::{Equation, Expr, ExprView, Rational, Symbol};
 use mathema_frontend::{Statement, parse_expression, parse_statement};
 use mathematishia_kernel::{
-    AlgebraicRootEvidence, AlgebraicRootSet, EvaluationContext, ExactQuadraticRoot,
-    LinearSolution, QuadraticRoots, RationalFunction, RationalPolynomial, RationalQuadraticRoots,
+    AlgebraicRootEvidence, AlgebraicRootSet, EvaluationContext, ExactQuadraticRoot, LinearSolution,
+    QuadraticRoots, RationalFunction, RationalPolynomial, RationalQuadraticRoots,
     VerifiedCondition,
 };
 
@@ -201,9 +201,7 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
                 .algebraic_roots(&poly)
                 .map_err(|error| invalid(error.to_string()))?;
             let mut out = match result.roots() {
-                AlgebraicRootSet::AllComplexNumbers => {
-                    "roots: all complex numbers".to_owned()
-                }
+                AlgebraicRootSet::AllComplexNumbers => "roots: all complex numbers".to_owned(),
                 AlgebraicRootSet::Finite(values) => format!("roots: {}", values.len()),
             };
             if let AlgebraicRootSet::Finite(values) = result.roots() {

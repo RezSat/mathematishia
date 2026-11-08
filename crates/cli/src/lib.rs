@@ -13,7 +13,7 @@ use mathema_frontend::{
 };
 use mathematishia_kernel::{
     AlgebraicRootEvidence, AlgebraicRootSet, Assumptions, DomainRewriteOutcome, EvaluationContext,
-    ExactQuadraticRoot, LinearSolution, QuadraticRoots, RationalFunction, RationalPolynomial,
+    ExactQuadraticRoot, LinearSolution, QuadraticBranch, QuadraticElement, QuadraticField, QuadraticRoots, RationalFunction, RationalPolynomial,
     RationalQuadraticRoots, VerifiedCondition, rewrite_domain_once, substitute_domain,
 };
 
@@ -27,6 +27,9 @@ Usage:
   mathematishia solve <EQUATION> <VARIABLE>
   mathematishia solveq <POLYNOMIAL> <VARIABLE>
   mathematishia roots2 <POLYNOMIAL> <VARIABLE>
+  mathematishia qvalue <MINPOLY> <BRANCH> <A> <B> <VARIABLE>
+  mathematishia qop <add|sub|mul|div> <MINPOLY> <BRANCH> <A> <B> <C> <D> <VARIABLE>
+  mathematishia qinv <MINPOLY> <BRANCH> <A> <B> <VARIABLE>
   mathematishia poly <EXPRESSION> <VARIABLE>
   mathematishia eval <POLYNOMIAL> <VARIABLE> <RATIONAL>
   mathematishia divide <DIVIDEND> <DIVISOR> <VARIABLE>
@@ -57,6 +60,8 @@ Examples:
   mathematishia solve '2*x+4=10' x
   mathematishia solveq 'x^2-5*x+6' x
   mathematishia roots2 'x^2-2' x
+  mathematishia qvalue 'x^2-2' upper_real 1 2 x
+  mathematishia qop mul 'x^2+1' positive_imaginary 0 1 0 1 x
   mathematishia poly '(x+1)^2' x
   mathematishia eval 'x^2+1/2' x '1/2'
   mathematishia divide 'x^2-1' 'x-1' x
@@ -100,6 +105,52 @@ fn expression(input: &str) -> Result<Expr, CliError> {
         .check_expression(&parsed)
         .map_err(|error| invalid(error.to_string()))?;
     Ok(parsed)
+}
+
+fn quadratic_branch(input: &str) -> Result<QuadraticBranch, CliError> {
+    match input {
+        "lower_real" => Ok(QuadraticBranch::LowerReal),
+        "upper_real" => Ok(QuadraticBranch::UpperReal),
+        "negative_imaginary" => Ok(QuadraticBranch::NegativeImaginary),
+        "positive_imaginary" => Ok(QuadraticBranch::PositiveImaginary),
+        _ => Err(invalid("expected lower_real, upper_real, negative_imaginary or positive_imaginary")),
+    }
+}
+
+fn quadratic_element(
+    minimal: &str,
+    branch: &str,
+    a: &str,
+    b: &str,
+    name: &str,
+) -> Result<QuadraticElement, CliError> {
+    let ctx = EvaluationContext::default();
+    let symbol = variable(name)?;
+    let polynomial = polynomial(minimal, &symbol)?;
+    let field = QuadraticField::new(&ctx, polynomial, quadratic_branch(branch)?)
+        .map_err(|error| invalid(error.to_string()))?;
+    QuadraticElement::new(&ctx, field, scalar(a)?, scalar(b)?)
+        .map_err(|error| invalid(error.to_string()))
+}
+
+fn show_quadratic(value: &QuadraticElement, variable: &Symbol) -> Result<String, CliError> {
+    let ctx = EvaluationContext::default();
+    let minimal = value.minimal_polynomial(&ctx)
+        .map_err(|error| invalid(error.to_string()))?;
+    let norm = value.norm(&ctx).map_err(|error| invalid(error.to_string()))?;
+    let trace = value.trace(&ctx).map_err(|error| invalid(error.to_string()))?;
+    let root = value.as_exact_root(&ctx).map_err(|error| invalid(error.to_string()))?;
+    Ok(format!(
+        "value: {} + ({})*alpha\nfield: {}\nembedding: {}\nminimal_polynomial: {}\nroot_branch: {}\ntrace: {}\nnorm: {}",
+        value.constant(),
+        value.coefficient(),
+        value.field().polynomial().to_expr(variable),
+        value.field().branch().stable_id(),
+        minimal.to_expr(variable),
+        root.branch().map_or("rational", QuadraticBranch::stable_id),
+        trace,
+        norm,
+    ))
 }
 
 fn domain_expression(input: &str) -> Result<DomainExpression, CliError> {
@@ -478,6 +529,30 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
                 }
             }
             Ok(out)
+        }
+        ["qvalue", minimal, branch, a, b, name] => {
+            let value = quadratic_element(minimal, branch, a, b, name)?;
+            show_quadratic(&value, &variable(name)?)
+        }
+        ["qinv", minimal, branch, a, b, name] => {
+            let value = quadratic_element(minimal, branch, a, b, name)?;
+            let inverse = value.inverse(&EvaluationContext::default())
+                .map_err(|error| invalid(error.to_string()))?;
+            show_quadratic(&inverse, &variable(name)?)
+        }
+        ["qop", op, minimal, branch, a, b, c, d, name] => {
+            let left = quadratic_element(minimal, branch, a, b, name)?;
+            let right = quadratic_element(minimal, branch, c, d, name)?;
+            let ctx = EvaluationContext::default();
+            let result = match *op {
+                "add" => left.add(&right, &ctx),
+                "sub" => left.subtract(&right, &ctx),
+                "mul" => left.multiply(&right, &ctx),
+                "div" => left.divide(&right, &ctx),
+                _ => return Err(invalid("expected qop add, sub, mul or div")),
+            }
+            .map_err(|error| invalid(error.to_string()))?;
+            show_quadratic(&result, &variable(name)?)
         }
         ["poly", input, name] => {
             let symbol = variable(name)?;

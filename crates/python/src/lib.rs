@@ -953,11 +953,11 @@ fn py_quadratic_operation(
     polynomial: &str,
     variable: &str,
     branch: &str,
-    a: &str,
-    b: &str,
-    c: &str,
-    d: &str,
+    left_coefficients: (&str, &str),
+    right_coefficients: (&str, &str),
 ) -> PyResult<PyQuadraticValue> {
+    let (a, b) = left_coefficients;
+    let (c, d) = right_coefficients;
     let (left, symbol) = selected_quadratic_element(polynomial, variable, branch, a, b)?;
     let (right, _) = selected_quadratic_element(polynomial, variable, branch, c, d)?;
     let ctx = EvaluationContext::default();

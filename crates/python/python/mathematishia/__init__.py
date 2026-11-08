@@ -315,7 +315,7 @@ def quadratic_operation(
 ) -> QuadraticFieldValue:
     """Combine two elements in the same embedded quadratic field exactly."""
     return _quad(_native.quadratic_operation(
-        operation, polynomial, variable, branch, a, b, c, d
+        operation, polynomial, variable, branch, (a, b), (c, d)
     ))
 
 

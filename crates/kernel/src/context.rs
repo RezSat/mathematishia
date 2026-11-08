@@ -93,6 +93,7 @@ pub enum EvaluationError {
     Quadratic(QuadraticError),
     QuadraticVerification(QuadraticVerificationError),
     AlgebraicVerification(AlgebraicVerificationError),
+    ExtendedGcdVerification(crate::ExtendedGcdVerificationError),
 }
 
 impl fmt::Display for EvaluationError {
@@ -119,6 +120,9 @@ impl fmt::Display for EvaluationError {
             }
             Self::AlgebraicVerification(error) => {
                 write!(f, "algebraic root verification failed: {error}")
+            }
+            Self::ExtendedGcdVerification(error) => {
+                write!(f, "polynomial Bézout verification failed: {error}")
             }
             Self::RationalEquationVerification(error) => {
                 write!(f, "rational equation verification failed: {error}")

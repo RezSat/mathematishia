@@ -13,6 +13,7 @@ mod conditional_rewrite;
 mod context;
 mod differentiate_expr;
 mod domain_operations;
+mod extended_gcd;
 mod guarded_rewrite;
 mod poly_convert;
 mod poly_division;
@@ -45,6 +46,9 @@ pub use differentiate_expr::{
 pub use domain_operations::{
     DomainOperationError, DomainRewrite, DomainRewriteOutcome, rewrite_domain_once,
     substitute_domain,
+};
+pub use extended_gcd::{
+    EuclideanStep, ExtendedGcdResult, ExtendedGcdVerificationError, verify_extended_gcd,
 };
 pub use guarded_rewrite::{
     GuardedRewriteOutcome, GuardedRewriteStep, GuardedRewriteVerificationError, GuardedRuleId,

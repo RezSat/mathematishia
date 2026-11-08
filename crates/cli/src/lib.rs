@@ -13,8 +13,9 @@ use mathema_frontend::{
 };
 use mathematishia_kernel::{
     AlgebraicRootEvidence, AlgebraicRootSet, Assumptions, DomainRewriteOutcome, EvaluationContext,
-    ExactQuadraticRoot, LinearSolution, QuadraticBranch, QuadraticElement, QuadraticField, QuadraticRoots, RationalFunction, RationalPolynomial,
-    RationalQuadraticRoots, VerifiedCondition, rewrite_domain_once, substitute_domain,
+    ExactQuadraticRoot, LinearSolution, QuadraticBranch, QuadraticElement, QuadraticField,
+    QuadraticRoots, RationalFunction, RationalPolynomial, RationalQuadraticRoots,
+    VerifiedCondition, rewrite_domain_once, substitute_domain,
 };
 
 pub const HELP: &str = "Mathematishia (early exact-math CLI)
@@ -113,7 +114,9 @@ fn quadratic_branch(input: &str) -> Result<QuadraticBranch, CliError> {
         "upper_real" => Ok(QuadraticBranch::UpperReal),
         "negative_imaginary" => Ok(QuadraticBranch::NegativeImaginary),
         "positive_imaginary" => Ok(QuadraticBranch::PositiveImaginary),
-        _ => Err(invalid("expected lower_real, upper_real, negative_imaginary or positive_imaginary")),
+        _ => Err(invalid(
+            "expected lower_real, upper_real, negative_imaginary or positive_imaginary",
+        )),
     }
 }
 
@@ -135,11 +138,18 @@ fn quadratic_element(
 
 fn show_quadratic(value: &QuadraticElement, variable: &Symbol) -> Result<String, CliError> {
     let ctx = EvaluationContext::default();
-    let minimal = value.minimal_polynomial(&ctx)
+    let minimal = value
+        .minimal_polynomial(&ctx)
         .map_err(|error| invalid(error.to_string()))?;
-    let norm = value.norm(&ctx).map_err(|error| invalid(error.to_string()))?;
-    let trace = value.trace(&ctx).map_err(|error| invalid(error.to_string()))?;
-    let root = value.as_exact_root(&ctx).map_err(|error| invalid(error.to_string()))?;
+    let norm = value
+        .norm(&ctx)
+        .map_err(|error| invalid(error.to_string()))?;
+    let trace = value
+        .trace(&ctx)
+        .map_err(|error| invalid(error.to_string()))?;
+    let root = value
+        .as_exact_root(&ctx)
+        .map_err(|error| invalid(error.to_string()))?;
     Ok(format!(
         "value: {} + ({})*alpha\nfield: {}\nembedding: {}\nminimal_polynomial: {}\nroot_branch: {}\ntrace: {}\nnorm: {}",
         value.constant(),
@@ -536,7 +546,8 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
         }
         ["qinv", minimal, branch, a, b, name] => {
             let value = quadratic_element(minimal, branch, a, b, name)?;
-            let inverse = value.inverse(&EvaluationContext::default())
+            let inverse = value
+                .inverse(&EvaluationContext::default())
                 .map_err(|error| invalid(error.to_string()))?;
             show_quadratic(&inverse, &variable(name)?)
         }

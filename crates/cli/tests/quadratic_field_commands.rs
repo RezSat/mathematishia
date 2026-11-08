@@ -9,7 +9,18 @@ fn quadratic_commands_evaluate_exact_embedded_numbers() {
     assert!(sqrt_two.contains("norm: -7"));
     assert!(sqrt_two.contains("trace: 2"));
 
-    let square_i = run(&["qop", "mul", "x^2+1", "positive_imaginary", "0", "1", "0", "1", "x"]).unwrap();
+    let square_i = run(&[
+        "qop",
+        "mul",
+        "x^2+1",
+        "positive_imaginary",
+        "0",
+        "1",
+        "0",
+        "1",
+        "x",
+    ])
+    .unwrap();
     assert!(square_i.contains("value: -1 + (0)*alpha"));
     assert!(square_i.contains("root_branch: rational"));
 }

@@ -79,6 +79,10 @@ impl Assumptions {
     /// No symbolic sign inference, expression definedness, or general
     /// simplification is attempted.
     pub fn assess(&self, condition: &Condition) -> ConditionStatus {
+        self.assess_bounded(condition, 0)
+    }
+
+    fn assess_bounded(&self, condition: &Condition, depth: usize) -> ConditionStatus {
         if let Some(status) = evaluate_exact_scalar(condition) {
             return status;
         }
@@ -87,9 +91,40 @@ impl Assumptions {
             .iter()
             .any(|premise| premise_implies(premise, condition))
         {
-            ConditionStatus::Assumed
-        } else {
-            ConditionStatus::Unknown
+            return ConditionStatus::Assumed;
+        }
+        if depth >= 128 {
+            return ConditionStatus::Unknown;
+        }
+        let Condition::NonZero(expression) = condition else {
+            return ConditionStatus::Unknown;
+        };
+        match expression.view() {
+            ExprView::Pow { base, exponent }
+                if matches!(exponent.view(), ExprView::Integer(_)) =>
+            {
+                self.assess_bounded(&Condition::NonZero(base.clone()), depth + 1)
+            }
+            ExprView::Mul(factors) => {
+                let mut assumed = false;
+                let mut refuted = false;
+                for factor in factors {
+                    match self.assess_bounded(&Condition::NonZero(factor.clone()), depth + 1) {
+                        ConditionStatus::Proven => {}
+                        ConditionStatus::Assumed => assumed = true,
+                        ConditionStatus::Refuted => refuted = true,
+                        ConditionStatus::Unknown => return ConditionStatus::Unknown,
+                    }
+                }
+                if refuted {
+                    ConditionStatus::Refuted
+                } else if assumed {
+                    ConditionStatus::Assumed
+                } else {
+                    ConditionStatus::Proven
+                }
+            }
+            _ => ConditionStatus::Unknown,
         }
     }
 }

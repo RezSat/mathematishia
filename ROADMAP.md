@@ -10,14 +10,14 @@ This file tracks implemented areas and the next domain extensions. See [CAPABILI
 - Exact rational-linear, selected quadratic and rational-equation solving with domain exclusions.
 - Exact representation and verification of quadratic real irrational and complex roots.
 - Formal symbolic derivatives for sums, products and positive integer powers.
-- Typed scalar conditions and a guarded reciprocal-cancellation rule.
-- Proof graph for expression-equality steps, explicit condition dependencies and independent rule checks.
+- Typed scalar conditions, guarded reciprocal cancellation and composite definedness obligations.
+- Proof graph for expression-equality steps, multiple condition dependencies and independent rule checks.
 - Experimental Python bindings, platform wheel tests and source-distribution rebuild.
 
 ## In progress / next
 
-1. Generalize proof obligations and the graph's relation types to equation transformations and domain-specific evidence.
-2. Implement composite-expression definedness and condition-aware rewriting.
+1. Carry definedness restrictions from the parser through all expression operations; extend proof obligations to equation transformations and domain-specific evidence.
+2. Extend conditional rewriting to wider expression classes and analytic branch semantics.
 3. Extend exact algebraic-number arithmetic beyond quadratic root identity.
 4. Factor polynomials over Q, followed by higher-degree equation algorithms.
 5. Add analytic functions, broader differentiation and integration.

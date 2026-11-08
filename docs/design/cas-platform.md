@@ -27,14 +27,14 @@ See [CAPABILITIES.md](../../CAPABILITIES.md) for implementation paths.
 
 ### 1. Exact domains
 
-Extend the quadratic algebraic-root representation to exact arithmetic with field embeddings and equality. Add controlled arithmetic and ordering only for domains with a defined comparison. Extend symbolic definedness beyond atomic nonzero assumptions.
+Extend the quadratic algebraic-root representation to exact arithmetic with field embeddings and equality. Add controlled arithmetic and ordering only for domains with a defined comparison. Extend definedness beyond integer powers and propagate restrictions through parsing.
 
 ### 2. Proof and rewriting
 
-The initial proof graph checks expression inputs, condition dependencies, existing distribution/cancellation rules, conclusion reachability and node budgets. Next:
+The proof graph checks expression inputs, condition dependencies, distributive and guarded cancellation rules, conclusion reachability and node budgets. [Definedness rules](definedness.md) cover integer powers and domain-preserving expression composition. Next:
 
 - Record intermediate obligations without treating unresolved propositions as established facts.
-- Generalize condition-aware rewriting to composite expressions and rational domains.
+- Extend conditional rewriting to rational-function and analytic-function domains.
 - Add proof composition, equation relations, and typed witnesses for domain algorithms.
 - Define deterministic step linearization and rendering without making formatting part of verification.
 

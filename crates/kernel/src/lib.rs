@@ -10,6 +10,8 @@ mod algebraic;
 mod assumptions;
 mod budget;
 mod context;
+mod conditional_rewrite;
+mod definedness;
 mod differentiate_expr;
 mod guarded_rewrite;
 mod poly_convert;
@@ -29,7 +31,13 @@ pub use algebraic::{
     AlgebraicVerificationError, ExactQuadraticRoot, QuadraticBranch, verify_algebraic_roots,
 };
 pub use assumptions::{AssumptionError, Assumptions, ConditionStatus};
+pub use conditional_rewrite::{
+    ConditionEvidence, ConditionalRewriteOutcome, ConditionalRewriteStep,
+    ConditionalRewriteVerificationError, ConditionalRuleId, cancel_composite_inverse_once,
+    verify_composite_inverse_step,
+};
 pub use context::{EvaluationContext, EvaluationError, ResourceLimitKind, ResourceLimits};
+pub use definedness::{DefinednessError, DomainExpression, definedness_obligations};
 pub use differentiate_expr::{
     DerivativeRuleId, DerivativeVerificationError, DifferentiationStep, SymbolicDerivative,
     SymbolicDifferentiationError, verify_symbolic_derivative,

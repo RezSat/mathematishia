@@ -10,8 +10,8 @@ use std::fmt;
 use mathema::{Condition, Expr};
 
 use crate::{
-    Assumptions, ConditionStatus, DerivationStep, GuardedRewriteStep, Relation,
-    verify_distribution_step, verify_guarded_rewrite_step,
+    Assumptions, ConditionStatus, ConditionalRewriteStep, DerivationStep, GuardedRewriteStep,
+    Relation, verify_composite_inverse_step, verify_distribution_step, verify_guarded_rewrite_step,
 };
 
 /// Stable index of a node within one proof graph.
@@ -48,6 +48,11 @@ pub enum ProofNodeKind {
         condition: ProofNodeId,
         step: GuardedRewriteStep,
     },
+    CompositeCancellation {
+        source: ProofNodeId,
+        conditions: Vec<ProofNodeId>,
+        step: ConditionalRewriteStep,
+    },
 }
 
 impl ProofNodeKind {
@@ -56,6 +61,7 @@ impl ProofNodeKind {
             Self::Input(expr) => Some(expr),
             Self::Distribution { step, .. } => Some(step.after()),
             Self::GuardedCancellation { step, .. } => Some(step.after()),
+            Self::CompositeCancellation { step, .. } => Some(step.after()),
             Self::Condition { .. } => None,
         }
     }
@@ -71,6 +77,7 @@ impl ProofNodeKind {
         match self {
             Self::Distribution { step, .. } => Some(step.relation()),
             Self::GuardedCancellation { step, .. } => Some(step.relation()),
+            Self::CompositeCancellation { step, .. } => Some(step.relation()),
             _ => None,
         }
     }
@@ -79,6 +86,7 @@ impl ProofNodeKind {
         match self {
             Self::Distribution { step, .. } => Some(step.rule().stable_id()),
             Self::GuardedCancellation { step, .. } => Some(step.rule().stable_id()),
+            Self::CompositeCancellation { step, .. } => Some(step.rule().stable_id()),
             _ => None,
         }
     }
@@ -90,6 +98,9 @@ impl ProofNodeKind {
             Self::GuardedCancellation {
                 source, condition, ..
             } => vec![*source, *condition],
+            Self::CompositeCancellation {
+                source, conditions, ..
+            } => std::iter::once(*source).chain(conditions.iter().copied()).collect(),
         }
     }
 }
@@ -208,6 +219,19 @@ impl ProofGraph {
             step,
         })
     }
+
+    pub fn add_composite_cancellation(
+        &mut self,
+        source: ProofNodeId,
+        conditions: Vec<ProofNodeId>,
+        step: ConditionalRewriteStep,
+    ) -> Result<ProofNodeId, ProofGraphBuildError> {
+        self.append(ProofNodeKind::CompositeCancellation {
+            source,
+            conditions,
+            step,
+        })
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -298,6 +322,37 @@ pub fn verify_proof_graph(
                     return Err(E::InvalidStep);
                 }
                 if verify_guarded_rewrite_step(step, assumptions).is_err() {
+                    return Err(E::InvalidStep);
+                }
+            }
+            ProofNodeKind::CompositeCancellation {
+                source,
+                conditions,
+                step,
+            } => {
+                let Some(parent) = prior_expression(graph, *source, index) else {
+                    return Err(E::InvalidDependency);
+                };
+                if step.before() != parent {
+                    return Err(E::InvalidStep);
+                }
+                if conditions.len() != step.conditions().len() {
+                    return Err(E::InvalidDependency);
+                }
+                for (id, required) in conditions.iter().zip(step.conditions()) {
+                    let Some(prior) = graph.nodes.get(id.index()) else {
+                        return Err(E::InvalidDependency);
+                    };
+                    if id.index() >= index {
+                        return Err(E::InvalidDependency);
+                    }
+                    match prior.kind() {
+                        ProofNodeKind::Condition { condition, status }
+                            if condition == required.condition() && *status == required.status() => {}
+                        _ => return Err(E::InvalidDependency),
+                    }
+                }
+                if verify_composite_inverse_step(step, assumptions).is_err() {
                     return Err(E::InvalidStep);
                 }
             }

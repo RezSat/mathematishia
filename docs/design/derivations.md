@@ -32,9 +32,10 @@ Quadratic-root evidence records the normalized polynomial, exact discriminant an
 | Condition | Typed condition with claimed status | External assumption context |
 | Distribution | Result expression plus distributive evidence | Prior expression node |
 | Guarded cancellation | Result expression plus cancellation evidence | Prior expression and condition nodes |
+| Composite cancellation | Result expression plus complete condition evidence | Prior expression and one node for each obligation |
 
 `verify_proof_graph` checks the input, references, condition statuses, exact step records and selected expression conclusion. All nodes must be reachable as dependencies of the conclusion; unused branches and orphaned premises are rejected.
 
 An established condition is marked `Proven` for an exact rational fact or `Assumed` when it follows from the supplied premises. Unknown conditions cannot justify a graph edge. The graph has a configurable node limit (128 by default).
 
-The current graph covers expression equality using the two registered rewrite rules. Equation proofs, condition discharge inside the graph, general composition, and student-facing rendering require further work.
+The current graph covers expression equality using the distributive rule and two cancellation rules. Equation proofs, condition discharge inside the graph, general composition, and student-facing rendering require further work.

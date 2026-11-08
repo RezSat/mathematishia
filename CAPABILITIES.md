@@ -9,7 +9,8 @@
 | Linear, quadratic and rational equations | `crates/kernel/src/solve_linear.rs`, `quadratic.rs`, `rational_equation.rs`, `rational_quadratic.rs` |
 | Exact quadratic roots | `crates/kernel/src/algebraic.rs` |
 | Symbolic differentiation | `crates/kernel/src/differentiate_expr.rs` |
-| Assumption classification and guarded rewriting | `crates/kernel/src/assumptions.rs`, `guarded_rewrite.rs` |
+| Assumptions and guarded rewrites | `crates/kernel/src/assumptions.rs`, `guarded_rewrite.rs`, `conditional_rewrite.rs` |
+| Definedness and domain-preserving expression composition | `crates/kernel/src/definedness.rs` |
 | Proof graph and dependency verification | `crates/kernel/src/proof_graph.rs` |
 | Distribution and linear-step checking | `crates/kernel/src/lib.rs`, `verification.rs` |
 | Parser and command-line commands | `crates/frontend/`, `crates/cli/` |
@@ -18,7 +19,7 @@
 
 ## Current boundaries
 
-The proof graph records exact expression inputs, condition nodes, rule evidence and typed parent references. Its verifier rejects invalid steps, unsupported conditions, forward dependencies and disconnected nodes. It does not yet compose equation proofs, establish new symbolic assumptions or infer general definedness.
+The proof graph records exact expression inputs, condition nodes, rule evidence and typed parent references, including composite cancellation with multiple conditions. Its verifier rejects invalid steps, unsupported conditions, forward dependencies and disconnected nodes. It does not yet compose equation proofs, establish new symbolic assumptions or cover fractional/analytic definedness. `DomainExpression` retains construction-time restrictions, but the surface parser still returns ordinary `Expr` values.
 
 General algebraic-number arithmetic, irreducible polynomial factorization, analytic functions, certified numerics and proof rendering remain to be implemented.
 

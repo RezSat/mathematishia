@@ -11,6 +11,7 @@ mod context;
 mod differentiate_expr;
 mod poly_convert;
 mod poly_division;
+mod rational_function;
 mod polynomial;
 mod solve_linear;
 mod square_free;
@@ -24,6 +25,7 @@ pub use differentiate_expr::{
 pub use poly_convert::PolynomialConversionError;
 pub use poly_division::ZeroPolynomialDivisor;
 pub use polynomial::RationalPolynomial;
+pub use rational_function::{RationalFunction, RationalFunctionError};
 pub use solve_linear::{
     EquationRuleId, EquationStep, LinearSolution, LinearSolveError, LinearSolveResult,
     VerifiedCondition, solve_linear_equation,

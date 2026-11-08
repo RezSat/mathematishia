@@ -197,7 +197,7 @@ fn enforces_node_limit_and_deterministic_ids() {
     );
     assert_eq!(graph.nodes().len(), 2);
     assert_eq!(
-        verify_proof_graph(&source, &Assumptions::new(), &ProofGraph::new(source)),
+        verify_proof_graph(&source, &Assumptions::new(), &ProofGraph::new(source.clone())),
         Ok(())
     );
 }

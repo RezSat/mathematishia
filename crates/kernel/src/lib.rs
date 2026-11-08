@@ -36,7 +36,6 @@ pub use conditional_rewrite::{
     verify_composite_inverse_step,
 };
 pub use context::{EvaluationContext, EvaluationError, ResourceLimitKind, ResourceLimits};
-pub use mathema::{DefinednessError, DomainExpression, definedness_obligations};
 pub use differentiate_expr::{
     DerivativeRuleId, DerivativeVerificationError, DifferentiationStep, SymbolicDerivative,
     SymbolicDifferentiationError, verify_symbolic_derivative,
@@ -45,6 +44,7 @@ pub use guarded_rewrite::{
     GuardedRewriteOutcome, GuardedRewriteStep, GuardedRewriteVerificationError, GuardedRuleId,
     cancel_symbol_inverse_once, verify_guarded_rewrite_step,
 };
+pub use mathema::{DefinednessError, DomainExpression, definedness_obligations};
 pub use poly_convert::PolynomialConversionError;
 pub use poly_division::ZeroPolynomialDivisor;
 pub use polynomial::RationalPolynomial;

@@ -39,6 +39,16 @@ class LinearResult:
 
 
 @dataclass(frozen=True)
+class QuadraticResult:
+    kind: Literal["finite", "all_rationals"]
+    roots: tuple[Fraction, ...]
+
+    @property
+    def has_rational_roots(self) -> bool:
+        return self.kind == "all_rationals" or bool(self.roots)
+
+
+@dataclass(frozen=True)
 class Polynomial:
     expression: str
     coefficients: tuple[Fraction, ...]
@@ -114,6 +124,15 @@ def solve(equation: str, variable: str) -> LinearResult:
         Fraction(value) if value is not None else None,
         tuple(Step(*step) for step in steps),
     )
+
+
+def solve_quadratic(source: str, variable: str) -> QuadraticResult:
+    """Exact rational roots of polynomials of degree at most two.
+
+    A finite empty result means no roots in Q, not no real/complex roots.
+    """
+    kind, roots = _native.solve_quadratic(source, variable)
+    return QuadraticResult(kind, tuple(Fraction(root) for root in roots))
 
 
 def polynomial(source: str, variable: str) -> Polynomial:
@@ -197,11 +216,11 @@ def gcd(left: str, right: str, variable: str) -> Polynomial:
 
 __all__ = [
     "MathSyntaxError", "ResourceLimitError", "UnsupportedMathematicsError",
-    "VerificationFailure", "UndefinedAtPointError", "Step", "Expansion", "LinearResult", "Polynomial",
+    "VerificationFailure", "UndefinedAtPointError", "Step", "Expansion", "LinearResult", "QuadraticResult", "Polynomial",
     "RationalFunction",
     "SquareFreeFactor", "SquareFreeDecomposition",
     "SymbolicDifferentiationStep", "SymbolicDerivative",
-    "expression", "expand", "solve", "polynomial", "differentiate", "differentiate_expression", "square_free",
+    "expression", "expand", "solve", "solve_quadratic", "polynomial", "differentiate", "differentiate_expression", "square_free",
     "evaluate", "divide", "gcd", "rational_function", "rational_evaluate",
     "rational_differentiate", "rational_operation",
 ]

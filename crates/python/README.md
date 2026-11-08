@@ -39,3 +39,9 @@ context-local, not a hard memory/time guarantee.
 numerator, monic denominator and excluded-zero-set polynomials. The functions
 `rational_evaluate`, `rational_differentiate` and `rational_operation` share
 the same exact Rust domain rules and preserve canceled poles.
+
+Solve exact quadratic roots with
+`m.solve_quadratic("x^2-5*x+6", "x")`. The immutable
+`QuadraticResult` contains sorted, distinct `Fraction` roots, or an
+`all_rationals` classification for the zero polynomial. No rational roots
+is not the same as no real or complex solutions.

@@ -28,6 +28,23 @@ class ExactMathTests(unittest.TestCase):
         self.assertEqual(m.solve("x+1=x+2", "x").kind, "none")
         self.assertEqual(m.solve("x=x", "x").kind, "all")
 
+    def test_exact_quadratic_roots_are_typed_and_domain_explicit(self):
+        result = m.solve_quadratic("x^2-5*x+6", "x")
+        self.assertEqual(result.kind, "finite")
+        self.assertEqual(result.roots, (Fraction(2), Fraction(3)))
+        self.assertTrue(result.has_rational_roots)
+        self.assertEqual(m.solve_quadratic("(x-2)^2", "x").roots, (Fraction(2),))
+        irrational = m.solve_quadratic("x^2-2", "x")
+        self.assertEqual(irrational.roots, ())
+        self.assertFalse(irrational.has_rational_roots)
+        all_values = m.solve_quadratic("0", "x")
+        self.assertEqual(all_values.kind, "all_rationals")
+        self.assertTrue(all_values.has_rational_roots)
+        with self.assertRaises(m.UnsupportedMathematicsError):
+            m.solve_quadratic("x^3+1", "x")
+        with self.assertRaises(FrozenInstanceError):
+            result.roots = ()
+
     def test_partial_and_complete_expansion(self):
         partial = m.expand("(x+1)*(y+2)", 0)
         self.assertFalse(partial.complete)

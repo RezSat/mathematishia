@@ -55,6 +55,7 @@ Use quoted arguments so your shell passes the complete Mathema expression:
 cargo run -p mathematishia-cli -- expr '1/2+1/3'
 cargo run -p mathematishia-cli -- expand '2*(x+3)' 4
 cargo run -p mathematishia-cli -- solve '2*x+4=10' x
+cargo run -p mathematishia-cli -- solveq 'x^2-5*x+6' x
 cargo run -p mathematishia-cli -- poly '(x+1)^2' x
 cargo run -p mathematishia-cli -- eval 'x^2+1/2' x '1/2'
 cargo run -p mathematishia-cli -- divide 'x^2-1' 'x-1' x
@@ -111,3 +112,15 @@ silently fill domain holes: `(x^2-1)/(x-1)` is undefined at `x=1`, even
 when its reduced numerator is `x+1`. The result lists explicit polynomial
 nonzero conditions. General `/` expression syntax and multivariate rational
 functions remain future work.
+
+### Exact rational roots of quadratic polynomials
+
+`solveq <POLYNOMIAL> <VARIABLE>` and Python
+`solve_quadratic("x^2-5*x+6", "x")` find all **rational** roots of a
+polynomial of degree at most two. The exact discriminant is checked using
+arbitrary-precision integer and rational square roots, without approximate
+floating-point tests. Missing rational roots do not imply that a polynomial
+has no real or complex roots: `x^2-2` has no roots in Q, but it has roots
+involving sqrt(2). Higher-degree inputs receive a typed unsupported-domain
+error. All candidate roots are verified by exact substitution, and the
+independent checker validates completeness with the exact discriminant.

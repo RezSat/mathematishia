@@ -51,3 +51,11 @@ These phases describe architectural goals, not dates.
    sums, products and positive integer powers over immutable Expr values.
    Negative/fractional powers, general functions, domains/assumptions and
    integration remain separate planned milestones.
+
+### Next CAS foundation
+
+An exact rational-root solver for univariate degree-at-most-two polynomials
+now builds on arbitrary-precision perfect-square testing and an independent
+mathematical verifier. Irrational/algebraic-number representations,
+higher-degree factorization, domain-aware nonlinear rational equations,
+partial fractions and symbolic integration remain planned.

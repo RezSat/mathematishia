@@ -216,3 +216,24 @@ fn rational_cli_uses_quotient_rule_and_rejects_zero_denominator() {
     assert!(derivative.contains("condition: "));
     assert!(run(&["rat", "x", "0", "x"]).is_err());
 }
+
+#[test]
+fn exact_quadratic_command_distinguishes_no_rational_roots_from_no_solutions() {
+    assert_eq!(
+        run(&["solveq", "x^2-5*x+6", "x"]).unwrap(),
+        "rational roots: 2, 3"
+    );
+    assert_eq!(
+        run(&["solveq", "x^2-4*x+4", "x"]).unwrap(),
+        "rational roots: 2"
+    );
+    assert_eq!(
+        run(&["solveq", "x^2-2", "x"]).unwrap(),
+        "rational roots: none (other roots may exist)"
+    );
+    assert_eq!(
+        run(&["solveq", "0", "x"]).unwrap(),
+        "rational roots: all rational values"
+    );
+    assert!(run(&["solveq", "x^3-1", "x"]).is_err());
+}

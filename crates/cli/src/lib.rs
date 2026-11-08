@@ -9,7 +9,8 @@ use std::fmt::Write as _;
 use mathema::{Equation, Expr, ExprView, Rational, Symbol};
 use mathema_frontend::{Statement, parse_expression, parse_statement};
 use mathematishia_kernel::{
-    EvaluationContext, LinearSolution, RationalFunction, RationalPolynomial, VerifiedCondition,
+    EvaluationContext, LinearSolution, QuadraticRoots, RationalFunction, RationalPolynomial,
+    VerifiedCondition,
 };
 
 pub const HELP: &str = "Mathematishia (early exact-math CLI)
@@ -17,6 +18,7 @@ Usage:
   mathematishia expr <EXPRESSION>
   mathematishia expand <EXPRESSION> [MAX_STEPS]
   mathematishia solve <EQUATION> <VARIABLE>
+  mathematishia solveq <POLYNOMIAL> <VARIABLE>
   mathematishia poly <EXPRESSION> <VARIABLE>
   mathematishia eval <POLYNOMIAL> <VARIABLE> <RATIONAL>
   mathematishia divide <DIVIDEND> <DIVISOR> <VARIABLE>
@@ -34,6 +36,7 @@ Examples:
   mathematishia expr '(x+1)^2'
   mathematishia expand '2*(x+3)' 4
   mathematishia solve '2*x+4=10' x
+  mathematishia solveq 'x^2-5*x+6' x
   mathematishia poly '(x+1)^2' x
   mathematishia eval 'x^2+1/2' x '1/2'
   mathematishia divide 'x^2-1' 'x-1' x
@@ -184,6 +187,26 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
                 )
                 .expect("writing to a String is infallible");
             }
+            Ok(out)
+        }
+        ["solveq", input, name] => {
+            let symbol = variable(name)?;
+            let poly = polynomial(input, &symbol)?;
+            let solved = EvaluationContext::default()
+                .solve_quadratic(&poly)
+                .map_err(|error| invalid(error.to_string()))?;
+            let out = match solved.roots() {
+                QuadraticRoots::AllRationals => {
+                    "rational roots: all rational values".to_owned()
+                }
+                QuadraticRoots::Finite(roots) if roots.is_empty() => {
+                    "rational roots: none (other roots may exist)".to_owned()
+                }
+                QuadraticRoots::Finite(roots) => format!(
+                    "rational roots: {}",
+                    roots.iter().map(ToString::to_string).collect::<Vec<_>>().join(", ")
+                ),
+            };
             Ok(out)
         }
         ["solve", input, name] => {

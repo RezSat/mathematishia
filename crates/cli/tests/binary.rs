@@ -112,3 +112,16 @@ fn actual_binary_respects_canceled_rational_holes() {
             .contains("undefined at this point")
     );
 }
+
+#[test]
+fn actual_binary_solves_exact_rational_quadratic_roots() {
+    let output = Command::new(env!("CARGO_BIN_EXE_mathematishia"))
+        .args(["solveq", "x^2-5*x+6", "x"])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    assert_eq!(
+        String::from_utf8(output.stdout).unwrap().trim(),
+        "rational roots: 2, 3"
+    );
+}

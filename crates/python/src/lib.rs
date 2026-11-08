@@ -11,9 +11,9 @@ use mathema_frontend::{
 use mathematishia_kernel::{
     AlgebraicRootEvidence, AlgebraicRootSet, Assumptions, DefinednessError, DomainOperationError,
     DomainRewriteOutcome, EvaluationContext, EvaluationError, ExactQuadraticRoot, LinearSolution,
-    ProofNodeKind, QuadraticBranch, QuadraticRoots, RationalFunction, RationalFunctionError,
-    RationalExpressionError, RationalPolynomial, RationalQuadraticRoots, ResourceLimitKind, VerifiedCondition,
-    rewrite_domain_once, substitute_domain,
+    ProofNodeKind, QuadraticBranch, QuadraticRoots, RationalExpressionError, RationalFunction,
+    RationalFunctionError, RationalPolynomial, RationalQuadraticRoots, ResourceLimitKind,
+    VerifiedCondition, rewrite_domain_once, substitute_domain,
 };
 use pyo3::create_exception;
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
@@ -572,7 +572,9 @@ fn py_rational_solve(source: &str, variable: &str) -> PyResult<PyRationalRoots> 
     let symbol = selected_variable(variable)?;
     let parsed = parse_domain_statement(source).map_err(map_domain_parse)?;
     let DomainStatement::Equation { left, right } = parsed else {
-        return Err(MathSyntaxError::new_err("expected an equation containing '='"));
+        return Err(MathSyntaxError::new_err(
+            "expected an equation containing '='",
+        ));
     };
     let ctx = EvaluationContext::default();
     let lhs = ctx
@@ -585,9 +587,7 @@ fn py_rational_solve(source: &str, variable: &str) -> PyResult<PyRationalRoots> 
         .solve_rational_quadratic_equation(&lhs, &rhs)
         .map_err(map_evaluation_error)?;
     let (status, roots) = match result.roots() {
-        RationalQuadraticRoots::AllAdmissibleRationals => {
-            ("all_admissible".to_owned(), Vec::new())
-        }
+        RationalQuadraticRoots::AllAdmissibleRationals => ("all_admissible".to_owned(), Vec::new()),
         RationalQuadraticRoots::Finite(values) => (
             "finite".to_owned(),
             values.iter().map(ToString::to_string).collect(),

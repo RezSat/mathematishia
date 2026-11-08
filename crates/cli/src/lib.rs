@@ -34,6 +34,10 @@ Usage:
   mathematishia diff <POLYNOMIAL> <VARIABLE>
   mathematishia sqfree <POLYNOMIAL> <VARIABLE>
   mathematishia diffexpr <EXPRESSION> <VARIABLE>
+  mathematishia rsimplify <EXPRESSION> <VARIABLE>
+  mathematishia rdiff <EXPRESSION> <VARIABLE>
+  mathematishia reval <EXPRESSION> <VARIABLE> <RATIONAL>
+  mathematishia rsolve <EQUATION> <VARIABLE>
   mathematishia rat <NUMERATOR> <DENOMINATOR> <VARIABLE>
   mathematishia rateval <NUMERATOR> <DENOMINATOR> <VARIABLE> <VALUE>
   mathematishia ratdiff <NUMERATOR> <DENOMINATOR> <VARIABLE>
@@ -58,6 +62,8 @@ Examples:
   mathematishia diff 'x^3+1/2*x' x
   mathematishia sqfree '2*(x-1)^2*(x+2)^3' x
   mathematishia diffexpr 'x*y+(x+1)^3' x
+  mathematishia rsimplify '(x^2-1)/(x-1)' x
+  mathematishia rsolve '(x^2-1)/(x-1)=3' x
   mathematishia rat 'x^2-1' 'x-1' x
   mathematishia rateval 'x^2-1' 'x-1' x 2
   mathematishia ratdiff '1' 'x-1' x
@@ -570,6 +576,84 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
                 .expect("writing to a String is infallible");
             }
             Ok(out)
+        }
+        ["rsimplify", input, name] => {
+            let symbol = variable(name)?;
+            let source = domain_expression(input)?;
+            let result = EvaluationContext::default()
+                .rational_expression(&source, &symbol)
+                .map_err(|error| invalid(error.to_string()))?;
+            Ok(show_rational(&result, &symbol))
+        }
+        ["rdiff", input, name] => {
+            let symbol = variable(name)?;
+            let source = domain_expression(input)?;
+            let ctx = EvaluationContext::default();
+            let function = ctx
+                .rational_expression(&source, &symbol)
+                .map_err(|error| invalid(error.to_string()))?;
+            let derivative = ctx
+                .differentiate_rational_function(&function)
+                .map_err(|error| invalid(error.to_string()))?;
+            Ok(show_rational(&derivative, &symbol))
+        }
+        ["reval", input, name, at] => {
+            let symbol = variable(name)?;
+            let source = domain_expression(input)?;
+            let value = scalar(at)?;
+            let ctx = EvaluationContext::default();
+            let function = ctx
+                .rational_expression(&source, &symbol)
+                .map_err(|error| invalid(error.to_string()))?;
+            let answer = ctx
+                .evaluate_rational_function(&function, &value)
+                .map_err(|error| invalid(error.to_string()))?;
+            Ok(format!("value: {answer}"))
+        }
+        ["rsolve", input, name] => {
+            let symbol = variable(name)?;
+            let parsed =
+                parse_domain_statement(input).map_err(|error| invalid(error.to_string()))?;
+            let DomainStatement::Equation { left, right } = parsed else {
+                return Err(invalid("expected an equation containing '='"));
+            };
+            check_domain(&left)?;
+            check_domain(&right)?;
+            let ctx = EvaluationContext::default();
+            let left = ctx
+                .rational_expression(&left, &symbol)
+                .map_err(|error| invalid(error.to_string()))?;
+            let right = ctx
+                .rational_expression(&right, &symbol)
+                .map_err(|error| invalid(error.to_string()))?;
+            let result = ctx
+                .solve_rational_quadratic_equation(&left, &right)
+                .map_err(|error| invalid(error.to_string()))?;
+            let mut output = match result.roots() {
+                RationalQuadraticRoots::AllAdmissibleRationals => {
+                    "rational roots: all admissible rationals".to_owned()
+                }
+                RationalQuadraticRoots::Finite(roots) if roots.is_empty() => {
+                    "rational roots: none (other roots may exist)".to_owned()
+                }
+                RationalQuadraticRoots::Finite(roots) => format!(
+                    "rational roots: {}",
+                    roots
+                        .iter()
+                        .map(ToString::to_string)
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ),
+            };
+            if result.domain_conditions().is_empty() {
+                output.push_str("\nconditions: none");
+            } else {
+                for condition in result.domain_conditions() {
+                    write!(&mut output, "\ncondition: {} != 0", condition.to_expr(&symbol))
+                        .expect("writing to a String is infallible");
+                }
+            }
+            Ok(output)
         }
         ["rat", numerator, denominator, name] => {
             let symbol = variable(name)?;

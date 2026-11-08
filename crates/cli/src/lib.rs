@@ -69,10 +69,9 @@ Examples:
   mathematishia ratdiff '1' 'x-1' x
   mathematishia ratsolveq 'x^2-5*x+6' 'x-2' '0' '1' x
 
-Syntax: integers, exact fraction literals n/d, identifiers, + - * ^ ( ) =.
-Use explicit multiplication. '/' only separates literal integers, not expressions.
-Rational operations take separate polynomial numerator and denominator inputs.
-Canceled denominator zeros remain excluded. This is not a general CAS.";
+Syntax: integers, exact scalar or symbolic division, identifiers, + - * / ^ ( ) =.
+Use explicit multiplication. Rational-expression operations accept one formula.
+Canceled denominator zeros remain excluded.";
 
 const MAX_DISTRIBUTION_STEPS: usize = 12;
 

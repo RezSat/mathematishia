@@ -7,6 +7,7 @@ This file tracks implemented areas and the next domain extensions. See [CAPABILI
 - Exact arbitrary-precision integers and rationals; immutable symbolic expressions with structural canonicalization.
 - Bounded expression/equation parser and Rust CLI.
 - Univariate rational-polynomial arithmetic, long division, GCD, differentiation and verified square-free decomposition.
+- Domain-aware rational expression parsing, exact normalization over Q(x), differentiation, point evaluation and rational-root solving through degree two.
 - Exact rational-linear, selected quadratic and rational-equation solving with domain exclusions.
 - Exact representation and verification of quadratic real irrational and complex roots.
 - Formal symbolic derivatives for sums, products and positive integer powers.
@@ -16,7 +17,7 @@ This file tracks implemented areas and the next domain extensions. See [CAPABILI
 
 ## In progress / next
 
-1. Carry definedness restrictions from the parser through all expression operations; extend proof obligations to equation transformations and domain-specific evidence.
+1. Provide verified arithmetic traces for general rational-expression conversions and extend proof obligations to equation transformations and domain-specific evidence.
 2. Extend conditional rewriting to wider expression classes and analytic branch semantics.
 3. Extend exact algebraic-number arithmetic beyond quadratic root identity.
 4. Factor polynomials over Q, followed by higher-degree equation algorithms.

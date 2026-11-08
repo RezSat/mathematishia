@@ -28,6 +28,7 @@ for root in roots.roots:
 - `evaluate`, `differentiate`, `square_free`: exact rational-polynomial operations.
 - `differentiate_expression`: formal differentiation of sums, products and positive integer powers, with verified derivation steps.
 - `rational_function`, `rational_evaluate`, `rational_differentiate`, `rational_operation`: partial rational functions with recorded domain restrictions.
+- `rational_simplify`, `rational_derivative`, `rational_value`, `rational_solve`: full univariate rational expressions and equations over Q, preserving source-domain exclusions.
 - `algebraic_roots`: exact quadratic roots, represented as rationals or as a monic minimal polynomial with a branch selector.
 
 The parser covers a bounded grammar. General function calculus, arbitrary algebraic-number arithmetic, and a stable Python compatibility contract have not yet been implemented. See [the syntax specification](../../docs/design/mathema-surface.md).
@@ -55,3 +56,25 @@ The `domain_expression`, `domain_equation`, `substitute_domain`, and
 Noninteger and symbolic powers are rejected. The original `expression`
 function continues to return a plain normalized string without domain
 provenance.
+
+## Rational expressions
+
+```python
+from fractions import Fraction
+import mathematishia as m
+
+simplified = m.rational_simplify("(x^2-1)/(x-1)", "x")
+assert simplified.numerator.coefficients == (Fraction(1), Fraction(1))
+assert simplified.excluded_zero_sets[0].coefficients == (
+    Fraction(-1), Fraction(1)
+)
+assert m.rational_value("(x^2-1)/(x-1)", "x", "2") == Fraction(3)
+
+roots = m.rational_solve("(x^2-1)/(x-1)=3", "x")
+assert roots.roots == (Fraction(2),)
+```
+
+The rational solver currently returns rational roots only and requires a
+residual numerator of degree at most two. An empty finite root list does
+not rule out irrational or complex roots. See
+[the rational-expression design](../../docs/design/rational-expressions.md).

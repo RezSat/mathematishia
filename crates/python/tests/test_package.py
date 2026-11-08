@@ -367,5 +367,42 @@ class RationalExpressionApiTests(unittest.TestCase):
             m.rational_solve("x+1", "x")
 
 
+
+class RationalExpressionCrossChecks(unittest.TestCase):
+    def test_linear_factor_reduction_and_removed_roots(self):
+        # Rational root cancellation is compared against exact integer
+        # arithmetic across 49 distinct polynomials.
+        for removed in range(-3, 4):
+            for surviving in range(-3, 4):
+                source = (
+                    f"(x-({removed}))*(x-({surviving}))/"
+                    f"(x-({removed}))"
+                )
+                with self.subTest(removed=removed, surviving=surviving):
+                    reduced = m.rational_simplify(source, "x")
+                    self.assertEqual(
+                        reduced.numerator.coefficients,
+                        (Fraction(-surviving), Fraction(1)),
+                    )
+                    self.assertEqual(
+                        reduced.denominator.coefficients,
+                        (Fraction(1),),
+                    )
+                    self.assertEqual(
+                        reduced.excluded_zero_sets[0].coefficients,
+                        (Fraction(-removed), Fraction(1)),
+                    )
+                    with self.assertRaises(m.UndefinedAtPointError):
+                        m.rational_value(source, "x", str(removed))
+                    admissible = removed + 1
+                    self.assertEqual(
+                        m.rational_value(source, "x", str(admissible)),
+                        Fraction(admissible - surviving),
+                    )
+                    roots = m.rational_solve(source + "=0", "x")
+                    expected = () if removed == surviving else (Fraction(surviving),)
+                    self.assertEqual(roots.roots, expected)
+
+
 if __name__ == "__main__":
     unittest.main()

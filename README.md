@@ -19,6 +19,9 @@ cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 
 ```sh
 cargo run -p mathematishia-cli -- expr '1/2+1/3'
+cargo run -p mathematishia-cli -- rsimplify '(x^2-1)/(x-1)' x
+cargo run -p mathematishia-cli -- rdiff '(x^2-1)/(x-1)' x
+cargo run -p mathematishia-cli -- rsolve '(x^2-1)/(x-1)=3' x
 cargo run -p mathematishia-cli -- domain '0*x^-1=0*y^-1'
 cargo run -p mathematishia-cli -- subdomain '0*x^-1' x 0
 cargo run -p mathematishia-cli -- rewrite '(x+1)*(x+1)^-1' 'x+1'
@@ -62,12 +65,18 @@ See [the Python API notes](crates/python/README.md) for supported operations.
 | `mathematishia-cli` | Command-line interface |
 | `mathematishia` (Python) | Native bindings to the Rust kernel |
 
-The domain-aware parser preserves nonzero conditions for integer powers,
-including restrictions removed by structural normalization. The `domain`,
-`subdomain`, and `rewrite` commands expose these conditions. The legacy
-`expr` and general algebra commands still use the unrestricted structural
-parser and do not preserve eliminated restrictions. General symbolic division
-and analytic functions are not supported. The exact algebraic-root representation covers quadratic roots but not arbitrary algebraic-number arithmetic. Expression equality is structural unless a checked transformation establishes a mathematical relation. Resource budgets bound selected operations, not process memory or execution time.
+The parser supports exact scalar and symbolic division with explicit multiplication.
+The `rsimplify`, `rdiff`, `reval`, and `rsolve` commands handle univariate
+rational expressions over Q, preserving excluded denominator zeros after
+cancellation. Solving currently returns admissible rational roots when the
+residual numerator has degree at most two.
+
+The domain-aware parser retains restrictions removed by structural normalization.
+`domain`, `subdomain`, and `rewrite` expose these conditions; older
+expression-returning operations may discard them. The algebraic-root representation
+covers quadratic roots, but arbitrary algebraic-number arithmetic and analytic
+functions are not implemented. Resource budgets bound selected algorithms, not
+process memory or execution time.
 
 For implemented operations and source locations, see [CAPABILITIES.md](CAPABILITIES.md). Architectural contracts are in [docs/design](docs/design), with planned work in [ROADMAP.md](ROADMAP.md).
 

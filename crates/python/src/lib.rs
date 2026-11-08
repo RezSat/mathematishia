@@ -13,7 +13,7 @@ use mathematishia_kernel::{
     DomainRewriteOutcome, EvaluationContext, EvaluationError, ExactQuadraticRoot, LinearSolution,
     ProofNodeKind, QuadraticBranch, QuadraticElement, QuadraticField, QuadraticFieldError,
     QuadraticRoots, RationalExpressionError, RationalFunction, RationalFunctionError,
-    RationalPolynomial, RationalQuadraticRoots, ResourceLimitKind, VerifiedCondition,
+    RationalPolynomial, PolynomialResidue, ResidueError, RationalQuadraticRoots, ResourceLimitKind, VerifiedCondition,
     rewrite_domain_once, substitute_domain,
 };
 use pyo3::create_exception;
@@ -862,6 +862,76 @@ fn quadratic_value_data(value: &QuadraticElement, symbol: &Symbol) -> PyResult<P
     ))
 }
 
+fn map_residue_error(error: ResidueError) -> PyErr {
+    match error {
+        ResidueError::Evaluation(reason) => map_evaluation_error(reason),
+        _ => UnsupportedMathematicsError::new_err(error.to_string()),
+    }
+}
+
+type PyResidueData = (PyPolynomialData, PyPolynomialData);
+
+fn residue_data(value: &PolynomialResidue, variable: &Symbol) -> PyResidueData {
+    (
+        poly_data(value.representative(), variable),
+        poly_data(value.modulus(), variable),
+    )
+}
+
+fn selected_residue(
+    source: &str,
+    modulus: &str,
+    variable: &Symbol,
+) -> PyResult<PolynomialResidue> {
+    let ctx = EvaluationContext::default();
+    let value = selected_polynomial(source, variable)?;
+    let modulus = selected_polynomial(modulus, variable)?;
+    PolynomialResidue::new(&ctx, value, modulus).map_err(map_residue_error)
+}
+
+#[pyfunction(name = "modular_reduce")]
+fn py_modular_reduce(source: &str, modulus: &str, variable: &str) -> PyResult<PyResidueData> {
+    let symbol = selected_variable(variable)?;
+    let value = selected_residue(source, modulus, &symbol)?;
+    Ok(residue_data(&value, &symbol))
+}
+
+#[pyfunction(name = "modular_operation")]
+fn py_modular_operation(
+    operation: &str,
+    left: &str,
+    right: &str,
+    modulus: &str,
+    variable: &str,
+) -> PyResult<PyResidueData> {
+    let symbol = selected_variable(variable)?;
+    let a = selected_residue(left, modulus, &symbol)?;
+    let b = selected_residue(right, modulus, &symbol)?;
+    let ctx = EvaluationContext::default();
+    let result = match operation {
+        "add" => a.add(&b, &ctx),
+        "sub" => a.subtract(&b, &ctx),
+        "mul" => a.multiply(&b, &ctx),
+        _ => return Err(UnsupportedMathematicsError::new_err("expected add, sub or mul")),
+    }
+    .map_err(map_residue_error)?;
+    Ok(residue_data(&result, &symbol))
+}
+
+#[pyfunction(name = "modular_power")]
+fn py_modular_power(
+    source: &str,
+    modulus: &str,
+    variable: &str,
+    exponent: i64,
+) -> PyResult<Option<PyResidueData>> {
+    let symbol = selected_variable(variable)?;
+    let value = selected_residue(source, modulus, &symbol)?;
+    let ctx = EvaluationContext::default();
+    let result = value.pow_signed(exponent, &ctx).map_err(map_residue_error)?;
+    Ok(result.map(|value| residue_data(&value, &symbol)))
+}
+
 #[pyfunction(name = "quadratic_value")]
 fn py_quadratic_value(
     polynomial: &str,
@@ -1012,6 +1082,9 @@ fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(py_solve_quadratic, m)?)?;
     m.add_function(wrap_pyfunction!(py_algebraic_roots, m)?)?;
     m.add_function(wrap_pyfunction!(py_quadratic_value, m)?)?;
+    m.add_function(wrap_pyfunction!(py_modular_reduce, m)?)?;
+    m.add_function(wrap_pyfunction!(py_modular_operation, m)?)?;
+    m.add_function(wrap_pyfunction!(py_modular_power, m)?)?;
     m.add_function(wrap_pyfunction!(py_quadratic_operation, m)?)?;
     m.add_function(wrap_pyfunction!(py_quadratic_inverse, m)?)?;
     m.add_function(wrap_pyfunction!(py_rational_solve_quadratic, m)?)?;

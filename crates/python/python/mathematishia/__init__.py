@@ -264,6 +264,40 @@ def _quad(data) -> QuadraticFieldValue:
     )
 
 
+@dataclass(frozen=True)
+class PolynomialResidue:
+    representative: Polynomial
+    modulus: Polynomial
+
+
+def _residue(data) -> PolynomialResidue:
+    value, modulus = data
+    return PolynomialResidue(_poly(value), _poly(modulus))
+
+
+def modular_reduce(source: str, modulus: str, variable: str) -> PolynomialResidue:
+    """Canonical polynomial remainder in Q[x]/(m)."""
+    return _residue(_native.modular_reduce(source, modulus, variable))
+
+
+def modular_operation(
+    operation: Literal["add", "sub", "mul"],
+    left: str, right: str, modulus: str, variable: str,
+) -> PolynomialResidue:
+    """Perform arithmetic in a polynomial quotient ring exactly."""
+    return _residue(_native.modular_operation(
+        operation, left, right, modulus, variable
+    ))
+
+
+def modular_power(
+    source: str, modulus: str, variable: str, exponent: int,
+) -> PolynomialResidue | None:
+    """Signed powers, returning None when a required inverse does not exist."""
+    result = _native.modular_power(source, modulus, variable, exponent)
+    return _residue(result) if result is not None else None
+
+
 def quadratic_value(
     polynomial: str, variable: str, branch: str,
     constant: str, coefficient: str,
@@ -483,6 +517,7 @@ __all__ = [
     "EuclideanDivision", "ExtendedGcd", "extended_gcd", "modular_inverse",
     "ExactQuadraticRoot", "AlgebraicRootStep", "AlgebraicRootsResult",
     "QuadraticFieldValue", "quadratic_value", "quadratic_operation", "quadratic_inverse",
+    "PolynomialResidue", "modular_reduce", "modular_operation", "modular_power",
     "SquareFreeFactor", "SquareFreeDecomposition",
     "SymbolicDifferentiationStep", "SymbolicDerivative",
     "expression", "expand", "solve", "solve_quadratic", "algebraic_roots", "polynomial", "differentiate", "differentiate_expression", "square_free",

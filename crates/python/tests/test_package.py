@@ -484,5 +484,28 @@ class QuadraticFieldArithmeticTests(unittest.TestCase):
             m.quadratic_inverse("x^2+1", "x", "positive_imaginary", "0", "0")
 
 
+
+class PolynomialQuotientRingTests(unittest.TestCase):
+    def test_polynomial_quotient_ring_arithmetic(self):
+        square = m.modular_operation("mul", "x", "x", "x^2+1", "x")
+        self.assertEqual(square.representative.coefficients, (Fraction(-1),))
+        self.assertEqual(square.modulus.coefficients,
+                         (Fraction(1), Fraction(0), Fraction(1)))
+        reduced = m.modular_reduce("x^2", "2*x^2+2", "x")
+        self.assertEqual(reduced, square)
+        fourth = m.modular_power("x", "x^2+1", "x", 4)
+        self.assertEqual(fourth.representative.coefficients, (Fraction(1),))
+        inverse = m.modular_power("x", "x^2+1", "x", -1)
+        self.assertEqual(inverse.representative.coefficients,
+                         (Fraction(0), Fraction(-1)))
+
+    def test_reducible_ring_can_have_noninvertible_elements(self):
+        self.assertIsNone(m.modular_power("x-1", "x^2-1", "x", -1))
+        with self.assertRaises(m.UnsupportedMathematicsError):
+            m.modular_reduce("x", "1", "x")
+        with self.assertRaises(m.UnsupportedMathematicsError):
+            m.modular_reduce("x", "0", "x")
+
+
 if __name__ == "__main__":
     unittest.main()

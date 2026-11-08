@@ -15,10 +15,10 @@ use crate::differentiate_expr::generate_symbolic_derivative;
 use crate::{
     DerivationStep, DerivativeVerificationError, DistributionResult, LinearSolution,
     LinearSolveResult, PolynomialConversionError, RationalFunction, RationalFunctionError,
-    RationalPolynomial, SquareFreeDecomposition,
-    SquareFreeError, SquareFreeVerificationError, SymbolicDerivative, SymbolicDifferentiationError,
-    VerificationError, ZeroPolynomialDivisor, distribute_first_once, expand_distributively,
-    solve_linear_equation, verify_distribution, verify_linear_solution, verify_symbolic_derivative,
+    RationalPolynomial, SquareFreeDecomposition, SquareFreeError, SquareFreeVerificationError,
+    SymbolicDerivative, SymbolicDifferentiationError, VerificationError, ZeroPolynomialDivisor,
+    distribute_first_once, expand_distributively, solve_linear_equation, verify_distribution,
+    verify_linear_solution, verify_symbolic_derivative,
 };
 
 /// Explicit, configurable limits. None are process-global.
@@ -450,7 +450,9 @@ impl EvaluationContext {
         self.check_polynomial(value.numerator())?;
         self.check_polynomial(value.denominator())?;
         if value.excluded_zero_sets().len() > self.limits.max_rational_conditions {
-            return Err(EvaluationError::Limit(ResourceLimitKind::RationalConditions));
+            return Err(EvaluationError::Limit(
+                ResourceLimitKind::RationalConditions,
+            ));
         }
         for condition in value.excluded_zero_sets() {
             self.check_polynomial(condition)?;

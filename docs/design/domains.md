@@ -61,3 +61,24 @@ Algorithm/reference: FLINT's characteristic-zero square-free documentation,
 and SymPy's `sqf_list` output convention, consulted November 2026:
 https://flintlib.org/doc/algorithms/polynomials/squarefree.html
 https://docs.sympy.org/latest/modules/polys/reference.html
+
+## Exact partial rational functions (Tasks 21–22)
+
+A reduced univariate Q(x) fraction is represented by coprime numerator and
+monic denominator plus an explicit, ordered, unique list of monic polynomial
+nonzero conditions. Conditions survive all GCD cancellations and algebraic
+operations. Thus (x^2-1)/(x-1) reduces algebraically to x+1 but is still
+undefined at x=1. Division by a rational function also adds a nonzero
+condition on the divisor's numerator. Algebraic fraction equivalence and
+equality of partial functions (including their domains) are distinct APIs.
+
+The immutable checked context meters normalization, arithmetic, quotient-rule
+differentiation and evaluation using exact scalar work/bit budgets, degree
+limits and a maximum number of conditions. These are not hard memory/time
+limits, and conservative intermediate limits can reject an expression even
+if it would simplify to a small result. General symbolic '/' syntax,
+multivariate fields, global assumption inference and full factorization
+remain unimplemented.
+
+Algorithm background: SymPy rational cancellation documentation,
+https://docs.sympy.org/latest/tutorial/simplification.html

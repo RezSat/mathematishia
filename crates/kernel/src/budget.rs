@@ -473,7 +473,9 @@ impl WorkBudget {
         self.polynomial_shape(value.numerator())?;
         self.polynomial_shape(value.denominator())?;
         if value.excluded_zero_sets().len() > self.limits.max_rational_conditions {
-            return Err(EvaluationError::Limit(ResourceLimitKind::RationalConditions));
+            return Err(EvaluationError::Limit(
+                ResourceLimitKind::RationalConditions,
+            ));
         }
         for condition in value.excluded_zero_sets() {
             self.polynomial_shape(condition)?;
@@ -511,8 +513,16 @@ impl WorkBudget {
         &mut self,
         exclusions: Vec<RationalPolynomial>,
     ) -> Result<Vec<RationalPolynomial>, EvaluationError> {
-        if exclusions.len() > self.limits.max_rational_conditions.saturating_mul(2).saturating_add(1) {
-            return Err(EvaluationError::Limit(ResourceLimitKind::RationalConditions));
+        if exclusions.len()
+            > self
+                .limits
+                .max_rational_conditions
+                .saturating_mul(2)
+                .saturating_add(1)
+        {
+            return Err(EvaluationError::Limit(
+                ResourceLimitKind::RationalConditions,
+            ));
         }
         let mut result = Vec::new();
         for condition in exclusions {
@@ -524,13 +534,18 @@ impl WorkBudget {
             if degree == 0 {
                 continue;
             }
-            let lead = condition.coefficients().last().expect("nonconstant polynomial");
+            let lead = condition
+                .coefficients()
+                .last()
+                .expect("nonconstant polynomial");
             result.push(self.scale_polynomial(&condition, lead)?);
         }
         result.sort_by(condition_order);
         result.dedup();
         if result.len() > self.limits.max_rational_conditions {
-            return Err(EvaluationError::Limit(ResourceLimitKind::RationalConditions));
+            return Err(EvaluationError::Limit(
+                ResourceLimitKind::RationalConditions,
+            ));
         }
         Ok(result)
     }
@@ -623,11 +638,7 @@ impl WorkBudget {
         let right = self.multiply(input.numerator(), &dd)?;
         let numerator = self.subtract(&left, &right)?;
         let denominator = self.multiply(input.denominator(), input.denominator())?;
-        self.rational_reduce(
-            numerator,
-            denominator,
-            input.excluded_zero_sets().to_vec(),
-        )
+        self.rational_reduce(numerator, denominator, input.excluded_zero_sets().to_vec())
     }
 
     pub(crate) fn evaluate_rational(

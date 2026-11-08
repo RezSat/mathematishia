@@ -95,3 +95,33 @@ The result records a complete Euclidean division chain and coefficients
 `s` and `t` satisfying `s*a+t*b=gcd(a,b)`. The Rust verifier checks
 each division identity, the terminating remainder, the monic gcd, and
 the Bézout identity. A modular inverse is returned only when the gcd is 1.
+
+## Polynomial quotient rings and quadratic fields
+
+```python
+from fractions import Fraction
+import mathematishia as m
+
+ring_value = m.modular_operation("mul", "x", "x", "x^2+1", "x")
+assert ring_value.representative.coefficients == (Fraction(-1),)
+assert m.modular_power("x-1", "x^2-1", "x", -1) is None
+
+value = m.quadratic_value("x^2-2", "x", "upper_real", "1", "2")
+assert value.minimal_polynomial.coefficients == (
+    Fraction(-7), Fraction(-2), Fraction(1)
+)
+assert value.norm == Fraction(-7)
+
+square_i = m.quadratic_operation(
+    "mul", "x^2+1", "x", "positive_imaginary",
+    "0", "1", "0", "1",
+)
+assert square_i.constant == Fraction(-1)
+assert square_i.coefficient == Fraction(0)
+```
+
+`modular_reduce`, `modular_operation` and `modular_power` operate in
+quotient rings. Nonunits have no negative powers. `quadratic_value`,
+`quadratic_operation` and `quadratic_inverse` require a certified irreducible
+quadratic with one selected embedding. These APIs do not combine elements from
+different quadratic fields.

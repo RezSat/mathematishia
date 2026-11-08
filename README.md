@@ -29,6 +29,9 @@ cargo run -p mathematishia-cli -- expand '2*(x+3)' 4
 cargo run -p mathematishia-cli -- solve '2*x+4=10' x
 cargo run -p mathematishia-cli -- roots2 'x^2-2' x
 cargo run -p mathematishia-cli -- roots2 'x^2+1' x
+cargo run -p mathematishia-cli -- qvalue 'x^2-2' upper_real 1 2 x
+cargo run -p mathematishia-cli -- qop mul 'x^2+1' positive_imaginary 0 1 0 1 x
+cargo run -p mathematishia-cli -- modop mul x x 'x^2+1' x
 cargo run -p mathematishia-cli -- divide 'x^2-1' 'x-1' x
 cargo run -p mathematishia-cli -- egcd 'x^3-1' 'x^2-1' x
 cargo run -p mathematishia-cli -- modinv x 'x^2+1' x
@@ -75,9 +78,11 @@ residual numerator has degree at most two.
 
 The domain-aware parser retains restrictions removed by structural normalization.
 `domain`, `subdomain`, and `rewrite` expose these conditions; older
-expression-returning operations may discard them. The algebraic-root representation
-covers quadratic roots, but arbitrary algebraic-number arithmetic and analytic
-functions are not implemented. Resource budgets bound selected algorithms, not
+expression-returning operations may discard them. Exact arithmetic is implemented within an individual certified quadratic field,
+including inversion, trace, norm, and minimal-polynomial verification. Polynomial
+quotient rings support canonical residues modulo an arbitrary positive-degree
+polynomial, without assuming the quotient is a field. Arithmetic across unrelated
+algebraic extensions and analytic functions are not implemented. Resource budgets bound selected algorithms, not
 process memory or execution time.
 
 For implemented operations and source locations, see [CAPABILITIES.md](CAPABILITIES.md). Architectural contracts are in [docs/design](docs/design), with planned work in [ROADMAP.md](ROADMAP.md).

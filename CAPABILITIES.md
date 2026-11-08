@@ -5,11 +5,13 @@
 | Exact scalars, expressions and conditions | `crates/mathema/src/` |
 | Polynomial arithmetic, division and GCD | `crates/kernel/src/polynomial.rs`, `poly_division.rs` |
 | Extended polynomial GCD, Bézout verification, modular inverses | `crates/kernel/src/extended_gcd.rs` |
+| Polynomial quotient rings and canonical residue arithmetic | `crates/kernel/src/polynomial_residue.rs` |
 | Square-free factorization | `crates/kernel/src/square_free.rs` |
 | Rational functions with domain exclusions | `crates/kernel/src/rational_function.rs` |
 | Rational-expression conversion and simplification over Q(x) | `crates/kernel/src/rational_expression.rs` |
 | Linear, quadratic and rational equations | `crates/kernel/src/solve_linear.rs`, `quadratic.rs`, `rational_equation.rs`, `rational_quadratic.rs` |
 | Exact quadratic roots | `crates/kernel/src/algebraic.rs` |
+| Embedded quadratic fields, arithmetic, trace, norm and minimal-polynomial checks | `crates/kernel/src/quadratic_field.rs` |
 | Symbolic differentiation | `crates/kernel/src/differentiate_expr.rs` |
 | Assumptions and guarded rewrites | `crates/kernel/src/assumptions.rs`, `guarded_rewrite.rs`, `conditional_rewrite.rs` |
 | Definedness and domain-preserving expression composition | `crates/mathema/src/definedness.rs` |
@@ -27,7 +29,7 @@ The rational-expression converter supports exact scalars, one variable, sums, pr
 
 The proof graph records exact expression inputs, condition nodes, rule evidence and typed parent references, including composite cancellation with multiple conditions. Its verifier rejects invalid steps, unsupported conditions, forward dependencies and disconnected nodes. It does not yet compose equation proofs, establish new symbolic assumptions or cover fractional/analytic definedness. `parse_domain_expression` and `parse_domain_statement` retain construction-time restrictions for integer powers. The legacy `parse_expression` and `parse_statement` interfaces still return ordinary `Expr` values; consumers must opt into the domain-aware path.
 
-General algebraic-number arithmetic, irreducible polynomial factorization, analytic functions, certified numerics and proof rendering remain to be implemented.
+The quotient-ring type does not assume a polynomial modulus is irreducible. Embedded quadratic fields require an irreducible quadratic and a compatible root branch. Arithmetic across different field presentations, degree-three-or-higher algebraic fields, irreducible polynomial factorization, analytic functions, certified numerics, and general proof rendering remain outside the implemented scope.
 
 ## Checks
 

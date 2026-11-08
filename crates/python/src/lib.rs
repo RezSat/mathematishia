@@ -170,6 +170,8 @@ fn domain_conditions(value: &DomainExpression) -> Vec<String> {
     value.conditions().iter().map(condition_text).collect()
 }
 
+type PyDomainValue = (String, Vec<String>);
+type PyDomainEquation = (PyDomainValue, PyDomainValue);
 type PyDomainProofNode = (usize, String, String, Vec<usize>, Option<String>);
 type PyDomainRewrite = (
     String,
@@ -187,7 +189,7 @@ fn py_domain_expression(source: &str) -> PyResult<(String, Vec<String>)> {
 }
 
 #[pyfunction(name = "domain_equation")]
-fn py_domain_equation(source: &str) -> PyResult<((String, Vec<String>), (String, Vec<String>))> {
+fn py_domain_equation(source: &str) -> PyResult<PyDomainEquation> {
     let statement = parse_domain_statement(source).map_err(map_domain_parse)?;
     let DomainStatement::Equation { left, right } = statement else {
         return Err(MathSyntaxError::new_err(

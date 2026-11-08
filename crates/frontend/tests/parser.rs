@@ -93,9 +93,7 @@ fn accepts_unicode_identifier_without_normalizing_its_name() {
 
 #[test]
 fn rejects_implicit_multiplication_and_invalid_division() {
-    for invalid in [
-        "2x", "2(x+1)", "1/0", "3.5", "x==1", "x=y=z",
-    ] {
+    for invalid in ["2x", "2(x+1)", "1/0", "3.5", "x==1", "x=y=z"] {
         assert!(
             parse_statement(invalid).is_err(),
             "unexpectedly parsed {invalid}"
@@ -160,16 +158,16 @@ fn parentheses_do_not_turn_powers_into_numeric_evaluation() {
 #[test]
 fn division_is_left_associative_and_exact() {
     let x = x();
-    assert_eq!(parse_expression("x/2").unwrap(), Expr::mul([x.clone(), rational(1, 2)]));
+    assert_eq!(
+        parse_expression("x/2").unwrap(),
+        Expr::mul([x.clone(), rational(1, 2)])
+    );
     assert_eq!(parse_expression("1/(2)").unwrap(), rational(1, 2));
     assert_eq!(parse_expression("1/2/3").unwrap(), rational(1, 6));
     assert_eq!(parse_expression("6/2*3").unwrap(), Expr::from(9));
     assert_eq!(
         parse_expression("x/(x+1)").unwrap(),
-        Expr::mul([
-            x.clone(),
-            Expr::pow(Expr::add([x, 1.into()]), (-1).into())
-        ])
+        Expr::mul([x.clone(), Expr::pow(Expr::add([x, 1.into()]), (-1).into())])
     );
     assert_eq!(
         parse_expression("x/0").unwrap_err().kind(),

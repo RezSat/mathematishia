@@ -3,7 +3,7 @@
 use std::error::Error;
 use std::fmt;
 
-use crate::{Condition, Expr, ExprView, Integer};
+use crate::{Condition, Expr, ExprView, Integer, Rational};
 
 /// Errors are distinct from an unmet or contradicted nonzero condition.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -117,14 +117,8 @@ impl DomainExpression {
         })
     }
 
-    /// Power with an explicitly evaluated integer exponent. Restrictions on
-    /// the exponent are retained even if its value was normalized to an integer.
     /// Divides expressions without discarding denominator exclusions.
-    pub fn divide(
-        self,
-        divisor: Self,
-        max_conditions: usize,
-    ) -> Result<Self, DefinednessError> {
+    pub fn divide(self, divisor: Self, max_conditions: usize) -> Result<Self, DefinednessError> {
         let mut conditions = self.conditions;
         for condition in divisor.conditions {
             append_unique(&mut conditions, condition, max_conditions)?;
@@ -156,6 +150,7 @@ impl DomainExpression {
         })
     }
 
+    /// Power with an explicitly evaluated integer exponent.
     pub fn pow(self, exponent: Self, max_conditions: usize) -> Result<Self, DefinednessError> {
         let ExprView::Integer(value) = exponent.expression.view() else {
             return Err(DefinednessError::UnsupportedExponent);

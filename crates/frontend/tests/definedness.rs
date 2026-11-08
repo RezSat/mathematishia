@@ -85,7 +85,10 @@ fn symbolic_division_preserves_removed_denominator_factors() {
     );
     let left_associative = parse_domain_expression("x/y/2").unwrap();
     assert_eq!(left_associative.conditions(), &[Condition::NonZero(y)]);
-    assert_eq!(parse_domain_expression("3/0").unwrap_err().to_string(), "division by zero");
+    assert_eq!(
+        parse_domain_expression("3/0").unwrap_err().to_string(),
+        "division by zero"
+    );
 }
 
 #[test]

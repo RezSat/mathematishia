@@ -242,11 +242,7 @@ impl<'a> Parser<'a> {
             } else if self.current() == TokenKind::Slash {
                 let offset = self.offset();
                 self.advance();
-                left = Syntax::Quotient(
-                    Box::new(left),
-                    Box::new(self.signed(depth + 1)?),
-                    offset,
-                );
+                left = Syntax::Quotient(Box::new(left), Box::new(self.signed(depth + 1)?), offset);
             } else {
                 break;
             }
@@ -332,11 +328,8 @@ fn lower(node: Syntax<'_>) -> Result<Expr, ParseError> {
                 _ => None,
             };
             if let Some(value) = rational {
-                let inverse = Rational::new(
-                    value.denominator().clone(),
-                    value.numerator().clone(),
-                )
-                .map_err(|_| ParseError::at(offset, ParseErrorKind::ZeroDenominator))?;
+                let inverse = Rational::new(value.denominator().clone(), value.numerator().clone())
+                    .map_err(|_| ParseError::at(offset, ParseErrorKind::ZeroDenominator))?;
                 Ok(Expr::mul([numerator, Expr::from(inverse)]))
             } else {
                 Ok(Expr::mul([
@@ -444,10 +437,9 @@ fn lower_domain(node: Syntax<'_>) -> Result<DomainExpression, DomainParseError> 
             [lower_domain(*left)?, lower_domain(*right)?],
             MAX_CONDITIONS,
         )?),
-        Syntax::Quotient(left, right, _) => Ok(lower_domain(*left)?.divide(
-            lower_domain(*right)?,
-            MAX_CONDITIONS,
-        )?),
+        Syntax::Quotient(left, right, _) => {
+            Ok(lower_domain(*left)?.divide(lower_domain(*right)?, MAX_CONDITIONS)?)
+        }
         Syntax::Power(left, right) => {
             Ok(lower_domain(*left)?.pow(lower_domain(*right)?, MAX_CONDITIONS)?)
         }

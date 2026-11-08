@@ -13,13 +13,15 @@
 | Definedness and domain-preserving expression composition | `crates/mathema/src/definedness.rs` |
 | Proof graph and dependency verification | `crates/kernel/src/proof_graph.rs` |
 | Distribution and linear-step checking | `crates/kernel/src/lib.rs`, `verification.rs` |
+| Domain-aware expression/equation parser | `crates/frontend/src/lib.rs` |
+| Domain-preserving substitution and proof-checked rewrites | `crates/kernel/src/domain_operations.rs` |
 | Parser and command-line commands | `crates/frontend/`, `crates/cli/` |
 | Python bindings | `crates/python/` |
 | Build and package checks | `.github/workflows/ci.yml` |
 
 ## Current boundaries
 
-The proof graph records exact expression inputs, condition nodes, rule evidence and typed parent references, including composite cancellation with multiple conditions. Its verifier rejects invalid steps, unsupported conditions, forward dependencies and disconnected nodes. It does not yet compose equation proofs, establish new symbolic assumptions or cover fractional/analytic definedness. `DomainExpression` retains construction-time restrictions, but the surface parser still returns ordinary `Expr` values.
+The proof graph records exact expression inputs, condition nodes, rule evidence and typed parent references, including composite cancellation with multiple conditions. Its verifier rejects invalid steps, unsupported conditions, forward dependencies and disconnected nodes. It does not yet compose equation proofs, establish new symbolic assumptions or cover fractional/analytic definedness. `parse_domain_expression` and `parse_domain_statement` retain construction-time restrictions for integer powers. The legacy `parse_expression` and `parse_statement` interfaces still return ordinary `Expr` values; consumers must opt into the domain-aware path.
 
 General algebraic-number arithmetic, irreducible polynomial factorization, analytic functions, certified numerics and proof rendering remain to be implemented.
 

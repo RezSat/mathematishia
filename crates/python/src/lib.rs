@@ -5,7 +5,8 @@
 
 use mathema::{Condition, DomainExpression, Equation, Expr, ExprView, Rational, Symbol};
 use mathema_frontend::{
-    DomainParseError, Statement, parse_domain_expression, parse_expression, parse_statement,
+    DomainParseError, DomainStatement, Statement, parse_domain_expression,
+    parse_domain_statement, parse_expression, parse_statement,
 };
 use mathematishia_kernel::{
     AlgebraicRootEvidence, AlgebraicRootSet, Assumptions, DefinednessError, DomainOperationError,
@@ -182,6 +183,48 @@ type PyDomainRewrite = (
 #[pyfunction(name = "domain_expression")]
 fn py_domain_expression(source: &str) -> PyResult<(String, Vec<String>)> {
     let value = checked_domain(source)?;
+    Ok((value.expression().to_string(), domain_conditions(&value)))
+}
+
+#[pyfunction(name = "domain_equation")]
+fn py_domain_equation(
+    source: &str,
+) -> PyResult<((String, Vec<String>), (String, Vec<String>))> {
+    let statement = parse_domain_statement(source).map_err(map_domain_parse)?;
+    let DomainStatement::Equation { left, right } = statement else {
+        return Err(MathSyntaxError::new_err("expected an equation containing '='"));
+    };
+    let ctx = EvaluationContext::default();
+    for side in [&left, &right] {
+        ctx.check_expression(side.expression())
+            .map_err(map_evaluation_error)?;
+        for condition in side.conditions() {
+            ctx.check_expression(condition.expression())
+                .map_err(map_evaluation_error)?;
+        }
+    }
+    Ok((
+        (left.expression().to_string(), domain_conditions(&left)),
+        (right.expression().to_string(), domain_conditions(&right)),
+    ))
+}
+
+#[pyfunction(name = "substitute_domain")]
+fn py_substitute_domain(
+    source: &str,
+    variable: &str,
+    replacement: &str,
+) -> PyResult<(String, Vec<String>)> {
+    let source = checked_domain(source)?;
+    let symbol = selected_variable(variable)?;
+    let replacement = checked_domain(replacement)?;
+    let value = substitute_domain(&source, &symbol, &replacement, 2_048, 256)
+        .map_err(|error| match error {
+            DefinednessError::UnsupportedExponent => {
+                UnsupportedMathematicsError::new_err(error.to_string())
+            }
+            _ => ResourceLimitError::new_err(error.to_string()),
+        })?;
     Ok((value.expression().to_string(), domain_conditions(&value)))
 }
 
@@ -663,6 +706,8 @@ fn py_algebraic_roots(source: &str, variable: &str) -> PyResult<PyAlgebraicResul
 fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(py_expression, m)?)?;
     m.add_function(wrap_pyfunction!(py_domain_expression, m)?)?;
+    m.add_function(wrap_pyfunction!(py_domain_equation, m)?)?;
+    m.add_function(wrap_pyfunction!(py_substitute_domain, m)?)?;
     m.add_function(wrap_pyfunction!(py_rewrite_domain, m)?)?;
     m.add_function(wrap_pyfunction!(py_expand, m)?)?;
     m.add_function(wrap_pyfunction!(py_solve, m)?)?;

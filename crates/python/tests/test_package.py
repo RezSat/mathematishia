@@ -287,6 +287,24 @@ class DomainApiTests(unittest.TestCase):
         self.assertEqual(original.status, "unchanged")
         self.assertEqual(original.conditions, ("x != 0",))
 
+    def test_domain_equations_and_substitution(self):
+        equation = m.domain_equation("0*x^-1=0*y^-2")
+        self.assertEqual(equation.left.expression, "0")
+        self.assertEqual(equation.left.conditions, ("x != 0",))
+        self.assertEqual(equation.right.expression, "0")
+        self.assertEqual(equation.right.conditions, ("y != 0",))
+
+        replaced = m.substitute_domain("0*x^-1", "x", "0")
+        self.assertEqual(replaced.expression, "0")
+        self.assertEqual(replaced.conditions, ("0 != 0",))
+        replacement = m.substitute_domain("0*x^-1", "x", "y^-1")
+        self.assertEqual(replacement.expression, "0")
+        self.assertEqual(len(replacement.conditions), 2)
+        self.assertIn("y != 0", replacement.conditions)
+
+        with self.assertRaises(m.MathSyntaxError):
+            m.domain_equation("x+1")
+
     def test_domain_errors_are_typed(self):
         with self.assertRaises(m.UnsupportedMathematicsError):
             m.domain_expression("x^(1/2)")

@@ -7,7 +7,10 @@ use std::fmt;
 use std::fmt::Write as _;
 
 use mathema::{Condition, DomainExpression, Equation, Expr, ExprView, Rational, Symbol};
-use mathema_frontend::{Statement, parse_domain_expression, parse_expression, parse_statement};
+use mathema_frontend::{
+    DomainStatement, Statement, parse_domain_expression, parse_domain_statement,
+    parse_expression, parse_statement,
+};
 use mathematishia_kernel::{
     AlgebraicRootEvidence, AlgebraicRootSet, Assumptions, DomainRewriteOutcome, EvaluationContext,
     ExactQuadraticRoot, LinearSolution, QuadraticRoots, RationalFunction, RationalPolynomial,
@@ -17,7 +20,8 @@ use mathematishia_kernel::{
 pub const HELP: &str = "Mathematishia (early exact-math CLI)
 Usage:
   mathematishia expr <EXPRESSION>
-  mathematishia domain <EXPRESSION>
+  mathematishia domain <EXPRESSION_OR_EQUATION>
+  mathematishia subdomain <EXPRESSION> <SYMBOL> <REPLACEMENT>
   mathematishia rewrite <EXPRESSION> [NONZERO_PREMISE ...]
   mathematishia expand <EXPRESSION> [MAX_STEPS]
   mathematishia solve <EQUATION> <VARIABLE>
@@ -40,6 +44,8 @@ Usage:
 Examples:
   mathematishia expr '(x+1)^2'
   mathematishia domain '0*x^-1'
+  mathematishia domain '0*x^-1=0*y^-1'
+  mathematishia subdomain '0*x^-1' x 0
   mathematishia rewrite '(x+1)*(x+1)^-1' 'x+1'
   mathematishia expand '2*(x+3)' 4
   mathematishia solve '2*x+4=10' x
@@ -89,15 +95,7 @@ fn expression(input: &str) -> Result<Expr, CliError> {
 
 fn domain_expression(input: &str) -> Result<DomainExpression, CliError> {
     let parsed = parse_domain_expression(input).map_err(|error| invalid(error.to_string()))?;
-    let context = EvaluationContext::default();
-    context
-        .check_expression(parsed.expression())
-        .map_err(|error| invalid(error.to_string()))?;
-    for condition in parsed.conditions() {
-        context
-            .check_expression(condition.expression())
-            .map_err(|error| invalid(error.to_string()))?;
-    }
+    check_domain(&parsed)?;
     Ok(parsed)
 }
 
@@ -122,6 +120,19 @@ fn append_conditions(output: &mut String, conditions: &[Condition]) {
                 .expect("writing to a String is infallible");
         }
     }
+}
+
+fn check_domain(value: &DomainExpression) -> Result<(), CliError> {
+    let context = EvaluationContext::default();
+    context
+        .check_expression(value.expression())
+        .map_err(|error| invalid(error.to_string()))?;
+    for condition in value.conditions() {
+        context
+            .check_expression(condition.expression())
+            .map_err(|error| invalid(error.to_string()))?;
+    }
+    Ok(())
 }
 
 fn variable(input: &str) -> Result<Symbol, CliError> {
@@ -200,9 +211,46 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
         [] | ["--help" | "-h" | "help"] => Ok(HELP.to_owned()),
         ["expr", input] => Ok(format!("expression: {}", expression(input)?)),
         ["domain", input] => {
-            let value = domain_expression(input)?;
-            let mut output = format!("expression: {}", value.expression());
-            append_conditions(&mut output, value.conditions());
+            let parsed = parse_domain_statement(input)
+                .map_err(|error| invalid(error.to_string()))?;
+            match parsed {
+                DomainStatement::Expression(value) => {
+                    check_domain(&value)?;
+                    let mut output = format!("expression: {}", value.expression());
+                    append_conditions(&mut output, value.conditions());
+                    Ok(output)
+                }
+                DomainStatement::Equation { left, right } => {
+                    check_domain(&left)?;
+                    check_domain(&right)?;
+                    let mut output = format!(
+                        "equation: {} = {}",
+                        left.expression(),
+                        right.expression()
+                    );
+                    for condition in left.conditions() {
+                        write!(&mut output, "\nleft condition: {}", condition_text(condition))
+                            .expect("writing to a String is infallible");
+                    }
+                    for condition in right.conditions() {
+                        write!(&mut output, "\nright condition: {}", condition_text(condition))
+                            .expect("writing to a String is infallible");
+                    }
+                    if left.conditions().is_empty() && right.conditions().is_empty() {
+                        output.push_str("\nconditions: none");
+                    }
+                    Ok(output)
+                }
+            }
+        }
+        ["subdomain", input, name, replacement] => {
+            let source = domain_expression(input)?;
+            let symbol = variable(name)?;
+            let replacement = domain_expression(replacement)?;
+            let updated = substitute_domain(&source, &symbol, &replacement, 2_048, 256)
+                .map_err(|error| invalid(error.to_string()))?;
+            let mut output = format!("expression: {}", updated.expression());
+            append_conditions(&mut output, updated.conditions());
             Ok(output)
         }
         ["rewrite", input, premises @ ..] => {

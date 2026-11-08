@@ -167,6 +167,31 @@ def domain_expression(source: str) -> DomainExpression:
     return DomainExpression(value, tuple(conditions))
 
 
+@dataclass(frozen=True)
+class DomainEquation:
+    left: DomainExpression
+    right: DomainExpression
+
+
+def domain_equation(source: str) -> DomainEquation:
+    """Parse an equation with domain restrictions retained on each side."""
+    left, right = _native.domain_equation(source)
+    return DomainEquation(
+        DomainExpression(left[0], tuple(left[1])),
+        DomainExpression(right[0], tuple(right[1])),
+    )
+
+
+def substitute_domain(
+    source: str, variable: str, replacement: str
+) -> DomainExpression:
+    """Substitute a symbolic value while retaining all original restrictions."""
+    expression_text, conditions = _native.substitute_domain(
+        source, variable, replacement
+    )
+    return DomainExpression(expression_text, tuple(conditions))
+
+
 def rewrite_domain(source: str, nonzero: tuple[str, ...] = ()) -> DomainRewrite:
     """Attempt one verified inverse cancellation under explicit nonzero premises."""
     status, value, conditions, outstanding, rule, nodes = _native.rewrite_domain(
@@ -337,8 +362,8 @@ def gcd(left: str, right: str, variable: str) -> Polynomial:
 
 
 __all__ = [
-    "DomainExpression", "DomainProofNode", "DomainRewrite",
-    "domain_expression", "rewrite_domain",
+    "DomainExpression", "DomainEquation", "DomainProofNode", "DomainRewrite",
+    "domain_expression", "domain_equation", "substitute_domain", "rewrite_domain",
     "MathSyntaxError", "ResourceLimitError", "UnsupportedMathematicsError",
     "VerificationFailure", "UndefinedAtPointError", "Step", "Expansion", "LinearResult", "QuadraticResult", "Polynomial",
     "RationalFunction", "RationalQuadraticResult",

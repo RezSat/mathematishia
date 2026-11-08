@@ -31,3 +31,27 @@ for root in roots.roots:
 - `algebraic_roots`: exact quadratic roots, represented as rationals or as a monic minimal polynomial with a branch selector.
 
 The parser covers a bounded grammar. General function calculus, arbitrary algebraic-number arithmetic, and a stable Python compatibility contract have not yet been implemented. See [the syntax specification](../../docs/design/mathema-surface.md).
+
+## Domain-aware expressions
+
+```python
+import mathematishia as m
+
+value = m.domain_expression("0*x^-1")
+assert value.expression == "0"
+assert value.conditions == ("x != 0",)
+
+equation = m.domain_equation("0*x^-1=0*y^-1")
+substituted = m.substitute_domain("0*x^-1", "x", "0")
+assert substituted.conditions == ("0 != 0",)
+
+rewrite = m.rewrite_domain("(x+1)*(x+1)^-1", ("x+1",))
+assert rewrite.status == "applied"
+assert rewrite.expression == "1"
+```
+
+The `domain_expression`, `domain_equation`, `substitute_domain`, and
+`rewrite_domain` interfaces use integer-power definedness rules.
+Noninteger and symbolic powers are rejected. The original `expression`
+function continues to return a plain normalized string without domain
+provenance.

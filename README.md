@@ -19,6 +19,9 @@ cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 
 ```sh
 cargo run -p mathematishia-cli -- expr '1/2+1/3'
+cargo run -p mathematishia-cli -- domain '0*x^-1=0*y^-1'
+cargo run -p mathematishia-cli -- subdomain '0*x^-1' x 0
+cargo run -p mathematishia-cli -- rewrite '(x+1)*(x+1)^-1' 'x+1'
 cargo run -p mathematishia-cli -- expand '2*(x+3)' 4
 cargo run -p mathematishia-cli -- solve '2*x+4=10' x
 cargo run -p mathematishia-cli -- roots2 'x^2-2' x
@@ -59,7 +62,12 @@ See [the Python API notes](crates/python/README.md) for supported operations.
 | `mathematishia-cli` | Command-line interface |
 | `mathematishia` (Python) | Native bindings to the Rust kernel |
 
-The current parser does not support general symbolic division or analytic functions. The exact algebraic-root representation covers quadratic roots but not arbitrary algebraic-number arithmetic. Expression equality is structural unless a checked transformation establishes a mathematical relation. Resource budgets bound selected operations, not process memory or execution time.
+The domain-aware parser preserves nonzero conditions for integer powers,
+including restrictions removed by structural normalization. The `domain`,
+`subdomain`, and `rewrite` commands expose these conditions. The legacy
+`expr` and general algebra commands still use the unrestricted structural
+parser and do not preserve eliminated restrictions. General symbolic division
+and analytic functions are not supported. The exact algebraic-root representation covers quadratic roots but not arbitrary algebraic-number arithmetic. Expression equality is structural unless a checked transformation establishes a mathematical relation. Resource budgets bound selected operations, not process memory or execution time.
 
 For implemented operations and source locations, see [CAPABILITIES.md](CAPABILITIES.md). Architectural contracts are in [docs/design](docs/design), with planned work in [ROADMAP.md](ROADMAP.md).
 

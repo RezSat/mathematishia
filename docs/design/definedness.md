@@ -20,3 +20,16 @@ entrypoints reject unsupported exponents rather than treating them as defined.
 
 The legacy parser returns plain `Expr` and can lose domain restrictions when
 a constructor eliminates an undefined subexpression.
+
+## User interfaces
+
+The domain-aware parser exports expression and equation entrypoints. The CLI
+commands `domain`, `subdomain`, and `rewrite` expose inspection,
+substitution and independently verified one-step cancellation. Python
+provides corresponding immutable results through `domain_expression`,
+`domain_equation`, `substitute_domain` and `rewrite_domain`.
+
+The legacy parsing, evaluation and solving entrypoints still accept plain
+`Expr` values. They should not be used to reconstruct conditions lost by
+constructor normalization. The domain-aware APIs are the supported path
+for calculations requiring explicit original-domain provenance.

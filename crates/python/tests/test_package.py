@@ -183,6 +183,25 @@ class ExactMathTests(unittest.TestCase):
         with self.assertRaises(m.UnsupportedMathematicsError):
             m.rational_operation("??", "1", "1", "1", "1", "x")
 
+    def test_domain_aware_exact_quadratic_equations(self):
+        result = m.rational_solve_quadratic("x^2-5*x+6", "x-2", "0", "1", "x")
+        self.assertEqual(result.kind, "finite")
+        self.assertEqual(result.roots, (Fraction(3),))
+        self.assertEqual(
+            [poly.coefficients for poly in result.excluded_zero_sets],
+            [(Fraction(-2), Fraction(1))],
+        )
+        identity = m.rational_solve_quadratic("x-1", "x-1", "1", "1", "x")
+        self.assertEqual(identity.kind, "all_admissible")
+        self.assertEqual(identity.roots, ())
+        self.assertTrue(identity.excluded_zero_sets)
+        irrational = m.rational_solve_quadratic("x^2-2", "x", "0", "1", "x")
+        self.assertEqual(irrational.roots, ())
+        with self.assertRaises(m.UnsupportedMathematicsError):
+            m.rational_solve_quadratic("x^3", "1", "0", "1", "x")
+        with self.assertRaises(FrozenInstanceError):
+            result.roots = ()
+
     def test_typed_errors(self):
         with self.assertRaises(m.MathSyntaxError):
             m.expression("x / 2")

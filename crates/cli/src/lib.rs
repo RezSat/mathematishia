@@ -10,6 +10,7 @@ use mathema::{Equation, Expr, ExprView, Rational, Symbol};
 use mathema_frontend::{Statement, parse_expression, parse_statement};
 use mathematishia_kernel::{
     EvaluationContext, LinearSolution, QuadraticRoots, RationalFunction, RationalPolynomial,
+    RationalQuadraticRoots,
     VerifiedCondition,
 };
 
@@ -29,6 +30,7 @@ Usage:
   mathematishia rat <NUMERATOR> <DENOMINATOR> <VARIABLE>
   mathematishia rateval <NUMERATOR> <DENOMINATOR> <VARIABLE> <VALUE>
   mathematishia ratdiff <NUMERATOR> <DENOMINATOR> <VARIABLE>
+  mathematishia ratsolveq <N1> <D1> <N2> <D2> <VARIABLE>
   mathematishia ratop <add|sub|mul|div> <N1> <D1> <N2> <D2> <VARIABLE>
   mathematishia --help
 
@@ -47,6 +49,7 @@ Examples:
   mathematishia rat 'x^2-1' 'x-1' x
   mathematishia rateval 'x^2-1' 'x-1' x 2
   mathematishia ratdiff '1' 'x-1' x
+  mathematishia ratsolveq 'x^2-5*x+6' 'x-2' '0' '1' x
 
 Syntax: integers, exact fraction literals n/d, identifiers, + - * ^ ( ) =.
 Use explicit multiplication. '/' only separates literal integers, not expressions.
@@ -363,6 +366,39 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
                 .differentiate_rational_function(&f)
                 .map_err(|error| invalid(error.to_string()))?;
             Ok(show_rational(&derivative, &symbol))
+        }
+        ["ratsolveq", n1, d1, n2, d2, name] => {
+            let symbol = variable(name)?;
+            let lhs = rational_function(n1, d1, &symbol)?;
+            let rhs = rational_function(n2, d2, &symbol)?;
+            let result = EvaluationContext::default()
+                .solve_rational_quadratic_equation(&lhs, &rhs)
+                .map_err(|error| invalid(error.to_string()))?;
+            let mut out = match result.roots() {
+                RationalQuadraticRoots::AllAdmissibleRationals => {
+                    "rational roots: all admissible rationals".to_owned()
+                }
+                RationalQuadraticRoots::Finite(roots) if roots.is_empty() => {
+                    "rational roots: none (other roots may exist)".to_owned()
+                }
+                RationalQuadraticRoots::Finite(roots) => format!(
+                    "rational roots: {}",
+                    roots
+                        .iter()
+                        .map(ToString::to_string)
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ),
+            };
+            if result.domain_conditions().is_empty() {
+                out.push_str("\nconditions: none");
+            } else {
+                for condition in result.domain_conditions() {
+                    write!(&mut out, "\ncondition: {} != 0", condition.to_expr(&symbol))
+                        .expect("writing to a String is infallible");
+                }
+            }
+            Ok(out)
         }
         ["ratop", operation, n1, d1, n2, d2, name] => {
             let symbol = variable(name)?;

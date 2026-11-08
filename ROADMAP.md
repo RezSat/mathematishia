@@ -59,3 +59,9 @@ now builds on arbitrary-precision perfect-square testing and an independent
 mathematical verifier. Irrational/algebraic-number representations,
 higher-degree factorization, domain-aware nonlinear rational equations,
 partial fractions and symbolic integration remain planned.
+
+A domain-aware quadratic rational-equation solver now combines the exact
+rational-root domain with inherited denominator exclusions. The existing
+linear rational-equation interface remains unchanged. Unrestricted rational
+function syntax, algebraic-number root representations, and higher-degree
+nonlinear solving remain future tasks.

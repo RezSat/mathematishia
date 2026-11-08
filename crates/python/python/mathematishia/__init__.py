@@ -99,6 +99,13 @@ class RationalFunction:
     excluded_zero_sets: tuple[Polynomial, ...]
 
 
+@dataclass(frozen=True)
+class RationalQuadraticResult:
+    kind: Literal["finite", "all_admissible"]
+    roots: tuple[Fraction, ...]
+    excluded_zero_sets: tuple[Polynomial, ...]
+
+
 def _rational(data: tuple[tuple[str, list[str]], tuple[str, list[str]],
                           list[tuple[str, list[str]]]]) -> RationalFunction:
     n, d, excluded = data
@@ -175,6 +182,21 @@ def rational_function(numerator: str, denominator: str, variable: str) -> Ration
     return _rational(_native.rational_function(numerator, denominator, variable))
 
 
+def rational_solve_quadratic(left_numerator: str, left_denominator: str,
+                             right_numerator: str, right_denominator: str,
+                             variable: str) -> RationalQuadraticResult:
+    """Solve an exact degree-two rational equation over its original domain."""
+    kind, roots, excluded = _native.rational_solve_quadratic(
+        left_numerator, left_denominator,
+        right_numerator, right_denominator, variable,
+    )
+    return RationalQuadraticResult(
+        kind,
+        tuple(Fraction(root) for root in roots),
+        tuple(_poly(condition) for condition in excluded),
+    )
+
+
 def rational_evaluate(numerator: str, denominator: str,
                       variable: str, at: str) -> Fraction:
     """Evaluate exactly; canceled poles remain undefined."""
@@ -217,10 +239,10 @@ def gcd(left: str, right: str, variable: str) -> Polynomial:
 __all__ = [
     "MathSyntaxError", "ResourceLimitError", "UnsupportedMathematicsError",
     "VerificationFailure", "UndefinedAtPointError", "Step", "Expansion", "LinearResult", "QuadraticResult", "Polynomial",
-    "RationalFunction",
+    "RationalFunction", "RationalQuadraticResult",
     "SquareFreeFactor", "SquareFreeDecomposition",
     "SymbolicDifferentiationStep", "SymbolicDerivative",
     "expression", "expand", "solve", "solve_quadratic", "polynomial", "differentiate", "differentiate_expression", "square_free",
     "evaluate", "divide", "gcd", "rational_function", "rational_evaluate",
-    "rational_differentiate", "rational_operation",
+    "rational_differentiate", "rational_operation", "rational_solve_quadratic",
 ]

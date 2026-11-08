@@ -7,7 +7,8 @@ use mathema::{Equation, Expr, ExprView, Rational, Symbol};
 use mathema_frontend::{Statement, parse_expression, parse_statement};
 use mathematishia_kernel::{
     EvaluationContext, EvaluationError, LinearSolution, QuadraticRoots, RationalFunction,
-    RationalFunctionError, RationalPolynomial, ResourceLimitKind, VerifiedCondition,
+    RationalFunctionError, RationalPolynomial, RationalQuadraticRoots, ResourceLimitKind,
+    VerifiedCondition,
 };
 use pyo3::create_exception;
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
@@ -393,6 +394,37 @@ fn py_solve_quadratic(source: &str, variable: &str) -> PyResult<(String, Vec<Str
     Ok((kind, roots))
 }
 
+#[pyfunction(name = "rational_solve_quadratic")]
+fn py_rational_solve_quadratic(
+    left_numerator: &str,
+    left_denominator: &str,
+    right_numerator: &str,
+    right_denominator: &str,
+    variable: &str,
+) -> PyResult<(String, Vec<String>, Vec<PyPolynomialData>)> {
+    let symbol = selected_variable(variable)?;
+    let lhs = selected_rational(left_numerator, left_denominator, &symbol)?;
+    let rhs = selected_rational(right_numerator, right_denominator, &symbol)?;
+    let result = EvaluationContext::default()
+        .solve_rational_quadratic_equation(&lhs, &rhs)
+        .map_err(map_evaluation_error)?;
+    let (kind, roots) = match result.roots() {
+        RationalQuadraticRoots::AllAdmissibleRationals => {
+            ("all_admissible".to_owned(), Vec::new())
+        }
+        RationalQuadraticRoots::Finite(roots) => (
+            "finite".to_owned(),
+            roots.iter().map(ToString::to_string).collect(),
+        ),
+    };
+    let excluded = result
+        .domain_conditions()
+        .iter()
+        .map(|polynomial| poly_data(polynomial, &symbol))
+        .collect();
+    Ok((kind, roots, excluded))
+}
+
 #[pymodule]
 fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(py_expression, m)?)?;
@@ -410,6 +442,7 @@ fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(py_rational_differentiate, m)?)?;
     m.add_function(wrap_pyfunction!(py_rational_operation, m)?)?;
     m.add_function(wrap_pyfunction!(py_solve_quadratic, m)?)?;
+    m.add_function(wrap_pyfunction!(py_rational_solve_quadratic, m)?)?;
     m.add("MathSyntaxError", m.py().get_type::<MathSyntaxError>())?;
     m.add(
         "UndefinedAtPointError",

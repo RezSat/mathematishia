@@ -124,3 +124,14 @@ has no real or complex roots: `x^2-2` has no roots in Q, but it has roots
 involving sqrt(2). Higher-degree inputs receive a typed unsupported-domain
 error. All candidate roots are verified by exact substitution, and the
 independent checker validates completeness with the exact discriminant.
+
+### Domain-aware rational quadratic equations
+
+`ratsolveq <N1> <D1> <N2> <D2> <VARIABLE>` and Python
+`rational_solve_quadratic` solve rational equations whose reduced
+numerator has degree at most two. They preserve the **original denominator
+conditions**, even when GCD cancellation would otherwise hide a hole. For
+`(x^2-5*x+6)/(x-2) = 0`, the only admissible rational root is `x=3`:
+`x=2` is excluded by the original denominator. A zero residual means all
+*admissible* rationals, not automatically all Q. An independent verifier
+checks exact recomposition and the complete rational root set.

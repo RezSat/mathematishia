@@ -125,3 +125,16 @@ fn actual_binary_solves_exact_rational_quadratic_roots() {
         "rational roots: 2, 3"
     );
 }
+
+#[test]
+fn actual_binary_rejects_canceled_quadratic_root() {
+    let output = Command::new(env!("CARGO_BIN_EXE_mathematishia"))
+        .args(["ratsolveq", "x^2-5*x+6", "x-2", "0", "1", "x"])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    assert!(output.stderr.is_empty());
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    assert!(stdout.starts_with("rational roots: 3\n"));
+    assert!(stdout.contains("condition:"));
+}

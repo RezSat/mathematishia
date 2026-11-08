@@ -45,3 +45,9 @@ Solve exact quadratic roots with
 `QuadraticResult` contains sorted, distinct `Fraction` roots, or an
 `all_rationals` classification for the zero polynomial. No rational roots
 is not the same as no real or complex solutions.
+
+Use `m.rational_solve_quadratic("x^2-5*x+6", "x-2", "0", "1", "x")`
+to solve a quadratic rational equation without filling canceled poles.
+The typed result contains sorted distinct rational roots and original
+nonzero conditions, or `all_admissible` for an identity on a restricted
+domain.

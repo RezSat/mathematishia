@@ -237,3 +237,15 @@ fn exact_quadratic_command_distinguishes_no_rational_roots_from_no_solutions() {
     );
     assert!(run(&["solveq", "x^3-1", "x"]).is_err());
 }
+
+#[test]
+fn quadratic_rational_cli_preserves_removed_poles() {
+    let answer = run(&["ratsolveq", "x^2-5*x+6", "x-2", "0", "1", "x"]).unwrap();
+    assert!(answer.starts_with("rational roots: 3\n"));
+    assert!(answer.contains("condition:"));
+    assert!(answer.contains("!= 0"));
+    let identity = run(&["ratsolveq", "x-1", "x-1", "1", "1", "x"]).unwrap();
+    assert!(identity.starts_with("rational roots: all admissible rationals"));
+    assert!(identity.contains("condition:"));
+    assert!(run(&["ratsolveq", "x^3", "1", "0", "1", "x"]).is_err());
+}

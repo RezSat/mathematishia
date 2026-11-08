@@ -6,9 +6,7 @@
 use std::error::Error;
 use std::fmt;
 
-use mathema::{
-    DefinednessError, DomainExpression, Equation, Expr, Integer, Rational, Symbol,
-};
+use mathema::{DefinednessError, DomainExpression, Equation, Expr, Integer, Rational, Symbol};
 
 const MAX_INPUT_BYTES: usize = 32_768;
 const MAX_TOKENS: usize = 4_096;
@@ -432,10 +430,9 @@ fn lower_domain(node: Syntax<'_>) -> Result<DomainExpression, DomainParseError> 
             [lower_domain(*left)?, lower_domain(*right)?],
             MAX_CONDITIONS,
         )?),
-        Syntax::Power(left, right) => Ok(lower_domain(*left)?.pow(
-            lower_domain(*right)?,
-            MAX_CONDITIONS,
-        )?),
+        Syntax::Power(left, right) => {
+            Ok(lower_domain(*left)?.pow(lower_domain(*right)?, MAX_CONDITIONS)?)
+        }
         Syntax::Negate(node) => Ok(DomainExpression::multiply(
             [
                 DomainExpression::from_expr(Expr::from(-1), MAX_TOKENS)?,
@@ -452,9 +449,7 @@ fn lower_domain(node: Syntax<'_>) -> Result<DomainExpression, DomainParseError> 
 /// scalars. Symbolic and noninteger exponents return a domain error.
 pub fn parse_domain_statement(input: &str) -> Result<DomainStatement, DomainParseError> {
     match parse_syntax(input)? {
-        SyntaxStatement::Expression(node) => {
-            Ok(DomainStatement::Expression(lower_domain(node)?))
-        }
+        SyntaxStatement::Expression(node) => Ok(DomainStatement::Expression(lower_domain(node)?)),
         SyntaxStatement::Equation(left, right) => Ok(DomainStatement::Equation {
             left: lower_domain(left)?,
             right: lower_domain(right)?,
@@ -465,11 +460,9 @@ pub fn parse_domain_statement(input: &str) -> Result<DomainStatement, DomainPars
 pub fn parse_domain_expression(input: &str) -> Result<DomainExpression, DomainParseError> {
     match parse_domain_statement(input)? {
         DomainStatement::Expression(expr) => Ok(expr),
-        DomainStatement::Equation { .. } => Err(ParseError::at(
-            0,
-            ParseErrorKind::ExpectedExpression,
-        )
-        .into()),
+        DomainStatement::Equation { .. } => {
+            Err(ParseError::at(0, ParseErrorKind::ExpectedExpression).into())
+        }
     }
 }
 
@@ -484,9 +477,10 @@ pub fn parse_domain_expression(input: &str) -> Result<DomainExpression, DomainPa
 pub fn parse_statement(input: &str) -> Result<Statement, ParseError> {
     match parse_syntax(input)? {
         SyntaxStatement::Expression(node) => Ok(Statement::Expression(lower(node)?)),
-        SyntaxStatement::Equation(left, right) => {
-            Ok(Statement::Equation(Equation::new(lower(left)?, lower(right)?)))
-        }
+        SyntaxStatement::Equation(left, right) => Ok(Statement::Equation(Equation::new(
+            lower(left)?,
+            lower(right)?,
+        ))),
     }
 }
 

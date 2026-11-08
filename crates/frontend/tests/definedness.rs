@@ -25,18 +25,17 @@ fn nested_exponents_preserve_the_exponents_own_restrictions() {
     let x = sym("x");
     let y = sym("y");
     let parsed = parse_domain_expression("y^(0*x^-1)").unwrap();
-    assert_eq!(parsed.conditions(), &[
-        Condition::NonZero(x),
-        Condition::NonZero(y),
-    ]);
+    assert_eq!(
+        parsed.conditions(),
+        &[Condition::NonZero(x), Condition::NonZero(y),]
+    );
 }
 
 #[test]
 fn equations_keep_both_domains() {
     let x = sym("x");
     let y = sym("y");
-    let DomainStatement::Equation { left, right } =
-        parse_domain_statement("0*x^-1=y^-2").unwrap()
+    let DomainStatement::Equation { left, right } = parse_domain_statement("0*x^-1=y^-2").unwrap()
     else {
         panic!("expected equation");
     };

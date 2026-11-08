@@ -96,11 +96,7 @@ impl DomainExpression {
 
     /// Power with an explicitly evaluated integer exponent. Restrictions on
     /// the exponent are retained even if its value was normalized to an integer.
-    pub fn pow(
-        self,
-        exponent: Self,
-        max_conditions: usize,
-    ) -> Result<Self, DefinednessError> {
+    pub fn pow(self, exponent: Self, max_conditions: usize) -> Result<Self, DefinednessError> {
         let ExprView::Integer(value) = exponent.expression.view() else {
             return Err(DefinednessError::UnsupportedExponent);
         };

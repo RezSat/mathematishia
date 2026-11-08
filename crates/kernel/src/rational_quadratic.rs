@@ -7,9 +7,7 @@
 use mathema::Rational;
 
 use crate::quadratic::independent_quadratic_roots;
-use crate::{
-    QuadraticRoots, QuadraticVerificationError, RationalFunction, RationalPolynomial,
-};
+use crate::{QuadraticRoots, QuadraticVerificationError, RationalFunction, RationalPolynomial};
 
 /// Exact rational solutions within the common (possibly punctured) domain.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -103,8 +101,8 @@ pub fn verify_rational_quadratic_equation(
 #[cfg(test)]
 mod forged {
     use super::*;
-    use mathema::{Integer, Rational};
     use crate::EvaluationContext;
+    use mathema::{Integer, Rational};
 
     fn p(values: &[i64]) -> RationalPolynomial {
         RationalPolynomial::new(

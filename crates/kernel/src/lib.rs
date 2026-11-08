@@ -14,8 +14,8 @@ mod poly_division;
 mod polynomial;
 mod quadratic;
 mod rational_equation;
-mod rational_quadratic;
 mod rational_function;
+mod rational_quadratic;
 mod solve_linear;
 mod square_free;
 mod verification;
@@ -28,9 +28,6 @@ pub use differentiate_expr::{
 pub use poly_convert::PolynomialConversionError;
 pub use poly_division::ZeroPolynomialDivisor;
 pub use polynomial::RationalPolynomial;
-pub use rational_quadratic::{
-    RationalQuadraticResult, RationalQuadraticRoots, verify_rational_quadratic_equation,
-};
 pub use quadratic::{
     QuadraticError, QuadraticResult, QuadraticRoots, QuadraticVerificationError,
     verify_quadratic_roots,
@@ -40,6 +37,9 @@ pub use rational_equation::{
     RationalEquationVerificationError, verify_rational_equation,
 };
 pub use rational_function::{RationalFunction, RationalFunctionError};
+pub use rational_quadratic::{
+    RationalQuadraticResult, RationalQuadraticRoots, verify_rational_quadratic_equation,
+};
 pub use solve_linear::{
     EquationRuleId, EquationStep, LinearSolution, LinearSolveError, LinearSolveResult,
     VerifiedCondition, solve_linear_equation,

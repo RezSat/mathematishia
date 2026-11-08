@@ -444,9 +444,7 @@ impl EvaluationContext {
         self.check_rational_function(&residual)?;
         let poly_result = checked_quadratic(residual.numerator(), &mut work)?;
         let roots = match poly_result.roots() {
-            crate::QuadraticRoots::AllRationals => {
-                RationalQuadraticRoots::AllAdmissibleRationals
-            }
+            crate::QuadraticRoots::AllRationals => RationalQuadraticRoots::AllAdmissibleRationals,
             crate::QuadraticRoots::Finite(values) => {
                 let mut admitted = Vec::new();
                 for value in values {
@@ -458,7 +456,12 @@ impl EvaluationContext {
                             break;
                         }
                     }
-                    if valid && work.evaluate(residual.denominator(), value)?.numerator().is_zero() {
+                    if valid
+                        && work
+                            .evaluate(residual.denominator(), value)?
+                            .numerator()
+                            .is_zero()
+                    {
                         valid = false;
                     }
                     if valid {
@@ -468,12 +471,8 @@ impl EvaluationContext {
                 RationalQuadraticRoots::Finite(admitted)
             }
         };
-        let result = RationalQuadraticResult::from_parts(
-            left.clone(),
-            right.clone(),
-            residual,
-            roots,
-        );
+        let result =
+            RationalQuadraticResult::from_parts(left.clone(), right.clone(), residual, roots);
         // The independent exact check is not a process-time or memory bound.
         work.charge(128)?;
         verify_rational_quadratic_equation(&result)?;

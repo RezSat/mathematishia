@@ -74,7 +74,7 @@ fn higher_degree_numerators_fail_explicitly() {
 }
 
 #[test]
-fn 125_deterministic_domain_aware_rational_equations_verify() {
+fn deterministic_125_domain_aware_rational_equations_verify() {
     let ctx = EvaluationContext::default();
     let zero = RationalFunction::from_polynomial(p(&[]));
     let mut tested = 0usize;

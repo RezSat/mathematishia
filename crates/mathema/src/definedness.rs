@@ -49,6 +49,27 @@ impl DomainExpression {
         })
     }
 
+    /// Constructs an expression with additional restrictions from an earlier
+    /// transformation or its source expression.
+    pub fn with_conditions(
+        expression: Expr,
+        inherited: impl IntoIterator<Item = Condition>,
+        max_nodes: usize,
+        max_conditions: usize,
+    ) -> Result<Self, DefinednessError> {
+        let mut conditions = Vec::new();
+        for condition in inherited {
+            append_unique(&mut conditions, condition, max_conditions)?;
+        }
+        for condition in definedness_obligations(&expression, max_nodes)? {
+            append_unique(&mut conditions, condition, max_conditions)?;
+        }
+        Ok(Self {
+            expression,
+            conditions,
+        })
+    }
+
     pub fn expression(&self) -> &Expr {
         &self.expression
     }

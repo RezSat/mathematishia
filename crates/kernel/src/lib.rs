@@ -12,6 +12,7 @@ mod budget;
 mod conditional_rewrite;
 mod context;
 mod differentiate_expr;
+mod domain_operations;
 mod guarded_rewrite;
 mod poly_convert;
 mod poly_division;
@@ -39,6 +40,10 @@ pub use context::{EvaluationContext, EvaluationError, ResourceLimitKind, Resourc
 pub use differentiate_expr::{
     DerivativeRuleId, DerivativeVerificationError, DifferentiationStep, SymbolicDerivative,
     SymbolicDifferentiationError, verify_symbolic_derivative,
+};
+pub use domain_operations::{
+    DomainOperationError, DomainRewrite, DomainRewriteOutcome, rewrite_domain_once,
+    substitute_domain,
 };
 pub use guarded_rewrite::{
     GuardedRewriteOutcome, GuardedRewriteStep, GuardedRewriteVerificationError, GuardedRuleId,

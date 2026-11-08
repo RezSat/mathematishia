@@ -119,8 +119,12 @@ fn show_rational(function: &RationalFunction, variable: &Symbol) -> String {
         out.push_str("\nconditions: none");
     } else {
         for condition in function.excluded_zero_sets() {
-            write!(&mut out, "\ncondition: {} != 0", condition.to_expr(variable))
-                .expect("writing to a String is infallible");
+            write!(
+                &mut out,
+                "\ncondition: {} != 0",
+                condition.to_expr(variable)
+            )
+            .expect("writing to a String is infallible");
         }
     }
     out

@@ -7,8 +7,7 @@ use mathema::{Equation, Expr, ExprView, Rational, Symbol};
 use mathema_frontend::{Statement, parse_expression, parse_statement};
 use mathematishia_kernel::{
     EvaluationContext, EvaluationError, LinearSolution, RationalFunction, RationalFunctionError,
-    RationalPolynomial, ResourceLimitKind,
-    VerifiedCondition,
+    RationalPolynomial, ResourceLimitKind, VerifiedCondition,
 };
 use pyo3::create_exception;
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
@@ -272,11 +271,7 @@ fn py_differentiate_expression(source: &str, variable: &str) -> PyResult<PySymbo
     Ok((result.derivative().to_string(), steps))
 }
 
-type PyRationalFunctionData = (
-    PyPolynomialData,
-    PyPolynomialData,
-    Vec<PyPolynomialData>,
-);
+type PyRationalFunctionData = (PyPolynomialData, PyPolynomialData, Vec<PyPolynomialData>);
 
 fn rational_data(value: &RationalFunction, variable: &Symbol) -> PyRationalFunctionData {
     (
@@ -363,7 +358,11 @@ fn py_rational_operation(
         "sub" => context.subtract_rational_functions(&left, &right),
         "mul" => context.multiply_rational_functions(&left, &right),
         "div" => context.divide_rational_functions(&left, &right),
-        _ => return Err(UnsupportedMathematicsError::new_err("expected add, sub, mul or div")),
+        _ => {
+            return Err(UnsupportedMathematicsError::new_err(
+                "expected add, sub, mul or div",
+            ));
+        }
     }
     .map_err(map_evaluation_error)?;
     Ok(rational_data(&result, &symbol))

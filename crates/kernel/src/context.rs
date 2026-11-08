@@ -14,13 +14,13 @@ use crate::differentiate_expr::generate_symbolic_derivative;
 
 use crate::{
     DerivationStep, DerivativeVerificationError, DistributionResult, LinearSolution,
-    LinearSolveResult, PolynomialConversionError, RationalEquationError,
-    RationalEquationResult, RationalEquationSolution, RationalEquationVerificationError,
-    RationalFunction, RationalFunctionError,
-    RationalPolynomial, SquareFreeDecomposition, SquareFreeError, SquareFreeVerificationError,
-    SymbolicDerivative, SymbolicDifferentiationError, VerificationError, ZeroPolynomialDivisor,
-    distribute_first_once, expand_distributively, solve_linear_equation, verify_distribution,
-    verify_linear_solution, verify_rational_equation, verify_symbolic_derivative,
+    LinearSolveResult, PolynomialConversionError, RationalEquationError, RationalEquationResult,
+    RationalEquationSolution, RationalEquationVerificationError, RationalFunction,
+    RationalFunctionError, RationalPolynomial, SquareFreeDecomposition, SquareFreeError,
+    SquareFreeVerificationError, SymbolicDerivative, SymbolicDifferentiationError,
+    VerificationError, ZeroPolynomialDivisor, distribute_first_once, expand_distributively,
+    solve_linear_equation, verify_distribution, verify_linear_solution, verify_rational_equation,
+    verify_symbolic_derivative,
 };
 
 /// Explicit, configurable limits. None are process-global.
@@ -595,12 +595,8 @@ impl EvaluationContext {
             }
             Some(_) => return Err(RationalEquationError::NonlinearNumerator.into()),
         };
-        let result = RationalEquationResult::from_parts(
-            left.clone(),
-            right.clone(),
-            residual,
-            solution,
-        );
+        let result =
+            RationalEquationResult::from_parts(left.clone(), right.clone(), residual, solution);
         verify_rational_equation(&result)?;
         Ok(result)
     }

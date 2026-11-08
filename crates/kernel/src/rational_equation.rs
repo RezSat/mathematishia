@@ -94,7 +94,9 @@ impl fmt::Display for RationalEquationVerificationError {
         match self {
             Self::IncorrectResidual => f.write_str("rational equation residual or domain is wrong"),
             Self::IncorrectSolution => f.write_str("rational equation solution is incorrect"),
-            Self::UnsupportedDegree => f.write_str("rational equation exceeds linear numerator scope"),
+            Self::UnsupportedDegree => {
+                f.write_str("rational equation exceeds linear numerator scope")
+            }
         }
     }
 }

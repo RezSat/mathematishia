@@ -7,7 +7,8 @@ use mathema::{Integer, Rational};
 
 use crate::poly_division::rational_quotient;
 use crate::{
-    EvaluationContext, EvaluationError, ExactQuadraticRoot, QuadraticBranch, RationalPolynomial,
+    EvaluationContext, EvaluationError, ExactQuadraticRoot, PolynomialResidue, QuadraticBranch,
+    RationalPolynomial, ResidueError,
 };
 
 fn zero() -> Rational {
@@ -45,7 +46,9 @@ impl fmt::Display for QuadraticFieldError {
             Self::MismatchedFields => f.write_str("quadratic elements use different embeddings"),
             Self::RationalRoot => f.write_str("a rational root does not define a quadratic field"),
             Self::DivisionByZero => f.write_str("cannot invert zero in a quadratic field"),
-            Self::InvalidMinimalPolynomial => f.write_str("the computed minimal polynomial failed exact verification"),
+            Self::InvalidMinimalPolynomial => {
+                f.write_str("the computed minimal polynomial failed exact verification")
+            }
             Self::Residue(error) => write!(f, "{error}"),
         }
     }
@@ -341,9 +344,7 @@ pub fn verify_quadratic_minimal_polynomial(
     } else {
         2
     };
-    if candidate.degree() != Some(degree)
-        || candidate.coefficients().last() != Some(&one())
-    {
+    if candidate.degree() != Some(degree) || candidate.coefficients().last() != Some(&one()) {
         return Ok(false);
     }
     let modulus = value.field.polynomial().clone();
@@ -352,11 +353,7 @@ pub fn verify_quadratic_minimal_polynomial(
         RationalPolynomial::new(vec![value.constant.clone(), value.coefficient.clone()]),
         modulus.clone(),
     )?;
-    let mut accumulator = PolynomialResidue::new(
-        ctx,
-        RationalPolynomial::zero(),
-        modulus.clone(),
-    )?;
+    let mut accumulator = PolynomialResidue::new(ctx, RationalPolynomial::zero(), modulus.clone())?;
     for coefficient in candidate.coefficients().iter().rev() {
         let scalar = PolynomialResidue::new(
             ctx,
@@ -367,4 +364,3 @@ pub fn verify_quadratic_minimal_polynomial(
     }
     Ok(accumulator.is_zero())
 }
-

@@ -70,8 +70,7 @@ pub use quadratic::{
     verify_quadratic_roots,
 };
 pub use quadratic_field::{
-    QuadraticElement, QuadraticField, QuadraticFieldError,
-    verify_quadratic_minimal_polynomial,
+    QuadraticElement, QuadraticField, QuadraticFieldError, verify_quadratic_minimal_polynomial,
 };
 pub use rational_equation::{
     RationalEquationError, RationalEquationResult, RationalEquationSolution,

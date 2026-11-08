@@ -124,11 +124,16 @@ fn irrational_roots_construct_quadratic_elements() {
 #[test]
 fn minimal_polynomial_verifier_rejects_forged_claims() {
     let ctx = EvaluationContext::default();
-    let field = QuadraticField::new(&ctx, p(&[-2,0,1]), QuadraticBranch::UpperReal).unwrap();
-    let value = QuadraticElement::new(&ctx, field, q(1,1), q(2,1)).unwrap();
+    let field = QuadraticField::new(&ctx, p(&[-2, 0, 1]), QuadraticBranch::UpperReal).unwrap();
+    let value = QuadraticElement::new(&ctx, field, q(1, 1), q(2, 1)).unwrap();
     let correct = value.minimal_polynomial(&ctx).unwrap();
     assert!(verify_quadratic_minimal_polynomial(&ctx, &value, &correct).unwrap());
-    for incorrect in [p(&[-2,0,1]), p(&[-7,-2,2]), p(&[1,0,1]), p(&[-7,-2,0,1])] {
+    for incorrect in [
+        p(&[-2, 0, 1]),
+        p(&[-7, -2, 2]),
+        p(&[1, 0, 1]),
+        p(&[-7, -2, 0, 1]),
+    ] {
         assert!(!verify_quadratic_minimal_polynomial(&ctx, &value, &incorrect).unwrap());
     }
 }
@@ -145,9 +150,14 @@ fn quadratic_root_solver_and_field_embeddings_agree() {
                 if let ExactQuadraticRoot::Algebraic { .. } = root {
                     let value = QuadraticElement::from_root(&ctx, root).unwrap();
                     assert_eq!(value.as_exact_root(&ctx).unwrap(), *root);
-                    assert!(verify_quadratic_minimal_polynomial(
-                        &ctx, &value, &value.minimal_polynomial(&ctx).unwrap()
-                    ).unwrap());
+                    assert!(
+                        verify_quadratic_minimal_polynomial(
+                            &ctx,
+                            &value,
+                            &value.minimal_polynomial(&ctx).unwrap()
+                        )
+                        .unwrap()
+                    );
                     checked += 1;
                 }
             }

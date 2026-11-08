@@ -14,11 +14,13 @@ use crate::differentiate_expr::generate_symbolic_derivative;
 
 use crate::{
     DerivationStep, DerivativeVerificationError, DistributionResult, LinearSolution,
-    LinearSolveResult, PolynomialConversionError, RationalFunction, RationalFunctionError,
+    LinearSolveResult, PolynomialConversionError, RationalEquationError,
+    RationalEquationResult, RationalEquationSolution, RationalEquationVerificationError,
+    RationalFunction, RationalFunctionError,
     RationalPolynomial, SquareFreeDecomposition, SquareFreeError, SquareFreeVerificationError,
     SymbolicDerivative, SymbolicDifferentiationError, VerificationError, ZeroPolynomialDivisor,
     distribute_first_once, expand_distributively, solve_linear_equation, verify_distribution,
-    verify_linear_solution, verify_symbolic_derivative,
+    verify_linear_solution, verify_rational_equation, verify_symbolic_derivative,
 };
 
 /// Explicit, configurable limits. None are process-global.
@@ -80,6 +82,8 @@ pub enum EvaluationError {
     SymbolicDifferentiation(SymbolicDifferentiationError),
     DerivativeVerification(DerivativeVerificationError),
     RationalFunction(RationalFunctionError),
+    RationalEquation(RationalEquationError),
+    RationalEquationVerification(RationalEquationVerificationError),
 }
 
 impl fmt::Display for EvaluationError {
@@ -99,6 +103,10 @@ impl fmt::Display for EvaluationError {
                 write!(f, "derivative verification failed: {error}")
             }
             Self::RationalFunction(error) => write!(f, "{error}"),
+            Self::RationalEquation(error) => write!(f, "{error}"),
+            Self::RationalEquationVerification(error) => {
+                write!(f, "rational equation verification failed: {error}")
+            }
         }
     }
 }
@@ -138,6 +146,18 @@ impl From<DerivativeVerificationError> for EvaluationError {
 impl From<RationalFunctionError> for EvaluationError {
     fn from(value: RationalFunctionError) -> Self {
         Self::RationalFunction(value)
+    }
+}
+
+impl From<RationalEquationError> for EvaluationError {
+    fn from(value: RationalEquationError) -> Self {
+        Self::RationalEquation(value)
+    }
+}
+
+impl From<RationalEquationVerificationError> for EvaluationError {
+    fn from(value: RationalEquationVerificationError) -> Self {
+        Self::RationalEquationVerification(value)
     }
 }
 
@@ -526,6 +546,62 @@ impl EvaluationContext {
         self.check_rational(at)?;
         let result = WorkBudget::new(self.limits).evaluate_rational(value, at)?;
         self.check_rational(&result)?;
+        Ok(result)
+    }
+
+    /// Solves LHS=RHS on their shared rational domain when the reduced
+    /// residual numerator has degree at most one.
+    ///
+    /// A canceled-pole candidate is rejected exactly; a zero residual means
+    /// all rational values satisfying the explicit inherited nonzero conditions.
+    pub fn solve_rational_equation(
+        &self,
+        left: &RationalFunction,
+        right: &RationalFunction,
+    ) -> Result<RationalEquationResult, EvaluationError> {
+        self.check_rational_function(left)?;
+        self.check_rational_function(right)?;
+        let residual = self.subtract_rational_functions(left, right)?;
+        let solution = match residual.numerator().degree() {
+            None => RationalEquationSolution::AllAdmissibleRationals,
+            Some(0) => RationalEquationSolution::NoSolution,
+            Some(1) => {
+                let zero = Rational::from(Integer::zero());
+                let constant = residual.numerator().coefficients().first().unwrap_or(&zero);
+                let coefficient = &residual.numerator().coefficients()[1];
+                let mut work = WorkBudget::new(self.limits);
+                let root = work.quotient(&(-constant), coefficient)?;
+                self.check_rational(&root)?;
+                let mut excluded = false;
+                for condition in residual.excluded_zero_sets() {
+                    if work.evaluate(condition, &root)?.numerator().is_zero() {
+                        excluded = true;
+                        break;
+                    }
+                }
+                if !excluded
+                    && work
+                        .evaluate(residual.denominator(), &root)?
+                        .numerator()
+                        .is_zero()
+                {
+                    excluded = true;
+                }
+                if excluded {
+                    RationalEquationSolution::NoSolution
+                } else {
+                    RationalEquationSolution::Unique(root)
+                }
+            }
+            Some(_) => return Err(RationalEquationError::NonlinearNumerator.into()),
+        };
+        let result = RationalEquationResult::from_parts(
+            left.clone(),
+            right.clone(),
+            residual,
+            solution,
+        );
+        verify_rational_equation(&result)?;
         Ok(result)
     }
 

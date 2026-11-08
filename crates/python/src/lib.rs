@@ -31,6 +31,9 @@ fn map_evaluation_error(error: EvaluationError) -> PyErr {
         EvaluationError::DerivativeVerification(reason) => {
             VerificationFailure::new_err(reason.to_string())
         }
+        EvaluationError::RationalEquationVerification(reason) => {
+            VerificationFailure::new_err(reason.to_string())
+        }
         EvaluationError::RationalFunction(RationalFunctionError::UndefinedAtPoint) => {
             UndefinedAtPointError::new_err(error.to_string())
         }
@@ -39,6 +42,7 @@ fn map_evaluation_error(error: EvaluationError) -> PyErr {
         | EvaluationError::SquareFree(_)
         | EvaluationError::SymbolicDifferentiation(_)
         | EvaluationError::RationalFunction(_)
+        | EvaluationError::RationalEquation(_)
         | EvaluationError::DivisionByZero => {
             UnsupportedMathematicsError::new_err(error.to_string())
         }

@@ -82,3 +82,15 @@ remain unimplemented.
 
 Algorithm background: SymPy rational cancellation documentation,
 https://docs.sympy.org/latest/tutorial/simplification.html
+
+## Domain-aware rational-linear equation solving (Task 23)
+
+A checked equation `lhs=rhs` between two partial Q(x) functions is solved
+by reducing their difference. A zero residual yields `AllAdmissibleRationals`,
+meaning every rational satisfying the inherited nonzero-polynomial conditions;
+a nonzero constant yields no solution. A linear numerator yields one candidate,
+which is verified against every excluded zero set and the denominator before
+being accepted. Higher-degree numerator equations are explicitly unsupported.
+The independent verifier recomputes the residual and exact solution
+classification; it does not trust the result's label. This is a rational-
+linear solver, not a general polynomial root finder or assumption engine.

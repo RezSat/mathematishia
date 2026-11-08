@@ -232,7 +232,7 @@ impl fmt::Display for ProofGraphVerificationError {
             Self::InvalidConclusion => "proof graph conclusion is not an expression node",
             Self::DisconnectedNode => {
                 "proof graph contains a node outside the conclusion dependency graph"
-            },
+            }
         };
         f.write_str(message)
     }

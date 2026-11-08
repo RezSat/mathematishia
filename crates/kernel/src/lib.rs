@@ -11,7 +11,6 @@ mod assumptions;
 mod budget;
 mod conditional_rewrite;
 mod context;
-mod definedness;
 mod differentiate_expr;
 mod guarded_rewrite;
 mod poly_convert;
@@ -37,7 +36,7 @@ pub use conditional_rewrite::{
     verify_composite_inverse_step,
 };
 pub use context::{EvaluationContext, EvaluationError, ResourceLimitKind, ResourceLimits};
-pub use definedness::{DefinednessError, DomainExpression, definedness_obligations};
+pub use mathema::{DefinednessError, DomainExpression, definedness_obligations};
 pub use differentiate_expr::{
     DerivativeRuleId, DerivativeVerificationError, DifferentiationStep, SymbolicDerivative,
     SymbolicDifferentiationError, verify_symbolic_derivative,

@@ -3,7 +3,7 @@
 use std::error::Error;
 use std::fmt;
 
-use mathema::{Condition, Expr, ExprView, Integer};
+use crate::{Condition, Expr, ExprView, Integer};
 
 /// Errors are distinct from an unmet or contradicted nonzero condition.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

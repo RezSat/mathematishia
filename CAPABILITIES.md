@@ -10,7 +10,7 @@
 | Exact quadratic roots | `crates/kernel/src/algebraic.rs` |
 | Symbolic differentiation | `crates/kernel/src/differentiate_expr.rs` |
 | Assumptions and guarded rewrites | `crates/kernel/src/assumptions.rs`, `guarded_rewrite.rs`, `conditional_rewrite.rs` |
-| Definedness and domain-preserving expression composition | `crates/kernel/src/definedness.rs` |
+| Definedness and domain-preserving expression composition | `crates/mathema/src/definedness.rs` |
 | Proof graph and dependency verification | `crates/kernel/src/proof_graph.rs` |
 | Distribution and linear-step checking | `crates/kernel/src/lib.rs`, `verification.rs` |
 | Parser and command-line commands | `crates/frontend/`, `crates/cli/` |

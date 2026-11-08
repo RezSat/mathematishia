@@ -43,7 +43,7 @@ steps, and the context-checked operation enforces input/output resource
 admission. General symbolic calculus and a justified differentiation-step
 format remain separate future work.
 
-## Exact square-free decomposition (Task 18)
+## Exact square-free decomposition
 
 For nonzero univariate rational polynomials, a GCD-with-formal-derivative
 algorithm separates the polynomial into a leading rational unit and monic
@@ -62,7 +62,7 @@ and SymPy's `sqf_list` output convention, consulted November 2026:
 https://flintlib.org/doc/algorithms/polynomials/squarefree.html
 https://docs.sympy.org/latest/modules/polys/reference.html
 
-## Exact partial rational functions (Tasks 21–22)
+## Exact partial rational functions
 
 A reduced univariate Q(x) fraction is represented by coprime numerator and
 monic denominator plus an explicit, ordered, unique list of monic polynomial
@@ -83,7 +83,7 @@ remain unimplemented.
 Algorithm background: SymPy rational cancellation documentation,
 https://docs.sympy.org/latest/tutorial/simplification.html
 
-## Domain-aware rational-linear equation solving (Task 23)
+## Domain-aware rational-linear equation solving
 
 A checked equation `lhs=rhs` between two partial Q(x) functions is solved
 by reducing their difference. A zero residual yields `AllAdmissibleRationals`,

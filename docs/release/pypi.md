@@ -1,42 +1,20 @@
-# PyPI release checklist — not published yet
+# Python release procedure
 
-Mathematishia already has a Rust-backed Python package named mathematishia
-in crates/python. It is experimental version 0.1.0 in the repository and is
-built with maturin/PyO3. Building an artifact is not the same as publishing
-to the public PyPI index.
+The Python bindings live in `crates/python` and are built with maturin and PyO3. The repository has wheel-install tests and a source-distribution rebuild check. A release workflow has not been configured.
 
-## Required before the first public release
+## First release checklist
 
-1. Confirm the PyPI project name is available, the maintainer owns the
-   project, and the GitHub repository URL and package metadata are accurate.
-   A pending trusted publisher does not reserve the package name.
-2. Approve a public version, release notes, changelog, API compatibility
-   policy and supported platform/Python matrix. Keep Cargo package versions
-   and the Python project version aligned.
-3. Build and install wheels for supported Linux, Windows and macOS targets;
-   test the installed package and the package metadata. Build/test an sdist
-   on a clean machine. Run cargo fmt/check/clippy/tests and the examples.
-4. Configure a dedicated GitHub environment with release approvals. Set
-   up a PyPI Trusted Publisher matching exactly the GitHub repository,
-   approved release workflow filename and environment. Avoid stored,
-   long-lived PyPI API tokens.
-5. Create a narrowly scoped release workflow, triggered only by an
-   explicitly approved release/tag. Give the publishing job only the
-   id-token: write permission needed by OIDC, and contents: read.
-   Use the official pypa/gh-action-pypi-publish mechanism after obtaining
-   tested artifacts. Never publish on push to main.
-6. Test an optional TestPyPI release and install the uploaded artifacts.
-   Remember that TestPyPI and PyPI publisher configurations are separate.
-7. After human approval, publish the production release, install it in
-   fresh environments without source checkout, check import, exact
-   polynomial operations, typed error handling and algebraic proof steps.
-   Record release artifact hashes and reproducible test results.
+1. Reserve or verify the PyPI project name and confirm the publishing account has the required access.
+2. Select a version and tag. Align Rust and Python package metadata; document compatibility and supported platforms.
+3. Run the full Rust checks, the installed wheel matrix and the source-distribution rebuild. Test published examples against built artifacts.
+4. Configure a protected GitHub environment and a PyPI Trusted Publisher bound to the release workflow and environment.
+5. Add a release-only workflow with `contents: read` and narrowly scoped `id-token: write` permissions. Use `pypa/gh-action-pypi-publish` with artifacts produced by the approved build.
+6. Optionally validate the workflow with TestPyPI, which requires its own publisher configuration.
+7. Publish after release approval. Install packages from PyPI into fresh environments and test imports, error classifications, polynomial operations and exact algebraic-root records. Archive artifact hashes.
 
-Official references consulted November 2026:
-https://docs.pypi.org/trusted-publishers/
-https://docs.pypi.org/trusted-publishers/creating-a-project-through-oidc/
-https://docs.pypi.org/trusted-publishers/using-a-publisher/
-https://www.maturin.rs/distribution.html
+No publishing job should run on ordinary pushes to `main`.
 
-No PyPI account credentials are stored in this repository, and this
-checklist does not configure a trusted publisher on the user's behalf.
+References:
+- https://docs.pypi.org/trusted-publishers/
+- https://docs.pypi.org/trusted-publishers/creating-a-project-through-oidc/
+- https://www.maturin.rs/distribution.html

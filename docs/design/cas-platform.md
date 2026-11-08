@@ -1,149 +1,61 @@
-# Mathematishia: toward a full, explainable CAS
+# Computer algebra architecture
 
-## North star
+Mathematishia separates syntax, symbolic values, domain-specific algorithms, and verification. The kernel computes exact results and structured derivations; the frontend and language bindings do not implement their own algebra.
 
-Build an open-source exact symbolic mathematics engine with structured
-mathematical provenance. The target is broad SymPy-like functionality
-together with the quality of guided steps users associate with education
-products. Mathematishia is not claiming existing parity with SymPy,
-Symbolab or Mathematica. Those are demanding product-level goals.
+## Core representations
 
-A count of commits, lines, or generated features is not a measure of
-mathematical correctness or usefulness. The unit of progress is a verified
-vertical slice: a documented domain contract, typed results, one or more
-mathematical algorithms, invalid-domain behavior, independent checkers
-where feasible, Rust/CLI/Python integration, adversarial and regression
-tests, and passing CI.
+- `Expr` is an immutable scalar-expression tree with conservative constructor normalization. Structural equality is distinct from mathematical equivalence.
+- `RationalPolynomial` represents a univariate polynomial over Q.
+- `RationalFunction` retains the domain exclusions introduced by its original denominators.
+- Quadratic algebraic roots use a monic minimal polynomial and a branch selector. General algebraic-number field arithmetic has not been implemented.
+- `Condition` and `Assumptions` represent nonzero, sign, integral, real and domain-membership facts. A premise is recorded separately from an exact arithmetic fact.
+- `ProofGraph` joins existing expression-rewrite evidence to its source and condition dependencies. Each edge is checked by the corresponding independent rule verifier.
 
-## Existing components
+See [CAPABILITIES.md](../../CAPABILITIES.md) for implementation paths.
 
-- mathema: arbitrary-precision integer/rational values, symbols, immutable
-  expression IR, semantic views and canonical scalar constructors.
-- kernel: exact polynomial arithmetic, division/GCD, square-free
-  multiplicities, rational partial functions with explicit holes, selected
-  linear and quadratic solvers, derivation records and independent checks.
-- Algebraic roots: exact degree-two real irrational and complex conjugate
-  values through a monic minimal polynomial and a branch selector; ordered
-  typed normalization/discriminant evidence. Not a general number field.
-- frontend and CLI: bounded parser, polynomial/solver commands and proof
-  data presentation. Full rational-expression syntax and broad functions
-  are not implemented.
-- Python: experimental maturin/PyO3 bindings, immutable results and
-  installed-wheel smoke tests.
+## Mathematical invariants
 
-## Immutable engineering contracts
+1. Every division must preserve its definedness conditions. Algebraically equal rational fractions need not define the same partial function.
+2. A transformation records exact input and output values, a stable rule ID, a relation kind, and any required conditions. Differentiation and root classification are not expression equalities.
+3. Verification reconstructs the permitted rule application. A rule identifier alone does not establish correctness.
+4. Canonical values, error categories and proof ordering are deterministic for fixed inputs and options.
+5. Unsupported domains produce explicit errors or bounded partial results.
+6. Work budgets meter selected operations; process-level CPU and memory isolation are separate concerns.
+7. Mathematical semantics belong to Rust. Python and command-line adapters expose the kernel's results.
 
-1. Domain semantics before algorithms. Never divide by a symbolic
-   denominator without retaining the necessary nonzero condition. Reduced
-   rational functions remain partial functions with original exclusions.
-2. Typed evidence before narratives. Every mathematical step needs a stable
-   identifier, a relation, and all necessary exact side conditions.
-   Classification and differentiation are not automatically equality steps.
-3. Independent verification where practical. A verifier must reconstruct
-   results without trusting the generator or sampling floating-point values.
-4. Determinism. Exact inputs produce the same canonical values, proof order,
-   error categories and stable rule IDs across runs.
-5. No silent scope escalation. If a domain is unsupported, return an
-   explicit error or partial/conditional result, never a guessed conclusion.
-6. Metering is not sandboxing. Exact arithmetic can allocate costly large
-   integers. Hard isolation needs separate process/time/memory controls.
-7. Rust owns the mathematics; Python, CLI and future web UI are adapters.
-8. No AI in the verified mathematical kernel. AI may help create code and
-   user explanations, but may not change the mathematical verdict.
+## Implementation order
 
-## Next engineering phases, in dependency order
+### 1. Exact domains
 
-### A. Exact domains and mathematical conditions
+Extend the quadratic algebraic-root representation to exact arithmetic with field embeddings and equality. Add controlled arithmetic and ordering only for domains with a defined comparison. Extend symbolic definedness beyond atomic nonzero assumptions.
 
-- Finish a minimal algebraic-number arithmetic domain, with canonical
-  embeddings, exact equality, field operations and comparisons where
-  mathematically defined. Degree-two roots are only the starting point.
-- Introduce explicit assumptions: nonzero, real, positive, integer, and
-  domain membership. Separate proven conditions from unknown obligations.
-- Add safe expression division/powers on top of those conditions and
-  rational partial-function semantics.
-- Gate: exact special cases and adversarial cancellation tests agree
-  with independent exact-domain oracles.
+### 2. Proof and rewriting
 
-### B. Structured proof graph and step checker
+The initial proof graph checks expression inputs, condition dependencies, existing distribution/cancellation rules, conclusion reachability and node budgets. Next:
 
-- Model proof nodes, parent references, input/output mathematical types,
-  relation kind, rule ID, assumptions consumed, new obligations, and exact
-  witnesses. Store semantic values, never prose as a proof.
-- Support deterministic linearization into concise or detailed explanations.
-  A user should be able to ask why a step is legal and see its conditions.
-- Add conditional rewriting, repeatability controls, proof budget and
-  completeness status. Reject disconnected or forged DAG edges.
-- Gate: independent checkers validate every emitted step, including
-  nonzero obligations; formatting is not required for proof verification.
+- Record intermediate obligations without treating unresolved propositions as established facts.
+- Generalize condition-aware rewriting to composite expressions and rational domains.
+- Add proof composition, equation relations, and typed witnesses for domain algorithms.
+- Define deterministic step linearization and rendering without making formatting part of verification.
 
-### C. Polynomial and equation platform
+### 3. Polynomial and equation algorithms
 
-- Build exact factorization over Q[x], including rational-root factoring and
-  irreducible factor extraction; then multivariate polynomial domains.
-- Implement elimination, resultants, rational functions, partial fractions
-  and equations beyond quadratic with explicit root domains.
-- Reuse the canonical algebraic value domain instead of duplicating root
-  representations for each solver.
-- Gate: identities recomposed exactly, all roots checked when completeness
-  is claimed, reproducible tests against established math systems.
+Factor univariate polynomials over Q, then introduce higher-degree algebraic solving, elimination, resultants and multivariate polynomial representations. Verify factor recomposition and completeness whenever a result is presented as exhaustive.
 
-### D. Analytic functions and calculus
+### 4. Functions and calculus
 
-- Add typed function nodes (sin, cos, exp, log, abs, etc.) with proper
-  real/complex domains and branch cuts, not ad-hoc Symbol names.
-- Define differentiation, limits and integration with guarded rules;
-  represent unevaluated integrals when unsupported.
-- General simplification must be assumption-sensitive (for example
-  sqrt(x^2) is not x without appropriate assumptions).
-- Gate: verified rewrites, branch/domain regression corpus and
-  independently checked transformations within supported scopes.
+Add typed function nodes and domain information for logarithms, trigonometric functions, absolute value and complex branches. Extend differentiation and implement integration with explicit unevaluated results when no supported method applies.
 
-### E. Numeric computation with honest accuracy
+### 5. Numeric domains
 
-- Arbitrary-precision approximations need explicit precision, rounding
-  semantics, and error estimates; separate approximations from exact values.
-- Eventually support certified intervals, root isolation, matrix/tensor
-  numerical operations and proven error bounds.
-- Gate: reference comparisons, error-bound tests, reproducible performance
-  measurements and resource isolation.
+Separate exact values from approximations. Introduce precision and rounding policies before certified intervals, root isolation or numerical linear algebra.
 
-### F. Explanations, UX and distribution
+### 6. Interfaces and packaging
 
-- Render the proof graph as a pedagogical explanation with selectable detail,
-  math notation, LaTeX/MathML, domain warnings and accessibility support.
-- Create an explainable problem corpus; score both mathematical correctness
-  and pedagogical clarity separately. Cover gradeschool-to-university
-  progressions without conflating a plausible explanation with a proof.
-- Stabilize a versioned JSON/structured client contract and Python API.
-- Publish signed, reproducible platform wheels and source distributions
-  to PyPI only after release gates and trusted-publisher setup.
+Stabilize machine-readable result types, preserve proof dependencies in API output, and implement readable explanations. Python releases require a supported platform matrix and reproducible installed-package tests; see [the release checklist](../release/pypi.md).
 
-## Evidence and evaluation plan
+## Verification
 
-Every new feature gets a coverage matrix: valid input, invalid input,
-boundary/limit behavior, domain restrictions, canonicalization,
-determinism, and forged-evidence rejection. Maintain a growing golden corpus
-of steps and solution classifications. Cross-check selected outputs against
-SymPy or other mature systems in a separate test harness, with exact rational
-or symbolic comparisons when possible; a third-party system is a test
-oracle, not a runtime dependency or a license to suppress disagreements.
+Changes to an algorithm require tests for normal inputs, zero/boundary cases, invalid domains and deterministic output. Evidence-producing operations also require forged-record rejection tests. Cross-check polynomial or algebraic results against independent exact arithmetic when possible.
 
-Measure: supported operation/domain coverage; passing evidence checks;
-counterexample count; reproducible error classifications; test-suite
-completion on Linux, Windows and macOS; Python installed-wheel health;
-and benchmark regressions on recorded workloads. Track capability milestones
-on the roadmap, not vanity commit totals.
-
-## Release gates
-
-- All supported platform checks, strict lint and tests pass for the tag.
-- User-facing examples match the released version; unsupported domains
-  have explicit errors or precise partial-result semantics.
-- Stable packaged API, changelog and compatibility policy are documented.
-- Built wheel and source distribution install cleanly without the repository.
-- PyPI account, name availability, GitHub environment protection and
-  Trusted Publishing are configured by the maintainer.
-- Release upload is manual/approved, never performed on an ordinary push.
-
-See the separate PyPI checklist for the release process.
+CI runs Rust formatting, compilation, strict Clippy checks and tests on Linux and Windows; wheel installation and source-distribution reconstruction are tested separately. A passing CI run checks the implementation but does not establish completeness outside documented domains.

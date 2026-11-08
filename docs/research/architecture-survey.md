@@ -1,6 +1,6 @@
 # Architecture survey
 
-This record captures design lessons, not copied implementation.
+References for representation, evaluation and algorithm design.
 
 - [SymPy](https://docs.sympy.org/latest/): immutable structural expressions,
   controlled constructor normalization, and specialized polynomial/domain
@@ -33,4 +33,3 @@ This record captures design lessons, not copied implementation.
 - [mpmath](https://mpmath.org/): arbitrary precision does not by itself imply
   rigorous error certification.
 
-No code from these projects is claimed as copied or incorporated.

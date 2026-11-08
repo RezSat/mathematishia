@@ -39,8 +39,8 @@ operate on suitable domain representations. Derivation records mathematical
 steps; verification checks the relevant claims. Formatting renders results and
 derivations and does not define their semantics.
 
-Python, API, MCP, and visualization systems are future consumers of kernel
-semantics; they must not reimplement mathematical behavior.
+Python and command-line interfaces use the checked kernel. Additional API
+and visualization layers must preserve the same mathematical semantics.
 
 Detailed contracts: [expressions](docs/design/expressions.md),
 [evaluation](docs/design/evaluation.md), [domains](docs/design/domains.md),

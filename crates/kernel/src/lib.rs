@@ -15,6 +15,7 @@ mod guarded_rewrite;
 mod poly_convert;
 mod poly_division;
 mod polynomial;
+mod proof_graph;
 mod quadratic;
 mod rational_equation;
 mod rational_function;
@@ -39,6 +40,10 @@ pub use guarded_rewrite::{
 };
 pub use poly_convert::PolynomialConversionError;
 pub use poly_division::ZeroPolynomialDivisor;
+pub use proof_graph::{
+    ProofGraph, ProofGraphBuildError, ProofGraphVerificationError, ProofNode, ProofNodeId,
+    ProofNodeKind, verify_proof_graph,
+};
 pub use polynomial::RationalPolynomial;
 pub use quadratic::{
     QuadraticError, QuadraticResult, QuadraticRoots, QuadraticVerificationError,

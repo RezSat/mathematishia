@@ -40,11 +40,11 @@ pub use guarded_rewrite::{
 };
 pub use poly_convert::PolynomialConversionError;
 pub use poly_division::ZeroPolynomialDivisor;
+pub use polynomial::RationalPolynomial;
 pub use proof_graph::{
     ProofGraph, ProofGraphBuildError, ProofGraphVerificationError, ProofNode, ProofNodeId,
     ProofNodeKind, verify_proof_graph,
 };
-pub use polynomial::RationalPolynomial;
 pub use quadratic::{
     QuadraticError, QuadraticResult, QuadraticRoots, QuadraticVerificationError,
     verify_quadratic_roots,

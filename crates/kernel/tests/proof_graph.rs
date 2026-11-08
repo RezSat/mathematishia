@@ -1,15 +1,18 @@
 use mathema::{Condition, Expr, Symbol};
 use mathematishia_kernel::{
-    Assumptions, ConditionStatus, GuardedRewriteOutcome, ProofGraph,
-    ProofGraphBuildError, ProofGraphVerificationError, ProofNodeId, ProofNodeKind,
-    cancel_symbol_inverse_once, distribute_product_once, verify_proof_graph,
+    Assumptions, ConditionStatus, GuardedRewriteOutcome, ProofGraph, ProofGraphBuildError,
+    ProofGraphVerificationError, ProofNodeId, ProofNodeKind, cancel_symbol_inverse_once,
+    distribute_product_once, verify_proof_graph,
 };
 
 fn symbol(name: &str) -> Expr {
     Expr::from(Symbol::new(name).unwrap())
 }
 
-fn guarded_step(input: &Expr, assumptions: &Assumptions) -> mathematishia_kernel::GuardedRewriteStep {
+fn guarded_step(
+    input: &Expr,
+    assumptions: &Assumptions,
+) -> mathematishia_kernel::GuardedRewriteStep {
     match cancel_symbol_inverse_once(input, assumptions) {
         GuardedRewriteOutcome::Applied(step) => step,
         other => panic!("expected a guarded rewrite: {other:?}"),
@@ -33,7 +36,11 @@ fn verifies_dependency_graph_with_a_condition_and_two_rules() {
         .add_condition(Condition::NonZero(x.clone()), ConditionStatus::Assumed)
         .unwrap();
     let cancel = graph
-        .add_guarded_cancellation(ProofNodeId::new(0), premise, guarded_step(&input, &assumptions))
+        .add_guarded_cancellation(
+            ProofNodeId::new(0),
+            premise,
+            guarded_step(&input, &assumptions),
+        )
         .unwrap();
     let after_cancel = match graph.nodes()[cancel.index()].kind().expression() {
         Some(expression) => expression.clone(),
@@ -45,7 +52,10 @@ fn verifies_dependency_graph_with_a_condition_and_two_rules() {
     graph.select_conclusion(distribute);
     assert_eq!(verify_proof_graph(&input, &assumptions, &graph), Ok(()));
     let expected = Expr::add([z.clone(), Expr::mul([z, y])]);
-    assert_eq!(graph.nodes()[distribute.index()].kind().expression(), Some(&expected));
+    assert_eq!(
+        graph.nodes()[distribute.index()].kind().expression(),
+        Some(&expected)
+    );
 }
 
 #[test]
@@ -77,15 +87,16 @@ fn verifies_guarded_cancellation_with_explicit_condition_dependency() {
         .add_condition(Condition::NonZero(x), ConditionStatus::Assumed)
         .unwrap();
     let finish = graph
-        .add_guarded_cancellation(ProofNodeId::new(0), premise, guarded_step(&input, &assumptions))
+        .add_guarded_cancellation(
+            ProofNodeId::new(0),
+            premise,
+            guarded_step(&input, &assumptions),
+        )
         .unwrap();
     graph.select_conclusion(finish);
 
     assert_eq!(verify_proof_graph(&input, &assumptions, &graph), Ok(()));
-    assert_eq!(
-        graph.nodes()[finish.index()].kind().expression(),
-        Some(&y)
-    );
+    assert_eq!(graph.nodes()[finish.index()].kind().expression(), Some(&y));
     assert_eq!(
         graph.nodes()[finish.index()].kind().dependencies(),
         vec![ProofNodeId::new(0), premise]
@@ -148,7 +159,9 @@ fn rejects_forged_parents_forward_references_and_wrong_sources() {
     );
 
     let mut cycle = ProofGraph::new(original.clone());
-    let cyclic = cycle.add_distribution(ProofNodeId::new(1), step.clone()).unwrap();
+    let cyclic = cycle
+        .add_distribution(ProofNodeId::new(1), step.clone())
+        .unwrap();
     cycle.select_conclusion(cyclic);
     assert_eq!(
         verify_proof_graph(&original, &assumptions, &cycle),

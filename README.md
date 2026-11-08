@@ -28,7 +28,7 @@ cargo run -p mathematishia-cli -- sqfree '2*(x-1)^2*(x+2)^3' x
 cargo run -p mathematishia-cli -- diffexpr 'x*y+(x+1)^3' x
 ```
 
-The CLI also exposes polynomial evaluation and GCD, rational-function operations, and rational equation solving. Run `cargo run -p mathematishia-cli -- help` for the command reference.
+The CLI also exposes polynomial evaluation and GCD, rational-function operations, and rational equation solving. Run `cargo run -p mathematishia-cli -- --help` for the command reference.
 
 ## Python
 

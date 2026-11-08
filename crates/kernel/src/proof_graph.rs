@@ -145,10 +145,7 @@ impl ProofGraph {
         Self::with_node_limit(input, 128).expect("nonzero default proof node limit")
     }
 
-    pub fn with_node_limit(
-        input: Expr,
-        max_nodes: usize,
-    ) -> Result<Self, ProofGraphBuildError> {
+    pub fn with_node_limit(input: Expr, max_nodes: usize) -> Result<Self, ProofGraphBuildError> {
         if max_nodes == 0 {
             return Err(ProofGraphBuildError::InvalidNodeLimit);
         }
@@ -233,7 +230,9 @@ impl fmt::Display for ProofGraphVerificationError {
             Self::UnjustifiedCondition => "proof graph condition is not established",
             Self::InvalidStep => "proof graph contains an invalid mathematical step",
             Self::InvalidConclusion => "proof graph conclusion is not an expression node",
-            Self::DisconnectedNode => "proof graph contains a node outside the conclusion dependency graph",
+            Self::DisconnectedNode => {
+                "proof graph contains a node outside the conclusion dependency graph"
+            },
         };
         f.write_str(message)
     }
@@ -338,11 +337,7 @@ fn prior_expression(graph: &ProofGraph, id: ProofNodeId, current: usize) -> Opti
     graph.nodes.get(id.index())?.kind.expression()
 }
 
-fn prior_condition(
-    graph: &ProofGraph,
-    id: ProofNodeId,
-    current: usize,
-) -> Option<&Condition> {
+fn prior_condition(graph: &ProofGraph, id: ProofNodeId, current: usize) -> Option<&Condition> {
     if id.index() >= current {
         return None;
     }

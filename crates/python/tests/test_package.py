@@ -234,7 +234,7 @@ class ExactMathTests(unittest.TestCase):
 
     def test_typed_errors(self):
         with self.assertRaises(m.MathSyntaxError):
-            m.expression("x / 2")
+            m.expression("x // 2")
         with self.assertRaises(m.UnsupportedMathematicsError):
             m.solve("x^2=4", "x")
         with self.assertRaises(m.UnsupportedMathematicsError):
@@ -309,7 +309,7 @@ class DomainApiTests(unittest.TestCase):
         with self.assertRaises(m.UnsupportedMathematicsError):
             m.domain_expression("x^(1/2)")
         with self.assertRaises(m.MathSyntaxError):
-            m.domain_expression("x/2")
+            m.domain_expression("x//2")
         with self.assertRaises(m.UnsupportedMathematicsError):
             m.rewrite_domain("x*x^-1", ("0",))
         with self.assertRaises(m.UnsupportedMathematicsError):

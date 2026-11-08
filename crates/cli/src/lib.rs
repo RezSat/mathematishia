@@ -14,7 +14,7 @@ use mathema_frontend::{
 use mathematishia_kernel::{
     AlgebraicRootEvidence, AlgebraicRootSet, Assumptions, DomainRewriteOutcome, EvaluationContext,
     ExactQuadraticRoot, LinearSolution, QuadraticBranch, QuadraticElement, QuadraticField,
-    QuadraticRoots, RationalFunction, RationalPolynomial, RationalQuadraticRoots,
+    QuadraticRoots, PolynomialResidue, RationalFunction, RationalPolynomial, RationalQuadraticRoots,
     VerifiedCondition, rewrite_domain_once, substitute_domain,
 };
 
@@ -37,6 +37,9 @@ Usage:
   mathematishia gcd <LEFT> <RIGHT> <VARIABLE>
   mathematishia egcd <LEFT> <RIGHT> <VARIABLE>
   mathematishia modinv <VALUE> <MODULUS> <VARIABLE>
+  mathematishia modreduce <VALUE> <MODULUS> <VARIABLE>
+  mathematishia modop <add|sub|mul> <A> <B> <MODULUS> <VARIABLE>
+  mathematishia modpow <VALUE> <MODULUS> <EXPONENT> <VARIABLE>
   mathematishia diff <POLYNOMIAL> <VARIABLE>
   mathematishia sqfree <POLYNOMIAL> <VARIABLE>
   mathematishia diffexpr <EXPRESSION> <VARIABLE>
@@ -69,6 +72,7 @@ Examples:
   mathematishia gcd 'x^2-1' 'x-1' x
   mathematishia egcd 'x^3-1' 'x^2-1' x
   mathematishia modinv x 'x^2+1' x
+  mathematishia modop mul x x 'x^2+1' x
   mathematishia diff 'x^3+1/2*x' x
   mathematishia sqfree '2*(x-1)^2*(x+2)^3' x
   mathematishia diffexpr 'x*y+(x+1)^3' x
@@ -655,6 +659,71 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
                 Some(value) => format!("inverse: {}", value.to_expr(&symbol)),
                 None => "inverse: none (noncoprime polynomials)".to_owned(),
             })
+        }
+        ["modreduce", input, modulus, name] => {
+            let symbol = variable(name)?;
+            let ctx = EvaluationContext::default();
+            let value = PolynomialResidue::new(
+                &ctx,
+                polynomial(input, &symbol)?,
+                polynomial(modulus, &symbol)?,
+            )
+            .map_err(|error| invalid(error.to_string()))?;
+            Ok(format!(
+                "residue: {}\nmodulus: {}",
+                value.representative().to_expr(&symbol),
+                value.modulus().to_expr(&symbol),
+            ))
+        }
+        ["modop", op, left, right, modulus, name] => {
+            let symbol = variable(name)?;
+            let ctx = EvaluationContext::default();
+            let modulus = polynomial(modulus, &symbol)?;
+            let left = PolynomialResidue::new(
+                &ctx,
+                polynomial(left, &symbol)?,
+                modulus.clone(),
+            )
+            .map_err(|error| invalid(error.to_string()))?;
+            let right = PolynomialResidue::new(
+                &ctx,
+                polynomial(right, &symbol)?,
+                modulus,
+            )
+            .map_err(|error| invalid(error.to_string()))?;
+            let answer = match *op {
+                "add" => left.add(&right, &ctx),
+                "sub" => left.subtract(&right, &ctx),
+                "mul" => left.multiply(&right, &ctx),
+                _ => return Err(invalid("expected modop add, sub or mul")),
+            }
+            .map_err(|error| invalid(error.to_string()))?;
+            Ok(format!(
+                "residue: {}\nmodulus: {}",
+                answer.representative().to_expr(&symbol),
+                answer.modulus().to_expr(&symbol),
+            ))
+        }
+        ["modpow", input, modulus, exponent, name] => {
+            let symbol = variable(name)?;
+            let ctx = EvaluationContext::default();
+            let power = exponent.parse::<i64>().map_err(|_| invalid("invalid signed exponent"))?;
+            let value = PolynomialResidue::new(
+                &ctx,
+                polynomial(input, &symbol)?,
+                polynomial(modulus, &symbol)?,
+            )
+            .map_err(|error| invalid(error.to_string()))?;
+            let Some(answer) = value.pow_signed(power, &ctx)
+                .map_err(|error| invalid(error.to_string()))?
+            else {
+                return Ok("residue: undefined (noninvertible element)".to_owned());
+            };
+            Ok(format!(
+                "residue: {}\nmodulus: {}",
+                answer.representative().to_expr(&symbol),
+                answer.modulus().to_expr(&symbol),
+            ))
         }
         ["diff", input, name] => {
             let symbol = variable(name)?;

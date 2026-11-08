@@ -148,11 +148,7 @@ fn premise_implies(premise: &Condition, goal: &Condition) -> bool {
                     ..
                 }
         ),
-        Condition::Integer(_) => match goal {
-            Condition::Real(_) => true,
-            Condition::InDomain { .. } => true,
-            _ => false,
-        },
+        Condition::Integer(_) => matches!(goal, Condition::Real(_) | Condition::InDomain { .. }),
         Condition::Real(_) => matches!(
             goal,
             Condition::InDomain {

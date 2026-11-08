@@ -51,3 +51,17 @@ to solve a quadratic rational equation without filling canceled poles.
 The typed result contains sorted distinct rational roots and original
 nonzero conditions, or `all_admissible` for an identity on a restricted
 domain.
+
+### Algebraic quadratic roots and proof evidence
+
+Use m.algebraic_roots("x^2-2", "x") for exact irrational real roots, or
+m.algebraic_roots("x^2+1", "x") for nonreal conjugates. The immutable root
+objects contain canonical rational Fractions or a monic minimal polynomial
+plus a root branch. Their ordered, typed proof steps expose exact monic
+normalization, the discriminant and a stable classification rule identifier.
+These values are not floating-point approximations. No general arithmetic
+between algebraic values is promised. The earlier solve_quadratic interface
+continues to return rational roots only.
+
+Published PyPI wheels are not yet claimed. See the repository's release
+checklist at docs/release/pypi.md before distributing a stable package.

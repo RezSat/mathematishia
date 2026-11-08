@@ -56,6 +56,8 @@ cargo run -p mathematishia-cli -- expr '1/2+1/3'
 cargo run -p mathematishia-cli -- expand '2*(x+3)' 4
 cargo run -p mathematishia-cli -- solve '2*x+4=10' x
 cargo run -p mathematishia-cli -- solveq 'x^2-5*x+6' x
+cargo run -p mathematishia-cli -- roots2 'x^2-2' x
+cargo run -p mathematishia-cli -- roots2 'x^2+1' x
 cargo run -p mathematishia-cli -- poly '(x+1)^2' x
 cargo run -p mathematishia-cli -- eval 'x^2+1/2' x '1/2'
 cargo run -p mathematishia-cli -- divide 'x^2-1' 'x-1' x
@@ -135,3 +137,29 @@ conditions**, even when GCD cancellation would otherwise hide a hole. For
 `x=2` is excluded by the original denominator. A zero residual means all
 *admissible* rationals, not automatically all Q. An independent verifier
 checks exact recomposition and the complete rational root set.
+
+### Exact quadratic-algebraic numbers and explainable roots
+
+The new roots2 command computes all complex roots of rational-coefficient
+polynomials of degree at most two. Rational answers remain exact rationals.
+Real irrational and nonreal quadratic roots are exact values identified by
+an irreducible monic minimal polynomial and a branch (lower/upper real or
+negative/positive imaginary). This is a canonical identity for this limited
+degree-two domain, not a general implementation of algebraic-number arithmetic,
+radical simplification, arbitrary complex ordering, or a full symbolic solver.
+
+Each result includes a structured evidence sequence: monic normalization,
+an exact discriminant, and a stable-ID classification of the quadratic formula.
+The kernel checks that evidence independently. Python exposes these as
+immutable dataclasses through mathematishia.algebraic_roots(...). The legacy
+solveq rational-only interface remains available and unchanged. See
+[the CAS engineering architecture](docs/design/cas-platform.md).
+
+### Distributing a Python package
+
+The Python source package already builds through maturin. Publishing the
+first package to PyPI is a separate, gated release milestone: it needs a
+final version/tag, a tested wheel matrix, a maintainer-controlled PyPI
+account and Trusted Publisher configuration. We will not claim that the
+package is on PyPI until its published artifacts have been installed and
+tested. See [the publishing checklist](docs/release/pypi.md).

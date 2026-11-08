@@ -80,3 +80,22 @@ and variable exponents are rejected explicitly: extending them requires
 mathematically defined domains, nonzero obligations and an assumption system.
 This does not constitute a general symbolic differentiation/rewrite engine,
 proof calculus, transcendental function library, or integration system.
+
+
+## Evidence for algebraic roots
+
+The quadratic-algebraic API returns typed ordered evidence rather than
+pretending every mathematical operation is an expression-equality rewrite.
+MonicNormalization records the exact normalized polynomial. Discriminant
+records an exact rational value. Classification carries the stable root
+rule identifier (rational pair, repeated root, real irrational pair,
+complex conjugates, or degenerate degree). The kernel verifies the entire
+sequence independently, including classification completeness.
+
+For an eventual Symbolab-style renderer, these are semantic facts: a
+renderer may generate user-friendly text or LaTeX, but must not invent a
+rule, an equality, a domain condition, or a proof obligation. The next
+phase needs a typed proof graph and a formal assumptions/definedness
+model to express conditional steps such as division by a possibly-zero
+symbol. The current typed evidence is a bounded proof record, not a
+general-purpose theorem prover.

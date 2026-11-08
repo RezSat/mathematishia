@@ -94,3 +94,30 @@ being accepted. Higher-degree numerator equations are explicitly unsupported.
 The independent verifier recomputes the residual and exact solution
 classification; it does not trust the result's label. This is a rational-
 linear solver, not a general polynomial root finder or assumption engine.
+
+
+## Exact roots of degree-at-most-two polynomials
+
+The algebraic domain extends the older rational-only quadratic root finder.
+For a nonzero polynomial of degree at most two, normalize by its leading
+rational coefficient to make it monic. A rational quadratic discriminant
+that is a rational square yields exact sorted rational roots. A positive
+nonsquare discriminant yields two distinct real irrational roots. A negative
+discriminant yields two complex conjugates. A double root is represented
+once; the zero polynomial has every complex number as a root.
+
+An irrational quadratic root is represented by its monic irreducible
+polynomial over Q plus a branch selector. For example, x^2-2 with its
+lower and upper real branches identifies -sqrt(2) and +sqrt(2); x^2+1
+with its negative and positive imaginary branches identifies -i and +i.
+Multiplying either defining polynomial by a nonzero rational changes
+neither root's identity. This works without integer-factorization or
+floating-point approximation.
+
+The exact domain supports structural equality of these values, not
+general addition, multiplication, field embeddings, global ordering of
+unrelated roots, arbitrary algebraic degree, radical simplification, or
+numeric approximation. Results carry an exact evidence sequence and the
+independent verifier reconstructs that evidence and validates rational
+roots by exact substitution. Resource budgets are deterministic admission
+limits, not hard execution-time/memory isolation.

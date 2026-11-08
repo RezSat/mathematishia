@@ -56,12 +56,30 @@ These phases describe architectural goals, not dates.
 
 An exact rational-root solver for univariate degree-at-most-two polynomials
 now builds on arbitrary-precision perfect-square testing and an independent
-mathematical verifier. Irrational/algebraic-number representations,
-higher-degree factorization, domain-aware nonlinear rational equations,
+mathematical verifier. General algebraic-number arithmetic and ordering,
+higher-degree factorization, domain-aware higher-degree rational equations,
 partial fractions and symbolic integration remain planned.
 
 A domain-aware quadratic rational-equation solver now combines the exact
 rational-root domain with inherited denominator exclusions. The existing
 linear rational-equation interface remains unchanged. Unrestricted rational
-function syntax, algebraic-number root representations, and higher-degree
-nonlinear solving remain future tasks.
+function syntax and higher-degree nonlinear solving remain future tasks.
+
+### Algebraic root domain and the next platform milestones
+
+Canonical degree-two algebraic values now represent irrational real roots and
+nonreal complex conjugates exactly, by a monic irreducible minimal polynomial
+and a branch selector. The checked kernel emits typed normalization,
+discriminant, and classification evidence, checked independently. The roots2
+CLI and Python algebraic_roots API expose the same verified domain.
+
+This is NOT yet general algebraic-number arithmetic, polynomial factorization
+over number fields, a symbolic-conditions engine or a user-facing step renderer.
+
+The next integrated engineering phases are tracked in
+docs/design/cas-platform.md. Priorities: definedness/assumptions and a
+verifiable proof graph; rational expression parsing and conditional rewrites;
+full univariate factorization; exact polynomial/algebraic solving; analytic
+functions and calculus; certified numerics; a human-friendly renderer; and
+then hardened release/distribution. Progress is measured by passing semantic
+contracts and capability coverage, not commit count.

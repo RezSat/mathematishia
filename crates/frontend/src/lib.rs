@@ -6,7 +6,9 @@
 use std::error::Error;
 use std::fmt;
 
-use mathema::{DefinednessError, DomainExpression, Equation, Expr, Integer, Rational, Symbol};
+use mathema::{
+    DefinednessError, DomainExpression, Equation, Expr, ExprView, Integer, Rational, Symbol,
+};
 
 const MAX_INPUT_BYTES: usize = 32_768;
 const MAX_TOKENS: usize = 4_096;
@@ -167,11 +169,11 @@ fn tokenize(input: &str) -> Result<Vec<Token<'_>>, ParseError> {
 // after a complete statement has been parsed successfully.
 enum Syntax<'a> {
     Integer(&'a str, usize),
-    Fraction(&'a str, &'a str, usize),
     Name(&'a str),
     Sum(Box<Self>, Box<Self>),
     Difference(Box<Self>, Box<Self>),
     Product(Box<Self>, Box<Self>),
+    Quotient(Box<Self>, Box<Self>, usize),
     Power(Box<Self>, Box<Self>),
     Negate(Box<Self>),
 }
@@ -234,8 +236,20 @@ impl<'a> Parser<'a> {
     fn product(&mut self, depth: usize) -> Result<Syntax<'a>, ParseError> {
         self.check_depth(depth)?;
         let mut left = self.signed(depth + 1)?;
-        while self.consume(TokenKind::Star) {
-            left = Syntax::Product(Box::new(left), Box::new(self.signed(depth + 1)?));
+        loop {
+            if self.consume(TokenKind::Star) {
+                left = Syntax::Product(Box::new(left), Box::new(self.signed(depth + 1)?));
+            } else if self.current() == TokenKind::Slash {
+                let offset = self.offset();
+                self.advance();
+                left = Syntax::Quotient(
+                    Box::new(left),
+                    Box::new(self.signed(depth + 1)?),
+                    offset,
+                );
+            } else {
+                break;
+            }
         }
         Ok(left)
     }
@@ -270,20 +284,9 @@ impl<'a> Parser<'a> {
         self.check_depth(depth)?;
         let offset = self.offset();
         match self.current() {
-            TokenKind::Integer(numerator) => {
+            TokenKind::Integer(value) => {
                 self.advance();
-                if self.consume(TokenKind::Slash) {
-                    let TokenKind::Integer(denominator) = self.current() else {
-                        return Err(ParseError::at(
-                            self.offset(),
-                            ParseErrorKind::UnexpectedToken,
-                        ));
-                    };
-                    self.advance();
-                    Ok(Syntax::Fraction(numerator, denominator, offset))
-                } else {
-                    Ok(Syntax::Integer(numerator, offset))
-                }
+                Ok(Syntax::Integer(value, offset))
             }
             TokenKind::Identifier(name) => {
                 self.advance();
@@ -311,17 +314,6 @@ fn lower(node: Syntax<'_>) -> Result<Expr, ParseError> {
             .parse::<Integer>()
             .map(Expr::from)
             .map_err(|_| ParseError::at(offset, ParseErrorKind::InvalidInteger)),
-        Syntax::Fraction(numerator, denominator, offset) => {
-            let n = numerator
-                .parse::<Integer>()
-                .map_err(|_| ParseError::at(offset, ParseErrorKind::InvalidInteger))?;
-            let d = denominator
-                .parse::<Integer>()
-                .map_err(|_| ParseError::at(offset, ParseErrorKind::InvalidInteger))?;
-            let value = Rational::new(n, d)
-                .map_err(|_| ParseError::at(offset, ParseErrorKind::ZeroDenominator))?;
-            Ok(value.into())
-        }
         Syntax::Name(name) => Ok(Symbol::new(name)
             .expect("lexer only produces nonempty identifiers")
             .into()),
@@ -331,6 +323,28 @@ fn lower(node: Syntax<'_>) -> Result<Expr, ParseError> {
             Expr::mul([(-1).into(), lower(*right)?]),
         ])),
         Syntax::Product(left, right) => Ok(Expr::mul([lower(*left)?, lower(*right)?])),
+        Syntax::Quotient(left, right, offset) => {
+            let numerator = lower(*left)?;
+            let denominator = lower(*right)?;
+            let rational = match denominator.view() {
+                ExprView::Integer(value) => Some(Rational::from(value.clone())),
+                ExprView::Rational(value) => Some(value.clone()),
+                _ => None,
+            };
+            if let Some(value) = rational {
+                let inverse = Rational::new(
+                    value.denominator().clone(),
+                    value.numerator().clone(),
+                )
+                .map_err(|_| ParseError::at(offset, ParseErrorKind::ZeroDenominator))?;
+                Ok(Expr::mul([numerator, Expr::from(inverse)]))
+            } else {
+                Ok(Expr::mul([
+                    numerator,
+                    Expr::pow(denominator, Expr::from(-1)),
+                ]))
+            }
+        }
         Syntax::Power(left, right) => Ok(Expr::pow(lower(*left)?, lower(*right)?)),
         Syntax::Negate(node) => Ok(Expr::mul([(-1).into(), lower(*node)?])),
     }
@@ -406,7 +420,7 @@ fn parse_syntax(input: &str) -> Result<SyntaxStatement<'_>, ParseError> {
 fn lower_domain(node: Syntax<'_>) -> Result<DomainExpression, DomainParseError> {
     const MAX_CONDITIONS: usize = 256;
     match node {
-        leaf @ (Syntax::Integer(..) | Syntax::Fraction(..) | Syntax::Name(..)) => {
+        leaf @ (Syntax::Integer(..) | Syntax::Name(..)) => {
             Ok(DomainExpression::from_expr(lower(leaf)?, MAX_TOKENS)?)
         }
         Syntax::Sum(left, right) => Ok(DomainExpression::add(
@@ -430,6 +444,10 @@ fn lower_domain(node: Syntax<'_>) -> Result<DomainExpression, DomainParseError> 
             [lower_domain(*left)?, lower_domain(*right)?],
             MAX_CONDITIONS,
         )?),
+        Syntax::Quotient(left, right, _) => Ok(lower_domain(*left)?.divide(
+            lower_domain(*right)?,
+            MAX_CONDITIONS,
+        )?),
         Syntax::Power(left, right) => {
             Ok(lower_domain(*left)?.pow(lower_domain(*right)?, MAX_CONDITIONS)?)
         }
@@ -446,7 +464,8 @@ fn lower_domain(node: Syntax<'_>) -> Result<DomainExpression, DomainParseError> 
 /// Parses without discarding restrictions during expression normalization.
 ///
 /// The supported definedness domain includes integer powers over complex
-/// scalars. Symbolic and noninteger exponents return a domain error.
+/// scalars. Symbolic and noninteger exponents return a domain error. Division
+/// preserves numerator and denominator restrictions.
 pub fn parse_domain_statement(input: &str) -> Result<DomainStatement, DomainParseError> {
     match parse_syntax(input)? {
         SyntaxStatement::Expression(node) => Ok(DomainStatement::Expression(lower_domain(node)?)),
@@ -468,9 +487,9 @@ pub fn parse_domain_expression(input: &str) -> Result<DomainExpression, DomainPa
 
 /// Parses a single Mathema expression or equation.
 ///
-/// Initial grammar: ASCII decimal integers, exact rational literals n/d,
+/// Grammar: ASCII decimal integers, exact rational literals n/d,
 /// Unicode identifiers, parentheses, +, -, *, ^ and a single top-level =.
-/// Operators are explicit (no implicit multiplication or general division).
+/// Operators are explicit; division shares precedence with multiplication.
 /// Exponentiation associates right, and unary minus binds less tightly than ^.
 /// There are no function calls, assignments, floating point values or statements
 /// separated by semicolons. A syntax tree is parsed before semantic lowering.

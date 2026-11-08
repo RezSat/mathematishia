@@ -9,6 +9,7 @@ use crate::{Condition, Expr, ExprView, Integer};
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum DefinednessError {
     UnsupportedExponent,
+    ZeroDenominator,
     NodeLimitExceeded,
     ConditionLimitExceeded,
 }
@@ -19,6 +20,7 @@ impl fmt::Display for DefinednessError {
             Self::UnsupportedExponent => {
                 f.write_str("definedness is unsupported for this exponent")
             }
+            Self::ZeroDenominator => f.write_str("division by zero"),
             Self::NodeLimitExceeded => {
                 f.write_str("definedness inspection exceeded the node limit")
             }
@@ -117,6 +119,43 @@ impl DomainExpression {
 
     /// Power with an explicitly evaluated integer exponent. Restrictions on
     /// the exponent are retained even if its value was normalized to an integer.
+    /// Divides expressions without discarding denominator exclusions.
+    pub fn divide(
+        self,
+        divisor: Self,
+        max_conditions: usize,
+    ) -> Result<Self, DefinednessError> {
+        let mut conditions = self.conditions;
+        for condition in divisor.conditions {
+            append_unique(&mut conditions, condition, max_conditions)?;
+        }
+        let inverse = match divisor.expression.view() {
+            ExprView::Integer(value) => {
+                let scalar = Rational::from(value.clone());
+                Expr::from(
+                    Rational::new(scalar.denominator().clone(), scalar.numerator().clone())
+                        .map_err(|_| DefinednessError::ZeroDenominator)?,
+                )
+            }
+            ExprView::Rational(value) => Expr::from(
+                Rational::new(value.denominator().clone(), value.numerator().clone())
+                    .map_err(|_| DefinednessError::ZeroDenominator)?,
+            ),
+            _ => {
+                append_unique(
+                    &mut conditions,
+                    Condition::NonZero(divisor.expression.clone()),
+                    max_conditions,
+                )?;
+                Expr::pow(divisor.expression, Expr::from(-1))
+            }
+        };
+        Ok(Self {
+            expression: Expr::mul([self.expression, inverse]),
+            conditions,
+        })
+    }
+
     pub fn pow(self, exponent: Self, max_conditions: usize) -> Result<Self, DefinednessError> {
         let ExprView::Integer(value) = exponent.expression.view() else {
             return Err(DefinednessError::UnsupportedExponent);

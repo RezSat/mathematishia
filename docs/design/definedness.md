@@ -9,3 +9,14 @@ The current inspection domain is exact scalars, free symbols, sums, products and
 The `algebra.cancel_composite_inverse` rule removes a matching `f * f^-1` pair when `f` is a composite expression, recording the definedness obligations of `f` and `NonZero(f)`. Unknown conditions block the rewrite. Refuted literal conditions reject the candidate. The verifier checks the factors, exact resulting expression, rule and complete condition evidence independently of the generator. `ProofGraph` records each condition as an explicit predecessor node.
 
 The ordinary `Expr` constructors still perform unconditional structural normalization. When they fold a product containing an undefined subexpression, they may discard domain restrictions before a later inspection can observe them. Clients that need preservation through construction must use `DomainExpression`. Extending this approach through the parser and all expression operations is a separate integration task.
+
+## Frontend lowering
+
+`parse_domain_expression` and `parse_domain_statement` lower syntax through
+`DomainExpression` constructors before scalar folding. Both expression and
+equation operands retain their original nonzero conditions. General symbolic
+powers still use `parse_expression` and `parse_statement`; the domain-aware
+entrypoints reject unsupported exponents rather than treating them as defined.
+
+The legacy parser returns plain `Expr` and can lose domain restrictions when
+a constructor eliminates an undefined subexpression.

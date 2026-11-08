@@ -6,7 +6,9 @@
 use std::error::Error;
 use std::fmt;
 
-use mathema::{Equation, Expr, Integer, Rational, Symbol};
+use mathema::{
+    DefinednessError, DomainExpression, Equation, Expr, Integer, Rational, Symbol,
+};
 
 const MAX_INPUT_BYTES: usize = 32_768;
 const MAX_TOKENS: usize = 4_096;
@@ -336,6 +338,141 @@ fn lower(node: Syntax<'_>) -> Result<Expr, ParseError> {
     }
 }
 
+/// Domain-preserving parsed values, including restrictions removed by
+/// structural normalization.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum DomainStatement {
+    Expression(DomainExpression),
+    Equation {
+        left: DomainExpression,
+        right: DomainExpression,
+    },
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum DomainParseError {
+    Syntax(ParseError),
+    Domain(DefinednessError),
+}
+
+impl fmt::Display for DomainParseError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Syntax(error) => write!(f, "{error}"),
+            Self::Domain(error) => write!(f, "{error}"),
+        }
+    }
+}
+
+impl Error for DomainParseError {}
+
+impl From<ParseError> for DomainParseError {
+    fn from(error: ParseError) -> Self {
+        Self::Syntax(error)
+    }
+}
+
+impl From<DefinednessError> for DomainParseError {
+    fn from(error: DefinednessError) -> Self {
+        Self::Domain(error)
+    }
+}
+
+enum SyntaxStatement<'a> {
+    Expression(Syntax<'a>),
+    Equation(Syntax<'a>, Syntax<'a>),
+}
+
+fn parse_syntax(input: &str) -> Result<SyntaxStatement<'_>, ParseError> {
+    let tokens = tokenize(input)?;
+    let mut parser = Parser { tokens, cursor: 0 };
+    if parser.current() == TokenKind::End {
+        return Err(ParseError::at(0, ParseErrorKind::EmptyInput));
+    }
+    let left = parser.sum(0)?;
+    let statement = if parser.consume(TokenKind::Equal) {
+        let right = parser.sum(0)?;
+        SyntaxStatement::Equation(left, right)
+    } else {
+        SyntaxStatement::Expression(left)
+    };
+    if parser.current() != TokenKind::End {
+        return Err(ParseError::at(
+            parser.offset(),
+            ParseErrorKind::UnexpectedToken,
+        ));
+    }
+    Ok(statement)
+}
+
+fn lower_domain(node: Syntax<'_>) -> Result<DomainExpression, DomainParseError> {
+    const MAX_CONDITIONS: usize = 256;
+    match node {
+        leaf @ (Syntax::Integer(..) | Syntax::Fraction(..) | Syntax::Name(..)) => {
+            Ok(DomainExpression::from_expr(lower(leaf)?, MAX_TOKENS)?)
+        }
+        Syntax::Sum(left, right) => Ok(DomainExpression::add(
+            [lower_domain(*left)?, lower_domain(*right)?],
+            MAX_CONDITIONS,
+        )?),
+        Syntax::Difference(left, right) => {
+            let negative_right = DomainExpression::multiply(
+                [
+                    DomainExpression::from_expr(Expr::from(-1), MAX_TOKENS)?,
+                    lower_domain(*right)?,
+                ],
+                MAX_CONDITIONS,
+            )?;
+            Ok(DomainExpression::add(
+                [lower_domain(*left)?, negative_right],
+                MAX_CONDITIONS,
+            )?)
+        }
+        Syntax::Product(left, right) => Ok(DomainExpression::multiply(
+            [lower_domain(*left)?, lower_domain(*right)?],
+            MAX_CONDITIONS,
+        )?),
+        Syntax::Power(left, right) => Ok(lower_domain(*left)?.pow(
+            lower_domain(*right)?,
+            MAX_CONDITIONS,
+        )?),
+        Syntax::Negate(node) => Ok(DomainExpression::multiply(
+            [
+                DomainExpression::from_expr(Expr::from(-1), MAX_TOKENS)?,
+                lower_domain(*node)?,
+            ],
+            MAX_CONDITIONS,
+        )?),
+    }
+}
+
+/// Parses without discarding restrictions during expression normalization.
+///
+/// The supported definedness domain includes integer powers over complex
+/// scalars. Symbolic and noninteger exponents return a domain error.
+pub fn parse_domain_statement(input: &str) -> Result<DomainStatement, DomainParseError> {
+    match parse_syntax(input)? {
+        SyntaxStatement::Expression(node) => {
+            Ok(DomainStatement::Expression(lower_domain(node)?))
+        }
+        SyntaxStatement::Equation(left, right) => Ok(DomainStatement::Equation {
+            left: lower_domain(left)?,
+            right: lower_domain(right)?,
+        }),
+    }
+}
+
+pub fn parse_domain_expression(input: &str) -> Result<DomainExpression, DomainParseError> {
+    match parse_domain_statement(input)? {
+        DomainStatement::Expression(expr) => Ok(expr),
+        DomainStatement::Equation { .. } => Err(ParseError::at(
+            0,
+            ParseErrorKind::ExpectedExpression,
+        )
+        .into()),
+    }
+}
+
 /// Parses a single Mathema expression or equation.
 ///
 /// Initial grammar: ASCII decimal integers, exact rational literals n/d,
@@ -345,25 +482,12 @@ fn lower(node: Syntax<'_>) -> Result<Expr, ParseError> {
 /// There are no function calls, assignments, floating point values or statements
 /// separated by semicolons. A syntax tree is parsed before semantic lowering.
 pub fn parse_statement(input: &str) -> Result<Statement, ParseError> {
-    let tokens = tokenize(input)?;
-    let mut parser = Parser { tokens, cursor: 0 };
-    if parser.current() == TokenKind::End {
-        return Err(ParseError::at(0, ParseErrorKind::EmptyInput));
+    match parse_syntax(input)? {
+        SyntaxStatement::Expression(node) => Ok(Statement::Expression(lower(node)?)),
+        SyntaxStatement::Equation(left, right) => {
+            Ok(Statement::Equation(Equation::new(lower(left)?, lower(right)?)))
+        }
     }
-    let left = parser.sum(0)?;
-    let result = if parser.consume(TokenKind::Equal) {
-        let right = parser.sum(0)?;
-        Statement::Equation(Equation::new(lower(left)?, lower(right)?))
-    } else {
-        Statement::Expression(lower(left)?)
-    };
-    if parser.current() != TokenKind::End {
-        return Err(ParseError::at(
-            parser.offset(),
-            ParseErrorKind::UnexpectedToken,
-        ));
-    }
-    Ok(result)
 }
 
 /// Parses a scalar expression and rejects equations.

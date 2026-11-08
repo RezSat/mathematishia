@@ -8,13 +8,13 @@ use std::fmt::Write as _;
 
 use mathema::{Condition, DomainExpression, Equation, Expr, ExprView, Rational, Symbol};
 use mathema_frontend::{
-    DomainStatement, Statement, parse_domain_expression, parse_domain_statement,
-    parse_expression, parse_statement,
+    DomainStatement, Statement, parse_domain_expression, parse_domain_statement, parse_expression,
+    parse_statement,
 };
 use mathematishia_kernel::{
     AlgebraicRootEvidence, AlgebraicRootSet, Assumptions, DomainRewriteOutcome, EvaluationContext,
     ExactQuadraticRoot, LinearSolution, QuadraticRoots, RationalFunction, RationalPolynomial,
-    RationalQuadraticRoots, VerifiedCondition, rewrite_domain_once,
+    RationalQuadraticRoots, VerifiedCondition, rewrite_domain_once, substitute_domain,
 };
 
 pub const HELP: &str = "Mathematishia (early exact-math CLI)
@@ -211,8 +211,8 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
         [] | ["--help" | "-h" | "help"] => Ok(HELP.to_owned()),
         ["expr", input] => Ok(format!("expression: {}", expression(input)?)),
         ["domain", input] => {
-            let parsed = parse_domain_statement(input)
-                .map_err(|error| invalid(error.to_string()))?;
+            let parsed =
+                parse_domain_statement(input).map_err(|error| invalid(error.to_string()))?;
             match parsed {
                 DomainStatement::Expression(value) => {
                     check_domain(&value)?;
@@ -223,18 +223,23 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
                 DomainStatement::Equation { left, right } => {
                     check_domain(&left)?;
                     check_domain(&right)?;
-                    let mut output = format!(
-                        "equation: {} = {}",
-                        left.expression(),
-                        right.expression()
-                    );
+                    let mut output =
+                        format!("equation: {} = {}", left.expression(), right.expression());
                     for condition in left.conditions() {
-                        write!(&mut output, "\nleft condition: {}", condition_text(condition))
-                            .expect("writing to a String is infallible");
+                        write!(
+                            &mut output,
+                            "\nleft condition: {}",
+                            condition_text(condition)
+                        )
+                        .expect("writing to a String is infallible");
                     }
                     for condition in right.conditions() {
-                        write!(&mut output, "\nright condition: {}", condition_text(condition))
-                            .expect("writing to a String is infallible");
+                        write!(
+                            &mut output,
+                            "\nright condition: {}",
+                            condition_text(condition)
+                        )
+                        .expect("writing to a String is infallible");
                     }
                     if left.conditions().is_empty() && right.conditions().is_empty() {
                         output.push_str("\nconditions: none");

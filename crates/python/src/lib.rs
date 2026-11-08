@@ -5,15 +5,15 @@
 
 use mathema::{Condition, DomainExpression, Equation, Expr, ExprView, Rational, Symbol};
 use mathema_frontend::{
-    DomainParseError, DomainStatement, Statement, parse_domain_expression,
-    parse_domain_statement, parse_expression, parse_statement,
+    DomainParseError, DomainStatement, Statement, parse_domain_expression, parse_domain_statement,
+    parse_expression, parse_statement,
 };
 use mathematishia_kernel::{
     AlgebraicRootEvidence, AlgebraicRootSet, Assumptions, DefinednessError, DomainOperationError,
     DomainRewriteOutcome, EvaluationContext, EvaluationError, ExactQuadraticRoot, LinearSolution,
     ProofNodeKind, QuadraticBranch, QuadraticRoots, RationalFunction, RationalFunctionError,
     RationalPolynomial, RationalQuadraticRoots, ResourceLimitKind, VerifiedCondition,
-    rewrite_domain_once,
+    rewrite_domain_once, substitute_domain,
 };
 use pyo3::create_exception;
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
@@ -187,12 +187,12 @@ fn py_domain_expression(source: &str) -> PyResult<(String, Vec<String>)> {
 }
 
 #[pyfunction(name = "domain_equation")]
-fn py_domain_equation(
-    source: &str,
-) -> PyResult<((String, Vec<String>), (String, Vec<String>))> {
+fn py_domain_equation(source: &str) -> PyResult<((String, Vec<String>), (String, Vec<String>))> {
     let statement = parse_domain_statement(source).map_err(map_domain_parse)?;
     let DomainStatement::Equation { left, right } = statement else {
-        return Err(MathSyntaxError::new_err("expected an equation containing '='"));
+        return Err(MathSyntaxError::new_err(
+            "expected an equation containing '='",
+        ));
     };
     let ctx = EvaluationContext::default();
     for side in [&left, &right] {
@@ -218,13 +218,15 @@ fn py_substitute_domain(
     let source = checked_domain(source)?;
     let symbol = selected_variable(variable)?;
     let replacement = checked_domain(replacement)?;
-    let value = substitute_domain(&source, &symbol, &replacement, 2_048, 256)
-        .map_err(|error| match error {
-            DefinednessError::UnsupportedExponent => {
-                UnsupportedMathematicsError::new_err(error.to_string())
-            }
-            _ => ResourceLimitError::new_err(error.to_string()),
-        })?;
+    let value =
+        substitute_domain(&source, &symbol, &replacement, 2_048, 256).map_err(
+            |error| match error {
+                DefinednessError::UnsupportedExponent => {
+                    UnsupportedMathematicsError::new_err(error.to_string())
+                }
+                _ => ResourceLimitError::new_err(error.to_string()),
+            },
+        )?;
     Ok((value.expression().to_string(), domain_conditions(&value)))
 }
 

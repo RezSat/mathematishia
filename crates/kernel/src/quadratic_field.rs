@@ -27,6 +27,8 @@ pub enum QuadraticFieldError {
     MismatchedFields,
     RationalRoot,
     DivisionByZero,
+    InvalidMinimalPolynomial,
+    Residue(ResidueError),
 }
 
 impl fmt::Display for QuadraticFieldError {
@@ -43,11 +45,19 @@ impl fmt::Display for QuadraticFieldError {
             Self::MismatchedFields => f.write_str("quadratic elements use different embeddings"),
             Self::RationalRoot => f.write_str("a rational root does not define a quadratic field"),
             Self::DivisionByZero => f.write_str("cannot invert zero in a quadratic field"),
+            Self::InvalidMinimalPolynomial => f.write_str("the computed minimal polynomial failed exact verification"),
+            Self::Residue(error) => write!(f, "{error}"),
         }
     }
 }
 
 impl Error for QuadraticFieldError {}
+
+impl From<ResidueError> for QuadraticFieldError {
+    fn from(error: ResidueError) -> Self {
+        Self::Residue(error)
+    }
+}
 
 impl From<EvaluationError> for QuadraticFieldError {
     fn from(value: EvaluationError) -> Self {
@@ -285,6 +295,9 @@ impl QuadraticElement {
             RationalPolynomial::new(vec![self.norm(ctx)?, -self.trace(ctx)?, one()])
         };
         ctx.check_polynomial(&result)?;
+        if !verify_quadratic_minimal_polynomial(ctx, self, &result)? {
+            return Err(QuadraticFieldError::InvalidMinimalPolynomial);
+        }
         Ok(result)
     }
 
@@ -313,3 +326,45 @@ impl QuadraticElement {
         })
     }
 }
+
+/// Independently checks a proposed monic minimal polynomial in Q(alpha).
+/// Evaluation takes place in the quotient ring, rather than using the
+/// trace/norm formula that constructs the candidate.
+pub fn verify_quadratic_minimal_polynomial(
+    ctx: &EvaluationContext,
+    value: &QuadraticElement,
+    candidate: &RationalPolynomial,
+) -> Result<bool, QuadraticFieldError> {
+    ctx.check_polynomial(candidate)?;
+    let degree = if value.coefficient.numerator().is_zero() {
+        1
+    } else {
+        2
+    };
+    if candidate.degree() != Some(degree)
+        || candidate.coefficients().last() != Some(&one())
+    {
+        return Ok(false);
+    }
+    let modulus = value.field.polynomial().clone();
+    let element = PolynomialResidue::new(
+        ctx,
+        RationalPolynomial::new(vec![value.constant.clone(), value.coefficient.clone()]),
+        modulus.clone(),
+    )?;
+    let mut accumulator = PolynomialResidue::new(
+        ctx,
+        RationalPolynomial::zero(),
+        modulus.clone(),
+    )?;
+    for coefficient in candidate.coefficients().iter().rev() {
+        let scalar = PolynomialResidue::new(
+            ctx,
+            RationalPolynomial::new(vec![coefficient.clone()]),
+            modulus.clone(),
+        )?;
+        accumulator = accumulator.multiply(&element, ctx)?.add(&scalar, ctx)?;
+    }
+    Ok(accumulator.is_zero())
+}
+

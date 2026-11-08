@@ -69,7 +69,10 @@ pub use quadratic::{
     QuadraticError, QuadraticResult, QuadraticRoots, QuadraticVerificationError,
     verify_quadratic_roots,
 };
-pub use quadratic_field::{QuadraticElement, QuadraticField, QuadraticFieldError};
+pub use quadratic_field::{
+    QuadraticElement, QuadraticField, QuadraticFieldError,
+    verify_quadratic_minimal_polynomial,
+};
 pub use rational_equation::{
     RationalEquationError, RationalEquationResult, RationalEquationSolution,
     RationalEquationVerificationError, verify_rational_equation,

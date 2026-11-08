@@ -23,23 +23,37 @@ jobs:
       - run: cargo test --workspace --all-features --locked
 
   python-wheel:
-    runs-on: ubuntu-latest
+    name: wheel (${{ matrix.os }}, Python ${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.10', '3.12']
+        include:
+          - os: ubuntu-latest
+            python-version: '3.10'
+          - os: ubuntu-latest
+            python-version: '3.12'
+          - os: windows-latest
+            python-version: '3.12'
+          - os: macos-latest
+            python-version: '3.12'
     steps:
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Build and install wheel into a clean Python environment
+      - name: Build and test installed Python wheel
+        shell: bash
         run: |
           python -m venv .venv
-          .venv/bin/python -m pip install --upgrade pip 'maturin>=1.9.4,<2'
-          .venv/bin/maturin build --manifest-path crates/python/Cargo.toml --locked --interpreter .venv/bin/python --out wheels
-          .venv/bin/python -m pip install wheels/*.whl
-          .venv/bin/python -m pip check
-      - name: Test installed Python package
-        run: .venv/bin/python -m unittest discover -s crates/python/tests -v
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            PY=.venv/Scripts/python.exe
+          else
+            PY=.venv/bin/python
+          fi
+          "$PY" -m pip install --upgrade pip 'maturin>=1.9.4,<2'
+          "$PY" -m maturin build --manifest-path crates/python/Cargo.toml --locked --interpreter "$PY" --out wheels
+          "$PY" -m pip install wheels/*.whl
+          "$PY" -m pip check
+          "$PY" -m unittest discover -s crates/python/tests -v

@@ -180,13 +180,12 @@ pub fn verify_quadratic_roots(result: &QuadraticResult) -> Result<(), QuadraticV
     if expected != *result.roots() {
         return Err(V::IncorrectRoots);
     }
-    if let QuadraticRoots::Finite(values) = result.roots() {
-        if values
+    if let QuadraticRoots::Finite(values) = result.roots()
+        && values
             .iter()
             .any(|value| !original.evaluate(value).numerator().is_zero())
-        {
-            return Err(V::IncorrectRoots);
-        }
+    {
+        return Err(V::IncorrectRoots);
     }
     Ok(())
 }

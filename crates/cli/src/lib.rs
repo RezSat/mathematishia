@@ -649,8 +649,12 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
                 output.push_str("\nconditions: none");
             } else {
                 for condition in result.domain_conditions() {
-                    write!(&mut output, "\ncondition: {} != 0", condition.to_expr(&symbol))
-                        .expect("writing to a String is infallible");
+                    write!(
+                        &mut output,
+                        "\ncondition: {} != 0",
+                        condition.to_expr(&symbol)
+                    )
+                    .expect("writing to a String is infallible");
                 }
             }
             Ok(output)

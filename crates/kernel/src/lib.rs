@@ -18,6 +18,7 @@ mod guarded_rewrite;
 mod poly_convert;
 mod poly_division;
 mod polynomial;
+mod polynomial_residue;
 mod proof_graph;
 mod quadratic;
 mod rational_equation;
@@ -57,6 +58,7 @@ pub use guarded_rewrite::{
 pub use mathema::{DefinednessError, DomainExpression, definedness_obligations};
 pub use poly_convert::PolynomialConversionError;
 pub use poly_division::ZeroPolynomialDivisor;
+pub use polynomial_residue::{PolynomialResidue, ResidueError, verify_residue_product};
 pub use polynomial::RationalPolynomial;
 pub use proof_graph::{
     ProofGraph, ProofGraphBuildError, ProofGraphVerificationError, ProofNode, ProofNodeId,

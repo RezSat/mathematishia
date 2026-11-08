@@ -13,8 +13,8 @@ use mathema_frontend::{
 };
 use mathematishia_kernel::{
     AlgebraicRootEvidence, AlgebraicRootSet, Assumptions, DomainRewriteOutcome, EvaluationContext,
-    ExactQuadraticRoot, LinearSolution, QuadraticBranch, QuadraticElement, QuadraticField,
-    QuadraticRoots, PolynomialResidue, RationalFunction, RationalPolynomial, RationalQuadraticRoots,
+    ExactQuadraticRoot, LinearSolution, PolynomialResidue, QuadraticBranch, QuadraticElement,
+    QuadraticField, QuadraticRoots, RationalFunction, RationalPolynomial, RationalQuadraticRoots,
     VerifiedCondition, rewrite_domain_once, substitute_domain,
 };
 
@@ -679,18 +679,10 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
             let symbol = variable(name)?;
             let ctx = EvaluationContext::default();
             let modulus = polynomial(modulus, &symbol)?;
-            let left = PolynomialResidue::new(
-                &ctx,
-                polynomial(left, &symbol)?,
-                modulus.clone(),
-            )
-            .map_err(|error| invalid(error.to_string()))?;
-            let right = PolynomialResidue::new(
-                &ctx,
-                polynomial(right, &symbol)?,
-                modulus,
-            )
-            .map_err(|error| invalid(error.to_string()))?;
+            let left = PolynomialResidue::new(&ctx, polynomial(left, &symbol)?, modulus.clone())
+                .map_err(|error| invalid(error.to_string()))?;
+            let right = PolynomialResidue::new(&ctx, polynomial(right, &symbol)?, modulus)
+                .map_err(|error| invalid(error.to_string()))?;
             let answer = match *op {
                 "add" => left.add(&right, &ctx),
                 "sub" => left.subtract(&right, &ctx),
@@ -707,14 +699,17 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
         ["modpow", input, modulus, exponent, name] => {
             let symbol = variable(name)?;
             let ctx = EvaluationContext::default();
-            let power = exponent.parse::<i64>().map_err(|_| invalid("invalid signed exponent"))?;
+            let power = exponent
+                .parse::<i64>()
+                .map_err(|_| invalid("invalid signed exponent"))?;
             let value = PolynomialResidue::new(
                 &ctx,
                 polynomial(input, &symbol)?,
                 polynomial(modulus, &symbol)?,
             )
             .map_err(|error| invalid(error.to_string()))?;
-            let Some(answer) = value.pow_signed(power, &ctx)
+            let Some(answer) = value
+                .pow_signed(power, &ctx)
                 .map_err(|error| invalid(error.to_string()))?
             else {
                 return Ok("residue: undefined (noninvertible element)".to_owned());

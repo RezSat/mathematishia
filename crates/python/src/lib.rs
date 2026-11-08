@@ -11,10 +11,10 @@ use mathema_frontend::{
 use mathematishia_kernel::{
     AlgebraicRootEvidence, AlgebraicRootSet, Assumptions, DefinednessError, DomainOperationError,
     DomainRewriteOutcome, EvaluationContext, EvaluationError, ExactQuadraticRoot, LinearSolution,
-    ProofNodeKind, QuadraticBranch, QuadraticElement, QuadraticField, QuadraticFieldError,
-    QuadraticRoots, RationalExpressionError, RationalFunction, RationalFunctionError,
-    RationalPolynomial, PolynomialResidue, ResidueError, RationalQuadraticRoots, ResourceLimitKind, VerifiedCondition,
-    rewrite_domain_once, substitute_domain,
+    PolynomialResidue, ProofNodeKind, QuadraticBranch, QuadraticElement, QuadraticField,
+    QuadraticFieldError, QuadraticRoots, RationalExpressionError, RationalFunction,
+    RationalFunctionError, RationalPolynomial, RationalQuadraticRoots, ResidueError,
+    ResourceLimitKind, VerifiedCondition, rewrite_domain_once, substitute_domain,
 };
 use pyo3::create_exception;
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
@@ -878,11 +878,7 @@ fn residue_data(value: &PolynomialResidue, variable: &Symbol) -> PyResidueData {
     )
 }
 
-fn selected_residue(
-    source: &str,
-    modulus: &str,
-    variable: &Symbol,
-) -> PyResult<PolynomialResidue> {
+fn selected_residue(source: &str, modulus: &str, variable: &Symbol) -> PyResult<PolynomialResidue> {
     let ctx = EvaluationContext::default();
     let value = selected_polynomial(source, variable)?;
     let modulus = selected_polynomial(modulus, variable)?;
@@ -912,7 +908,11 @@ fn py_modular_operation(
         "add" => a.add(&b, &ctx),
         "sub" => a.subtract(&b, &ctx),
         "mul" => a.multiply(&b, &ctx),
-        _ => return Err(UnsupportedMathematicsError::new_err("expected add, sub or mul")),
+        _ => {
+            return Err(UnsupportedMathematicsError::new_err(
+                "expected add, sub or mul",
+            ));
+        }
     }
     .map_err(map_residue_error)?;
     Ok(residue_data(&result, &symbol))
@@ -928,7 +928,9 @@ fn py_modular_power(
     let symbol = selected_variable(variable)?;
     let value = selected_residue(source, modulus, &symbol)?;
     let ctx = EvaluationContext::default();
-    let result = value.pow_signed(exponent, &ctx).map_err(map_residue_error)?;
+    let result = value
+        .pow_signed(exponent, &ctx)
+        .map_err(map_residue_error)?;
     Ok(result.map(|value| residue_data(&value, &symbol)))
 }
 

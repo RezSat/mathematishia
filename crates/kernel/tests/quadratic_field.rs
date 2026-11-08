@@ -1,7 +1,7 @@
 use mathema::{Integer, Rational};
 use mathematishia_kernel::{
-    EvaluationContext, ExactQuadraticRoot, QuadraticBranch, QuadraticElement, QuadraticField,
-    QuadraticFieldError, RationalPolynomial,
+    AlgebraicRootSet, EvaluationContext, ExactQuadraticRoot, QuadraticBranch, QuadraticElement,
+    QuadraticField, QuadraticFieldError, RationalPolynomial, verify_quadratic_minimal_polynomial,
 };
 
 fn p(values: &[i64]) -> RationalPolynomial {
@@ -146,10 +146,10 @@ fn quadratic_root_solver_and_field_embeddings_agree() {
         let polynomial = p(&[-radicand, 0, 1]);
         let roots = ctx.algebraic_roots(&polynomial).unwrap();
         if let AlgebraicRootSet::Finite(entries) = roots.roots() {
-            for root in entries {
-                if let ExactQuadraticRoot::Algebraic { .. } = root {
+            for root in entries.iter() {
+                if matches!(root, ExactQuadraticRoot::Algebraic { .. }) {
                     let value = QuadraticElement::from_root(&ctx, root).unwrap();
-                    assert_eq!(value.as_exact_root(&ctx).unwrap(), *root);
+                    assert_eq!(value.as_exact_root(&ctx).unwrap(), root.clone());
                     assert!(
                         verify_quadratic_minimal_polynomial(
                             &ctx,

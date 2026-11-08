@@ -11,9 +11,10 @@ use mathema_frontend::{
 use mathematishia_kernel::{
     AlgebraicRootEvidence, AlgebraicRootSet, Assumptions, DefinednessError, DomainOperationError,
     DomainRewriteOutcome, EvaluationContext, EvaluationError, ExactQuadraticRoot, LinearSolution,
-    ProofNodeKind, QuadraticBranch, QuadraticElement, QuadraticField, QuadraticFieldError, QuadraticRoots, RationalExpressionError, RationalFunction,
-    RationalFunctionError, RationalPolynomial, RationalQuadraticRoots, ResourceLimitKind,
-    VerifiedCondition, rewrite_domain_once, substitute_domain,
+    ProofNodeKind, QuadraticBranch, QuadraticElement, QuadraticField, QuadraticFieldError,
+    QuadraticRoots, RationalExpressionError, RationalFunction, RationalFunctionError,
+    RationalPolynomial, RationalQuadraticRoots, ResourceLimitKind, VerifiedCondition,
+    rewrite_domain_once, substitute_domain,
 };
 use pyo3::create_exception;
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
@@ -799,7 +800,9 @@ fn selected_quadratic_branch(branch: &str) -> PyResult<QuadraticBranch> {
         "upper_real" => Ok(QuadraticBranch::UpperReal),
         "negative_imaginary" => Ok(QuadraticBranch::NegativeImaginary),
         "positive_imaginary" => Ok(QuadraticBranch::PositiveImaginary),
-        _ => Err(UnsupportedMathematicsError::new_err("invalid quadratic root branch")),
+        _ => Err(UnsupportedMathematicsError::new_err(
+            "invalid quadratic root branch",
+        )),
     }
 }
 
@@ -834,21 +837,27 @@ type PyQuadraticValue = (
     (String, String),
 );
 
-fn quadratic_value_data(
-    value: &QuadraticElement,
-    symbol: &Symbol,
-) -> PyResult<PyQuadraticValue> {
+fn quadratic_value_data(value: &QuadraticElement, symbol: &Symbol) -> PyResult<PyQuadraticValue> {
     let ctx = EvaluationContext::default();
-    let minimal = value.minimal_polynomial(&ctx).map_err(map_quadratic_field_error)?;
-    let selected = value.as_exact_root(&ctx).map_err(map_quadratic_field_error)?;
+    let minimal = value
+        .minimal_polynomial(&ctx)
+        .map_err(map_quadratic_field_error)?;
+    let selected = value
+        .as_exact_root(&ctx)
+        .map_err(map_quadratic_field_error)?;
     let trace = value.trace(&ctx).map_err(map_quadratic_field_error)?;
     let norm = value.norm(&ctx).map_err(map_quadratic_field_error)?;
     Ok((
         poly_data(value.field().polynomial(), symbol),
         value.field().branch().stable_id().to_owned(),
-        (value.constant().to_string(), value.coefficient().to_string()),
+        (
+            value.constant().to_string(),
+            value.coefficient().to_string(),
+        ),
         poly_data(&minimal, symbol),
-        selected.branch().map(|branch| branch.stable_id().to_owned()),
+        selected
+            .branch()
+            .map(|branch| branch.stable_id().to_owned()),
         (trace.to_string(), norm.to_string()),
     ))
 }
@@ -885,7 +894,11 @@ fn py_quadratic_operation(
         "sub" => left.subtract(&right, &ctx),
         "mul" => left.multiply(&right, &ctx),
         "div" => left.divide(&right, &ctx),
-        _ => return Err(UnsupportedMathematicsError::new_err("expected add, sub, mul or div")),
+        _ => {
+            return Err(UnsupportedMathematicsError::new_err(
+                "expected add, sub, mul or div",
+            ));
+        }
     }
     .map_err(map_quadratic_field_error)?;
     quadratic_value_data(&result, &symbol)
@@ -901,7 +914,8 @@ fn py_quadratic_inverse(
 ) -> PyResult<PyQuadraticValue> {
     let (value, symbol) =
         selected_quadratic_element(polynomial, variable, branch, constant, coefficient)?;
-    let inverse = value.inverse(&EvaluationContext::default())
+    let inverse = value
+        .inverse(&EvaluationContext::default())
         .map_err(map_quadratic_field_error)?;
     quadratic_value_data(&inverse, &symbol)
 }

@@ -120,6 +120,7 @@ pub(crate) fn checked_quadratic(
 pub enum QuadraticVerificationError {
     UnsupportedDegree,
     IncorrectRoots,
+    IncorrectResidual,
 }
 
 impl fmt::Display for QuadraticVerificationError {
@@ -127,6 +128,7 @@ impl fmt::Display for QuadraticVerificationError {
         match self {
             Self::UnsupportedDegree => f.write_str("quadratic verification degree exceeded"),
             Self::IncorrectRoots => f.write_str("incorrect rational root classification"),
+            Self::IncorrectResidual => f.write_str("incorrect rational equation residual"),
         }
     }
 }
@@ -144,9 +146,10 @@ fn quotient(a: &Rational, b: &Rational) -> Rational {
 ///
 /// It does not call the metered generator and also checks every claimed root
 /// by exact polynomial substitution (no numerical tolerance).
-pub fn verify_quadratic_roots(result: &QuadraticResult) -> Result<(), QuadraticVerificationError> {
+pub(crate) fn independent_quadratic_roots(
+    original: &RationalPolynomial,
+) -> Result<QuadraticRoots, QuadraticVerificationError> {
     use QuadraticVerificationError as V;
-    let original = result.original();
     let expected = match original.degree() {
         None => QuadraticRoots::AllRationals,
         Some(0) => QuadraticRoots::Finite(Vec::new()),
@@ -177,6 +180,14 @@ pub fn verify_quadratic_roots(result: &QuadraticResult) -> Result<(), QuadraticV
         }
         Some(_) => return Err(V::UnsupportedDegree),
     };
+    Ok(expected)
+}
+
+/// Independently verifies the complete exact rational-root classification.
+pub fn verify_quadratic_roots(result: &QuadraticResult) -> Result<(), QuadraticVerificationError> {
+    use QuadraticVerificationError as V;
+    let original = result.original();
+    let expected = independent_quadratic_roots(original)?;
     if expected != *result.roots() {
         return Err(V::IncorrectRoots);
     }

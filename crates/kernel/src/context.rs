@@ -12,6 +12,7 @@ use mathema::{Equation, Expr, ExprView, Integer, Rational, Symbol};
 use crate::budget::{RationalBinaryOp, WorkBudget};
 use crate::differentiate_expr::generate_symbolic_derivative;
 use crate::quadratic::checked_quadratic;
+use crate::rational_quadratic::{RationalQuadraticResult, RationalQuadraticRoots};
 
 use crate::{
     DerivationStep, DerivativeVerificationError, DistributionResult, LinearSolution,
@@ -22,7 +23,7 @@ use crate::{
     SquareFreeVerificationError, SymbolicDerivative, SymbolicDifferentiationError,
     VerificationError, ZeroPolynomialDivisor, distribute_first_once, expand_distributively,
     solve_linear_equation, verify_distribution, verify_linear_solution, verify_quadratic_roots,
-    verify_rational_equation, verify_symbolic_derivative,
+    verify_rational_equation, verify_rational_quadratic_equation, verify_symbolic_derivative,
 };
 
 /// Explicit, configurable limits. None are process-global.
@@ -429,6 +430,56 @@ impl EvaluationContext {
 
     /// Exact rational roots (degree <= 2), with independent checking.
     /// No rational roots does not mean no real or complex roots.
+    /// Exact rational solutions of LHS=RHS with a degree-at-most-two
+    /// residual numerator, restricted to the *original* common domain.
+    pub fn solve_rational_quadratic_equation(
+        &self,
+        left: &RationalFunction,
+        right: &RationalFunction,
+    ) -> Result<RationalQuadraticResult, EvaluationError> {
+        self.check_rational_function(left)?;
+        self.check_rational_function(right)?;
+        let mut work = WorkBudget::new(self.limits);
+        let residual = work.rational_binary(left, right, RationalBinaryOp::Subtract)?;
+        self.check_rational_function(&residual)?;
+        let poly_result = checked_quadratic(residual.numerator(), &mut work)?;
+        let roots = match poly_result.roots() {
+            crate::QuadraticRoots::AllRationals => {
+                RationalQuadraticRoots::AllAdmissibleRationals
+            }
+            crate::QuadraticRoots::Finite(values) => {
+                let mut admitted = Vec::new();
+                for value in values {
+                    self.check_rational(value)?;
+                    let mut valid = true;
+                    for condition in residual.excluded_zero_sets() {
+                        if work.evaluate(condition, value)?.numerator().is_zero() {
+                            valid = false;
+                            break;
+                        }
+                    }
+                    if valid && work.evaluate(residual.denominator(), value)?.numerator().is_zero() {
+                        valid = false;
+                    }
+                    if valid {
+                        admitted.push(value.clone());
+                    }
+                }
+                RationalQuadraticRoots::Finite(admitted)
+            }
+        };
+        let result = RationalQuadraticResult::from_parts(
+            left.clone(),
+            right.clone(),
+            residual,
+            roots,
+        );
+        // The independent exact check is not a process-time or memory bound.
+        work.charge(128)?;
+        verify_rational_quadratic_equation(&result)?;
+        Ok(result)
+    }
+
     pub fn solve_quadratic(
         &self,
         polynomial: &RationalPolynomial,

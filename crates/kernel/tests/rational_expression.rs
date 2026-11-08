@@ -1,4 +1,4 @@
-use mathema::{Condition, DomainExpression, Expr, Rational, Symbol};
+use mathema::{Condition, DomainExpression, Expr, Integer, Rational, Symbol};
 use mathematishia_kernel::{EvaluationContext, RationalExpressionError, RationalFunctionError};
 
 fn symbol(value: &str) -> Symbol {
@@ -47,12 +47,12 @@ fn cancels_rational_polynomial_factors_but_keeps_exclusions() {
     assert_eq!(value.denominator().to_expr(&symbol("x")), 1.into());
     assert_eq!(value.excluded_zero_sets().len(), 1);
     assert_eq!(
-        value.evaluate(&Rational::from(1.into())),
+        value.evaluate(&Rational::from(Integer::from(1))),
         Err(RationalFunctionError::UndefinedAtPoint)
     );
     assert_eq!(
-        value.evaluate(&Rational::from(2.into())),
-        Ok(Rational::from(3.into()))
+        value.evaluate(&Rational::from(Integer::from(2))),
+        Ok(Rational::from(Integer::from(3)))
     );
 }
 
@@ -65,7 +65,7 @@ fn constant_zero_preserves_a_removed_domain_hole() {
     assert!(value.is_zero());
     assert_eq!(value.excluded_zero_sets().len(), 1);
     assert_eq!(
-        value.evaluate(&Rational::from(1.into())),
+        value.evaluate(&Rational::from(Integer::from(1))),
         Err(RationalFunctionError::UndefinedAtPoint)
     );
 }

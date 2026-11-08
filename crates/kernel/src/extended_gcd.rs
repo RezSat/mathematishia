@@ -101,9 +101,7 @@ impl Error for ExtendedGcdVerificationError {}
 /// Checks the exact division identities and their complete remainder chain,
 /// then checks the final gcd and Bézout identity. It does not regenerate the
 /// quotient/remainder sequence.
-pub fn verify_extended_gcd(
-    result: &ExtendedGcdResult,
-) -> Result<(), ExtendedGcdVerificationError> {
+pub fn verify_extended_gcd(result: &ExtendedGcdResult) -> Result<(), ExtendedGcdVerificationError> {
     use ExtendedGcdVerificationError as E;
 
     let mut a = result.left.clone();
@@ -136,11 +134,8 @@ pub fn verify_extended_gcd(
             .coefficients()
             .last()
             .expect("nonzero polynomial has a leading coefficient");
-        let inverse = Rational::new(
-            leading.denominator().clone(),
-            leading.numerator().clone(),
-        )
-        .expect("leading coefficient is nonzero");
+        let inverse = Rational::new(leading.denominator().clone(), leading.numerator().clone())
+            .expect("leading coefficient is nonzero");
         scale(&a, &inverse)
     };
 
@@ -209,11 +204,8 @@ impl EvaluationContext {
                 .coefficients()
                 .last()
                 .expect("nonzero polynomial has a leading coefficient");
-            let inverse = Rational::new(
-                leading.denominator().clone(),
-                leading.numerator().clone(),
-            )
-            .expect("leading coefficient is nonzero");
+            let inverse = Rational::new(leading.denominator().clone(), leading.numerator().clone())
+                .expect("leading coefficient is nonzero");
             (
                 scale(&a, &inverse),
                 scale(&s0, &inverse),
@@ -272,23 +264,37 @@ mod tests {
     #[test]
     fn rejects_modified_euclidean_and_bezout_evidence() {
         let ctx = EvaluationContext::default();
-        let result = ctx.extended_gcd(&p(&[-1, 0, 0, 1]), &p(&[-1, 0, 1])).unwrap();
+        let result = ctx
+            .extended_gcd(&p(&[-1, 0, 0, 1]), &p(&[-1, 0, 1]))
+            .unwrap();
         assert_eq!(verify_extended_gcd(&result), Ok(()));
 
         let mut forged = result.clone();
         forged.divisions[0].quotient = p(&[42]);
-        assert_eq!(verify_extended_gcd(&forged), Err(ExtendedGcdVerificationError::InvalidDivision));
+        assert_eq!(
+            verify_extended_gcd(&forged),
+            Err(ExtendedGcdVerificationError::InvalidDivision)
+        );
 
         let mut forged = result.clone();
         forged.divisions.pop();
-        assert_eq!(verify_extended_gcd(&forged), Err(ExtendedGcdVerificationError::IncompleteChain));
+        assert_eq!(
+            verify_extended_gcd(&forged),
+            Err(ExtendedGcdVerificationError::IncompleteChain)
+        );
 
         let mut forged = result.clone();
         forged.left_coefficient = p(&[20]);
-        assert_eq!(verify_extended_gcd(&forged), Err(ExtendedGcdVerificationError::InvalidBezout));
+        assert_eq!(
+            verify_extended_gcd(&forged),
+            Err(ExtendedGcdVerificationError::InvalidBezout)
+        );
 
         let mut forged = result;
         forged.gcd = p(&[2]);
-        assert_eq!(verify_extended_gcd(&forged), Err(ExtendedGcdVerificationError::InvalidGcd));
+        assert_eq!(
+            verify_extended_gcd(&forged),
+            Err(ExtendedGcdVerificationError::InvalidGcd)
+        );
     }
 }

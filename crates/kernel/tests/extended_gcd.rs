@@ -3,7 +3,10 @@ use mathematishia_kernel::{EvaluationContext, RationalPolynomial, verify_extende
 
 fn poly(coefficients: &[i64]) -> RationalPolynomial {
     RationalPolynomial::new(
-        coefficients.iter().map(|&n| Rational::from(Integer::from(n))).collect()
+        coefficients
+            .iter()
+            .map(|&n| Rational::from(Integer::from(n)))
+            .collect(),
     )
 }
 
@@ -22,7 +25,9 @@ fn bezout_gcd_handles_zero_and_coprime_cases() {
         assert_eq!(result.gcd(), &expected);
         assert_eq!(verify_extended_gcd(&result), Ok(()));
         assert_eq!(
-            result.left_coefficient().multiply(&left)
+            result
+                .left_coefficient()
+                .multiply(&left)
                 .add(&result.right_coefficient().multiply(&right)),
             expected,
         );
@@ -39,10 +44,7 @@ fn deterministic_bezout_witnesses_for_many_polynomial_pairs() {
             let second = x.subtract(&poly(&[a])).multiply(&x.add(&poly(&[2])));
             let result = ctx.extended_gcd(&first, &second).unwrap();
             assert_eq!(verify_extended_gcd(&result), Ok(()));
-            assert_eq!(
-                result,
-                ctx.extended_gcd(&first, &second).unwrap(),
-            );
+            assert_eq!(result, ctx.extended_gcd(&first, &second).unwrap(),);
         }
     }
 }
@@ -53,10 +55,17 @@ fn modular_inverse_exists_exactly_for_coprime_inputs() {
     let modulus = poly(&[1, 0, 1]);
     let x = poly(&[0, 1]);
     let inverse = ctx.inverse_mod_polynomial(&x, &modulus).unwrap().unwrap();
-    let (_, residue) = inverse.multiply(&x).divide_with_remainder(&modulus).unwrap();
+    let (_, residue) = inverse
+        .multiply(&x)
+        .divide_with_remainder(&modulus)
+        .unwrap();
     assert_eq!(residue, poly(&[1]));
 
     let not_coprime = poly(&[-1, 0, 1]);
-    assert_eq!(ctx.inverse_mod_polynomial(&poly(&[-1, 1]), &not_coprime).unwrap(), None);
+    assert_eq!(
+        ctx.inverse_mod_polynomial(&poly(&[-1, 1]), &not_coprime)
+            .unwrap(),
+        None
+    );
     assert!(ctx.inverse_mod_polynomial(&x, &poly(&[])).is_err());
 }

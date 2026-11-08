@@ -404,5 +404,40 @@ class RationalExpressionCrossChecks(unittest.TestCase):
                     self.assertEqual(roots.roots, expected)
 
 
+
+class PolynomialBezoutTests(unittest.TestCase):
+    @staticmethod
+    def evaluate(polynomial, at):
+        value = Fraction(0)
+        for coefficient in reversed(polynomial.coefficients):
+            value = value * at + coefficient
+        return value
+
+    def test_extended_gcd_returns_exact_bezout_identity_and_divisions(self):
+        result = m.extended_gcd("x^3-1", "x^2-1", "x")
+        self.assertEqual(result.gcd.coefficients, (Fraction(-1), Fraction(1)))
+        self.assertGreaterEqual(len(result.divisions), 1)
+        left = m.polynomial("x^3-1", "x")
+        right = m.polynomial("x^2-1", "x")
+        for at in [Fraction(-3), Fraction(-1), Fraction(0), Fraction(2)]:
+            self.assertEqual(
+                self.evaluate(left, at) * self.evaluate(result.left_coefficient, at)
+                + self.evaluate(right, at) * self.evaluate(result.right_coefficient, at),
+                self.evaluate(result.gcd, at),
+            )
+        with self.assertRaises(FrozenInstanceError):
+            result.gcd = left
+
+    def test_zero_edge_cases_and_modular_inverse(self):
+        both_zero = m.extended_gcd("0", "0", "x")
+        self.assertEqual(both_zero.gcd.coefficients, ())
+        value = m.modular_inverse("x", "x^2+1", "x")
+        self.assertIsInstance(value, m.Polynomial)
+        self.assertEqual(value.coefficients, (Fraction(0), Fraction(-1)))
+        self.assertIsNone(m.modular_inverse("x-1", "x^2-1", "x"))
+        with self.assertRaises(m.UnsupportedMathematicsError):
+            m.modular_inverse("x", "0", "x")
+
+
 if __name__ == "__main__":
     unittest.main()

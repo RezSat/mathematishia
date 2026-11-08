@@ -430,6 +430,62 @@ fn py_divide(dividend: &str, divisor: &str, variable: &str) -> PyResult<PyDivisi
     ))
 }
 
+type PyEuclideanStep = (
+    PyPolynomialData,
+    PyPolynomialData,
+    PyPolynomialData,
+    PyPolynomialData,
+);
+type PyExtendedGcd = (
+    PyPolynomialData,
+    PyPolynomialData,
+    PyPolynomialData,
+    Vec<PyEuclideanStep>,
+);
+
+#[pyfunction(name = "extended_gcd")]
+fn py_extended_gcd(left: &str, right: &str, variable: &str) -> PyResult<PyExtendedGcd> {
+    let symbol = selected_variable(variable)?;
+    let first = selected_polynomial(left, &symbol)?;
+    let second = selected_polynomial(right, &symbol)?;
+    let result = EvaluationContext::default()
+        .extended_gcd(&first, &second)
+        .map_err(map_evaluation_error)?;
+    let steps = result
+        .divisions()
+        .iter()
+        .map(|step| {
+            (
+                poly_data(step.dividend(), &symbol),
+                poly_data(step.divisor(), &symbol),
+                poly_data(step.quotient(), &symbol),
+                poly_data(step.remainder(), &symbol),
+            )
+        })
+        .collect();
+    Ok((
+        poly_data(result.gcd(), &symbol),
+        poly_data(result.left_coefficient(), &symbol),
+        poly_data(result.right_coefficient(), &symbol),
+        steps,
+    ))
+}
+
+#[pyfunction(name = "modular_inverse")]
+fn py_modular_inverse(
+    value: &str,
+    modulus: &str,
+    variable: &str,
+) -> PyResult<Option<PyPolynomialData>> {
+    let symbol = selected_variable(variable)?;
+    let left = selected_polynomial(value, &symbol)?;
+    let modulus = selected_polynomial(modulus, &symbol)?;
+    EvaluationContext::default()
+        .inverse_mod_polynomial(&left, &modulus)
+        .map(|value| value.map(|polynomial| poly_data(&polynomial, &symbol)))
+        .map_err(map_evaluation_error)
+}
+
 #[pyfunction(name = "gcd")]
 fn py_gcd(left: &str, right: &str, variable: &str) -> PyResult<(String, Vec<String>)> {
     let symbol = selected_variable(variable)?;
@@ -806,6 +862,8 @@ fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(py_evaluate, m)?)?;
     m.add_function(wrap_pyfunction!(py_divide, m)?)?;
     m.add_function(wrap_pyfunction!(py_gcd, m)?)?;
+    m.add_function(wrap_pyfunction!(py_extended_gcd, m)?)?;
+    m.add_function(wrap_pyfunction!(py_modular_inverse, m)?)?;
     m.add_function(wrap_pyfunction!(py_differentiate, m)?)?;
     m.add_function(wrap_pyfunction!(py_square_free, m)?)?;
     m.add_function(wrap_pyfunction!(py_differentiate_expression, m)?)?;

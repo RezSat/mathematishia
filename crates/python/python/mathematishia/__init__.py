@@ -381,6 +381,39 @@ def divide(dividend: str, divisor: str, variable: str) -> tuple[Polynomial, Poly
     return _poly(quotient), _poly(remainder)
 
 
+@dataclass(frozen=True)
+class EuclideanDivision:
+    dividend: Polynomial
+    divisor: Polynomial
+    quotient: Polynomial
+    remainder: Polynomial
+
+
+@dataclass(frozen=True)
+class ExtendedGcd:
+    gcd: Polynomial
+    left_coefficient: Polynomial
+    right_coefficient: Polynomial
+    divisions: tuple[EuclideanDivision, ...]
+
+
+def extended_gcd(left: str, right: str, variable: str) -> ExtendedGcd:
+    """Return the monic polynomial gcd, Bézout coefficients and division evidence."""
+    g, s, t, steps = _native.extended_gcd(left, right, variable)
+    return ExtendedGcd(
+        _poly(g),
+        _poly(s),
+        _poly(t),
+        tuple(EuclideanDivision(*(_poly(item) for item in step)) for step in steps),
+    )
+
+
+def modular_inverse(value: str, modulus: str, variable: str) -> Polynomial | None:
+    """Return a polynomial inverse modulo the modulus when gcd(value, modulus)=1."""
+    result = _native.modular_inverse(value, modulus, variable)
+    return _poly(result) if result is not None else None
+
+
 def gcd(left: str, right: str, variable: str) -> Polynomial:
     """Return the monic greatest common divisor in Q[x]."""
     return _poly(_native.gcd(left, right, variable))
@@ -392,6 +425,7 @@ __all__ = [
     "MathSyntaxError", "ResourceLimitError", "UnsupportedMathematicsError",
     "VerificationFailure", "UndefinedAtPointError", "Step", "Expansion", "LinearResult", "QuadraticResult", "Polynomial",
     "RationalFunction", "RationalQuadraticResult",
+    "EuclideanDivision", "ExtendedGcd", "extended_gcd", "modular_inverse",
     "ExactQuadraticRoot", "AlgebraicRootStep", "AlgebraicRootsResult",
     "SquareFreeFactor", "SquareFreeDecomposition",
     "SymbolicDifferentiationStep", "SymbolicDerivative",

@@ -23,15 +23,17 @@ fn checked_rewrite_retains_original_domain() {
         DomainRewriteOutcome::Blocked(vec![Condition::NonZero(x.clone())])
     );
     let premises = Assumptions::from_conditions([Condition::NonZero(x.clone())]).unwrap();
-    let DomainRewriteOutcome::Applied(rewrite) =
-        rewrite_domain_once(&original, &premises).unwrap()
+    let DomainRewriteOutcome::Applied(rewrite) = rewrite_domain_once(&original, &premises).unwrap()
     else {
         panic!("expected a checked cancellation");
     };
     assert_eq!(rewrite.result().expression(), &Expr::from(1));
     assert_eq!(rewrite.result().conditions(), &[Condition::NonZero(x)]);
     assert_eq!(rewrite.rule_id(), Some("algebra.cancel_symbol_inverse"));
-    assert_eq!(verify_proof_graph(&expr, &premises, rewrite.proof()), Ok(()));
+    assert_eq!(
+        verify_proof_graph(&expr, &premises, rewrite.proof()),
+        Ok(())
+    );
 }
 
 #[test]
@@ -43,8 +45,7 @@ fn scoped_composite_rule_uses_existing_independent_verifier() {
         Expr::pow(base.clone(), (-1).into()),
     ]));
     let premises = Assumptions::from_conditions([Condition::NonZero(base.clone())]).unwrap();
-    let DomainRewriteOutcome::Applied(rewrite) =
-        rewrite_domain_once(&original, &premises).unwrap()
+    let DomainRewriteOutcome::Applied(rewrite) = rewrite_domain_once(&original, &premises).unwrap()
     else {
         panic!("expected composite cancellation");
     };
@@ -105,8 +106,7 @@ fn substitution_transforms_guards_even_when_value_is_zero() {
     );
 
     let replacement = domain(Expr::pow(y.clone(), (-1).into()));
-    let replacement_result =
-        substitute_domain(&original, &x, &replacement, 128, 32).unwrap();
+    let replacement_result = substitute_domain(&original, &x, &replacement, 128, 32).unwrap();
     assert_eq!(
         replacement_result.conditions(),
         &[

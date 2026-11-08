@@ -3,15 +3,12 @@
 use std::error::Error;
 use std::fmt;
 
-use mathema::{
-    Condition, DefinednessError, DomainExpression, Expr, ExprView, Symbol,
-};
+use mathema::{Condition, DefinednessError, DomainExpression, Expr, ExprView, Symbol};
 
 use crate::{
     Assumptions, ConditionStatus, ConditionalRewriteOutcome, GuardedRewriteOutcome, ProofGraph,
-    ProofGraphBuildError, ProofGraphVerificationError, ProofNodeId,
-    cancel_composite_inverse_once, cancel_symbol_inverse_once, substitute_symbol,
-    verify_proof_graph,
+    ProofGraphBuildError, ProofGraphVerificationError, ProofNodeId, cancel_composite_inverse_once,
+    cancel_symbol_inverse_once, substitute_symbol, verify_proof_graph,
 };
 
 const MAX_NODES: usize = 2_048;
@@ -99,7 +96,9 @@ pub fn rewrite_domain_once(
     let mut missing = Vec::new();
     for condition in source.conditions() {
         match assumptions.assess(condition) {
-            ConditionStatus::Refuted => return Ok(DomainRewriteOutcome::Refuted(condition.clone())),
+            ConditionStatus::Refuted => {
+                return Ok(DomainRewriteOutcome::Refuted(condition.clone()));
+            }
             ConditionStatus::Unknown => missing.push(condition.clone()),
             ConditionStatus::Proven | ConditionStatus::Assumed => {}
         }
@@ -115,10 +114,7 @@ pub fn rewrite_domain_once(
         ConditionalRewriteOutcome::Applied(step) => {
             let mut parents = Vec::new();
             for evidence in step.conditions() {
-                parents.push(graph.add_condition(
-                    evidence.condition().clone(),
-                    evidence.status(),
-                )?);
+                parents.push(graph.add_condition(evidence.condition().clone(), evidence.status())?);
             }
             let after = step.after().clone();
             let end = graph.add_composite_cancellation(root, parents, step)?;
@@ -130,7 +126,10 @@ pub fn rewrite_domain_once(
                 MAX_NODES,
                 MAX_CONDITIONS,
             )?;
-            return Ok(DomainRewriteOutcome::Applied(DomainRewrite { result, proof: graph }));
+            return Ok(DomainRewriteOutcome::Applied(DomainRewrite {
+                result,
+                proof: graph,
+            }));
         }
         ConditionalRewriteOutcome::Blocked(conditions) => {
             return Ok(DomainRewriteOutcome::Blocked(conditions));
@@ -144,10 +143,7 @@ pub fn rewrite_domain_once(
     match cancel_symbol_inverse_once(source.expression(), assumptions) {
         GuardedRewriteOutcome::Applied(step) => {
             let condition = step.condition().clone();
-            let parent = graph.add_condition(
-                condition.clone(),
-                assumptions.assess(&condition),
-            )?;
+            let parent = graph.add_condition(condition.clone(), assumptions.assess(&condition))?;
             let after = step.after().clone();
             let end = graph.add_guarded_cancellation(root, parent, step)?;
             graph.select_conclusion(end);
@@ -158,7 +154,10 @@ pub fn rewrite_domain_once(
                 MAX_NODES,
                 MAX_CONDITIONS,
             )?;
-            Ok(DomainRewriteOutcome::Applied(DomainRewrite { result, proof: graph }))
+            Ok(DomainRewriteOutcome::Applied(DomainRewrite {
+                result,
+                proof: graph,
+            }))
         }
         GuardedRewriteOutcome::Blocked(condition) => {
             Ok(DomainRewriteOutcome::Blocked(vec![condition]))
@@ -190,7 +189,11 @@ pub fn substitute_domain(
     let replaced = substitute_symbol(source.expression(), symbol, replacement.expression());
     let mut conditions = Vec::new();
     for condition in source.conditions() {
-        conditions.push(substitute_condition(condition, symbol, replacement.expression()));
+        conditions.push(substitute_condition(
+            condition,
+            symbol,
+            replacement.expression(),
+        ));
     }
     if encountered {
         conditions.extend(replacement.conditions().iter().cloned());

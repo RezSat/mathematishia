@@ -32,6 +32,20 @@ impl Integer {
     pub fn bit_len(&self) -> u64 {
         self.0.bits()
     }
+
+    /// Returns the nonnegative exact integer square root, if one exists.
+    /// A negative integer has no real integer square root.
+    pub fn exact_sqrt(&self) -> Option<Self> {
+        if self.0.sign() == Sign::Minus {
+            return None;
+        }
+        let root = self.0.sqrt();
+        if &root * &root == self.0 {
+            Some(Self(root))
+        } else {
+            None
+        }
+    }
 }
 
 impl fmt::Display for Integer {

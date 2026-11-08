@@ -293,3 +293,22 @@ proptest! {
         prop_assert_eq!(a == b, expected == std::cmp::Ordering::Equal);
     }
 }
+
+#[test]
+fn exact_square_roots_cover_big_integers_and_reduced_rationals() {
+    assert_eq!(Integer::from(-1).exact_sqrt(), None);
+    for n in 0..128 {
+        let square = Integer::from(n) * Integer::from(n);
+        assert_eq!(square.exact_sqrt(), Some(Integer::from(n)));
+        if n > 1 {
+            assert_eq!((&square - &Integer::one()).exact_sqrt(), None);
+        }
+    }
+    let huge: Integer = "1234567890123456789012345678901234567890".parse().unwrap();
+    assert_eq!((&huge * &huge).exact_sqrt(), Some(huge));
+    for (n, d, root) in [(0, 7, Some((0, 1))), (4, 9, Some((2, 3))),
+                         (9, 16, Some((3, 4))), (2, 3, None), (-4, 9, None)] {
+        let result = rational(n, d).exact_sqrt();
+        assert_eq!(result, root.map(|(a, b)| rational(a, b)));
+    }
+}

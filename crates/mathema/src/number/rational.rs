@@ -75,6 +75,17 @@ impl Rational {
     pub fn denominator(&self) -> &Integer {
         &self.denominator
     }
+
+    /// Returns an exact nonnegative square root in Q if one exists.
+    ///
+    /// Canonical positive denominators imply that the rational is a square
+    /// precisely when its numerator and denominator are both integer squares.
+    pub fn exact_sqrt(&self) -> Option<Self> {
+        Some(Self {
+            numerator: self.numerator.exact_sqrt()?,
+            denominator: self.denominator.exact_sqrt()?,
+        })
+    }
 }
 
 impl From<Integer> for Rational {

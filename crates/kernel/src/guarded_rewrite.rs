@@ -176,7 +176,11 @@ pub fn verify_guarded_rewrite_step(
             continue;
         }
         for (j, right) in factors.iter().enumerate() {
-            let ExprView::Pow { base: reciprocal_base, exponent } = right.view() else {
+            let ExprView::Pow {
+                base: reciprocal_base,
+                exponent,
+            } = right.view()
+            else {
                 continue;
             };
             if reciprocal_base != base || exponent != &Expr::from(-1) {

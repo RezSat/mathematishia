@@ -104,11 +104,7 @@ fn domain_membership_implications_are_one_way() {
 fn symbolic_inverse_cancellation_requires_and_checks_nonzero() {
     let x = symbol("x");
     let y = symbol("y");
-    let expression = Expr::mul([
-        x.clone(),
-        Expr::pow(x.clone(), Expr::from(-1)),
-        y.clone(),
-    ]);
+    let expression = Expr::mul([x.clone(), Expr::pow(x.clone(), Expr::from(-1)), y.clone()]);
     let empty = Assumptions::new();
     assert_eq!(
         cancel_symbol_inverse_once(&expression, &empty),
@@ -131,10 +127,7 @@ fn symbolic_inverse_cancellation_requires_and_checks_nonzero() {
 fn inverse_rule_does_not_assume_definedness_of_composite_bases() {
     let x = symbol("x");
     let composite = Expr::add([x.clone(), Expr::from(1)]);
-    let expression = Expr::mul([
-        composite.clone(),
-        Expr::pow(composite, Expr::from(-1)),
-    ]);
+    let expression = Expr::mul([composite.clone(), Expr::pow(composite, Expr::from(-1))]);
     let assumptions = Assumptions::from_conditions([Condition::NonZero(x)]).unwrap();
     assert_eq!(
         cancel_symbol_inverse_once(&expression, &assumptions),

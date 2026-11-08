@@ -22,16 +22,18 @@ pub enum Condition {
     Positive(Expr),
     Real(Expr),
     Integer(Expr),
-    InDomain { expression: Expr, domain: ScalarDomain },
+    InDomain {
+        expression: Expr,
+        domain: ScalarDomain,
+    },
 }
 
 impl Condition {
     pub fn expression(&self) -> &Expr {
         match self {
-            Self::NonZero(expr)
-            | Self::Positive(expr)
-            | Self::Real(expr)
-            | Self::Integer(expr) => expr,
+            Self::NonZero(expr) | Self::Positive(expr) | Self::Real(expr) | Self::Integer(expr) => {
+                expr
+            }
             Self::InDomain { expression, .. } => expression,
         }
     }

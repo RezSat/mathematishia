@@ -29,13 +29,13 @@ pub use algebraic::{
 };
 pub use assumptions::{AssumptionError, Assumptions, ConditionStatus};
 pub use context::{EvaluationContext, EvaluationError, ResourceLimitKind, ResourceLimits};
-pub use guarded_rewrite::{
-    GuardedRewriteOutcome, GuardedRewriteStep, GuardedRewriteVerificationError,
-    GuardedRuleId, cancel_symbol_inverse_once, verify_guarded_rewrite_step,
-};
 pub use differentiate_expr::{
     DerivativeRuleId, DerivativeVerificationError, DifferentiationStep, SymbolicDerivative,
     SymbolicDifferentiationError, verify_symbolic_derivative,
+};
+pub use guarded_rewrite::{
+    GuardedRewriteOutcome, GuardedRewriteStep, GuardedRewriteVerificationError, GuardedRuleId,
+    cancel_symbol_inverse_once, verify_guarded_rewrite_step,
 };
 pub use poly_convert::PolynomialConversionError;
 pub use poly_division::ZeroPolynomialDivisor;

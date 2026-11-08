@@ -1,7 +1,5 @@
 use mathema::{Condition, DomainExpression, Expr, Rational, Symbol};
-use mathematishia_kernel::{
-    EvaluationContext, RationalExpressionError, RationalFunctionError,
-};
+use mathematishia_kernel::{EvaluationContext, RationalExpressionError, RationalFunctionError};
 
 fn symbol(value: &str) -> Symbol {
     Symbol::new(value).unwrap()
@@ -18,17 +16,20 @@ fn domain(expression: &str) -> DomainExpression {
                 Expr::pow(Expr::add([x, (-1).into()]), (-1).into()),
             ]),
             128,
-        ).unwrap(),
+        )
+        .unwrap(),
         "zero_with_hole" => DomainExpression::multiply(
             [
                 DomainExpression::from_expr(Expr::from(0), 128).unwrap(),
                 DomainExpression::from_expr(
                     Expr::pow(Expr::add([x, (-1).into()]), (-1).into()),
                     128,
-                ).unwrap(),
+                )
+                .unwrap(),
             ],
             16,
-        ).unwrap(),
+        )
+        .unwrap(),
         _ => panic!("unknown example"),
     }
 }
@@ -36,10 +37,13 @@ fn domain(expression: &str) -> DomainExpression {
 #[test]
 fn cancels_rational_polynomial_factors_but_keeps_exclusions() {
     let ctx = EvaluationContext::default();
-    let value = ctx.rational_expression(&domain("canceled"), &symbol("x")).unwrap();
-    assert_eq!(value.numerator().to_expr(&symbol("x")), Expr::add([
-        1.into(), Expr::from(symbol("x"))
-    ]));
+    let value = ctx
+        .rational_expression(&domain("canceled"), &symbol("x"))
+        .unwrap();
+    assert_eq!(
+        value.numerator().to_expr(&symbol("x")),
+        Expr::add([1.into(), Expr::from(symbol("x"))])
+    );
     assert_eq!(value.denominator().to_expr(&symbol("x")), 1.into());
     assert_eq!(value.excluded_zero_sets().len(), 1);
     assert_eq!(
@@ -55,7 +59,9 @@ fn cancels_rational_polynomial_factors_but_keeps_exclusions() {
 #[test]
 fn constant_zero_preserves_a_removed_domain_hole() {
     let ctx = EvaluationContext::default();
-    let value = ctx.rational_expression(&domain("zero_with_hole"), &symbol("x")).unwrap();
+    let value = ctx
+        .rational_expression(&domain("zero_with_hole"), &symbol("x"))
+        .unwrap();
     assert!(value.is_zero());
     assert_eq!(value.excluded_zero_sets().len(), 1);
     assert_eq!(
@@ -72,10 +78,13 @@ fn impossible_domain_is_rejected() {
         [Condition::NonZero(Expr::from(0)), Condition::NonZero(x)],
         128,
         8,
-    ).unwrap();
+    )
+    .unwrap();
     assert_eq!(
         EvaluationContext::default().rational_expression(&value, &symbol("x")),
-        Err(RationalExpressionError::RationalFunction(RationalFunctionError::EmptyDomain))
+        Err(RationalExpressionError::RationalFunction(
+            RationalFunctionError::EmptyDomain
+        ))
     );
 }
 
@@ -83,11 +92,11 @@ fn impossible_domain_is_rejected() {
 fn rejects_multivariate_and_nonpolynomial_domains() {
     let x = Expr::from(symbol("x"));
     let y = Expr::from(symbol("y"));
-    let value = DomainExpression::from_expr(Expr::add([x.clone(),y]), 128).unwrap();
+    let value = DomainExpression::from_expr(Expr::add([x.clone(), y]), 128).unwrap();
     assert_eq!(
         EvaluationContext::default().rational_expression(&value, &symbol("x")),
         Err(RationalExpressionError::OtherSymbol)
     );
-    let symbolic = DomainExpression::from_expr(Expr::pow(x, Expr::from(symbol("n"))),128);
+    let symbolic = DomainExpression::from_expr(Expr::pow(x, Expr::from(symbol("n"))), 128);
     assert!(symbolic.is_err());
 }

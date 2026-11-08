@@ -6,8 +6,7 @@ use std::fmt;
 use mathema::{Condition, DomainExpression, Expr, ExprView, Integer, Rational, Symbol};
 
 use crate::{
-    EvaluationContext, EvaluationError, RationalFunction, RationalFunctionError,
-    RationalPolynomial,
+    EvaluationContext, EvaluationError, RationalFunction, RationalFunctionError, RationalPolynomial,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -27,8 +26,12 @@ impl fmt::Display for RationalExpressionError {
             Self::RationalFunction(error) => write!(f, "{error}"),
             Self::OtherSymbol => f.write_str("rational expression contains another symbol"),
             Self::UnsupportedExponent => f.write_str("rational expression requires integer powers"),
-            Self::ExponentLimitExceeded => f.write_str("rational exponent exceeds the configured degree limit"),
-            Self::UnsupportedCondition => f.write_str("unsupported rational-expression domain condition"),
+            Self::ExponentLimitExceeded => {
+                f.write_str("rational exponent exceeds the configured degree limit")
+            }
+            Self::UnsupportedCondition => {
+                f.write_str("unsupported rational-expression domain condition")
+            }
         }
     }
 }

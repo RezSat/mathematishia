@@ -60,6 +60,30 @@ class Polynomial:
 
 
 @dataclass(frozen=True)
+class ExactQuadraticRoot:
+    kind: Literal["rational", "real_quadratic", "complex_quadratic"]
+    rational: Fraction | None
+    minimal_polynomial: Polynomial | None
+    branch: Literal[
+        "lower_real", "upper_real", "negative_imaginary", "positive_imaginary"
+    ] | None
+
+
+@dataclass(frozen=True)
+class AlgebraicRootStep:
+    rule: str
+    monic_polynomial: Polynomial | None
+    discriminant: Fraction | None
+
+
+@dataclass(frozen=True)
+class AlgebraicRootsResult:
+    kind: Literal["finite", "all_complex"]
+    roots: tuple[ExactQuadraticRoot, ...]
+    steps: tuple[AlgebraicRootStep, ...]
+
+
+@dataclass(frozen=True)
 class SymbolicDifferentiationStep:
     before: str
     derivative: str
@@ -140,6 +164,33 @@ def solve_quadratic(source: str, variable: str) -> QuadraticResult:
     """
     kind, roots = _native.solve_quadratic(source, variable)
     return QuadraticResult(kind, tuple(Fraction(root) for root in roots))
+
+
+def algebraic_roots(source: str, variable: str) -> AlgebraicRootsResult:
+    """Return complete exact complex roots through degree two with proof steps.
+
+    Irrational values are represented by an irreducible monic minimal
+    polynomial plus a selected real or complex root branch. No floats.
+    """
+    kind, values, evidence = _native.algebraic_roots(source, variable)
+    roots = tuple(
+        ExactQuadraticRoot(
+            root_kind,
+            Fraction(rational) if rational is not None else None,
+            _poly(minimal) if minimal is not None else None,
+            branch,
+        )
+        for root_kind, rational, minimal, branch in values
+    )
+    steps = tuple(
+        AlgebraicRootStep(
+            rule,
+            _poly(monic) if monic is not None else None,
+            Fraction(discriminant) if discriminant is not None else None,
+        )
+        for rule, monic, discriminant in evidence
+    )
+    return AlgebraicRootsResult(kind, roots, steps)
 
 
 def polynomial(source: str, variable: str) -> Polynomial:
@@ -240,9 +291,10 @@ __all__ = [
     "MathSyntaxError", "ResourceLimitError", "UnsupportedMathematicsError",
     "VerificationFailure", "UndefinedAtPointError", "Step", "Expansion", "LinearResult", "QuadraticResult", "Polynomial",
     "RationalFunction", "RationalQuadraticResult",
+    "ExactQuadraticRoot", "AlgebraicRootStep", "AlgebraicRootsResult",
     "SquareFreeFactor", "SquareFreeDecomposition",
     "SymbolicDifferentiationStep", "SymbolicDerivative",
-    "expression", "expand", "solve", "solve_quadratic", "polynomial", "differentiate", "differentiate_expression", "square_free",
+    "expression", "expand", "solve", "solve_quadratic", "algebraic_roots", "polynomial", "differentiate", "differentiate_expression", "square_free",
     "evaluate", "divide", "gcd", "rational_function", "rational_evaluate",
     "rational_differentiate", "rational_operation", "rational_solve_quadratic",
 ]

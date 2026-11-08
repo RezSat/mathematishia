@@ -45,6 +45,36 @@ class ExactMathTests(unittest.TestCase):
         with self.assertRaises(FrozenInstanceError):
             result.roots = ()
 
+    def test_exact_real_and_complex_quadratic_roots_with_proof(self):
+        irrational = m.algebraic_roots("x^2-2", "x")
+        self.assertEqual(irrational.kind, "finite")
+        self.assertEqual([root.kind for root in irrational.roots],
+                         ["real_quadratic", "real_quadratic"])
+        self.assertEqual([root.branch for root in irrational.roots],
+                         ["lower_real", "upper_real"])
+        self.assertEqual(irrational.roots[0].minimal_polynomial.coefficients,
+                         (Fraction(-2), Fraction(0), Fraction(1)))
+        self.assertEqual(irrational.steps[1].discriminant, Fraction(8))
+        self.assertEqual(irrational.steps[1].rule, "roots.quadratic.discriminant")
+        self.assertEqual(irrational.steps[-1].rule,
+                         "roots.quadratic.irrational_real_pair")
+
+        complex_roots = m.algebraic_roots("x^2+1", "x")
+        self.assertEqual([root.kind for root in complex_roots.roots],
+                         ["complex_quadratic", "complex_quadratic"])
+        self.assertEqual([root.branch for root in complex_roots.roots],
+                         ["negative_imaginary", "positive_imaginary"])
+
+        rational = m.algebraic_roots("x^2-5*x+6", "x")
+        self.assertEqual([root.rational for root in rational.roots],
+                         [Fraction(2), Fraction(3)])
+        self.assertEqual(m.algebraic_roots("0", "x").kind, "all_complex")
+        self.assertEqual(m.algebraic_roots("7", "x").roots, ())
+        with self.assertRaises(m.UnsupportedMathematicsError):
+            m.algebraic_roots("x^3-1", "x")
+        with self.assertRaises(FrozenInstanceError):
+            irrational.roots[0].branch = "upper_real"
+
     def test_partial_and_complete_expansion(self):
         partial = m.expand("(x+1)*(y+2)", 0)
         self.assertFalse(partial.complete)

@@ -9,8 +9,9 @@ use std::fmt::Write as _;
 use mathema::{Equation, Expr, ExprView, Rational, Symbol};
 use mathema_frontend::{Statement, parse_expression, parse_statement};
 use mathematishia_kernel::{
-    EvaluationContext, LinearSolution, QuadraticRoots, RationalFunction, RationalPolynomial,
-    RationalQuadraticRoots, VerifiedCondition,
+    AlgebraicRootEvidence, AlgebraicRootSet, EvaluationContext, ExactQuadraticRoot,
+    LinearSolution, QuadraticRoots, RationalFunction, RationalPolynomial, RationalQuadraticRoots,
+    VerifiedCondition,
 };
 
 pub const HELP: &str = "Mathematishia (early exact-math CLI)
@@ -19,6 +20,7 @@ Usage:
   mathematishia expand <EXPRESSION> [MAX_STEPS]
   mathematishia solve <EQUATION> <VARIABLE>
   mathematishia solveq <POLYNOMIAL> <VARIABLE>
+  mathematishia roots2 <POLYNOMIAL> <VARIABLE>
   mathematishia poly <EXPRESSION> <VARIABLE>
   mathematishia eval <POLYNOMIAL> <VARIABLE> <RATIONAL>
   mathematishia divide <DIVIDEND> <DIVISOR> <VARIABLE>
@@ -38,6 +40,7 @@ Examples:
   mathematishia expand '2*(x+3)' 4
   mathematishia solve '2*x+4=10' x
   mathematishia solveq 'x^2-5*x+6' x
+  mathematishia roots2 'x^2-2' x
   mathematishia poly '(x+1)^2' x
   mathematishia eval 'x^2+1/2' x '1/2'
   mathematishia divide 'x^2-1' 'x-1' x
@@ -188,6 +191,64 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
                     step.rule().stable_id()
                 )
                 .expect("writing to a String is infallible");
+            }
+            Ok(out)
+        }
+        ["roots2", input, name] => {
+            let symbol = variable(name)?;
+            let poly = polynomial(input, &symbol)?;
+            let result = EvaluationContext::default()
+                .algebraic_roots(&poly)
+                .map_err(|error| invalid(error.to_string()))?;
+            let mut out = match result.roots() {
+                AlgebraicRootSet::AllComplexNumbers => {
+                    "roots: all complex numbers".to_owned()
+                }
+                AlgebraicRootSet::Finite(values) => format!("roots: {}", values.len()),
+            };
+            if let AlgebraicRootSet::Finite(values) = result.roots() {
+                for (index, root) in values.iter().enumerate() {
+                    match root {
+                        ExactQuadraticRoot::Rational(value) => {
+                            write!(&mut out, "\nroot {}: {value}", index + 1)
+                                .expect("writing to String is infallible");
+                        }
+                        ExactQuadraticRoot::Algebraic {
+                            minimal_polynomial,
+                            branch,
+                        } => {
+                            write!(
+                                &mut out,
+                                "\nroot {}: {} of minimal polynomial {}",
+                                index + 1,
+                                branch.stable_id(),
+                                minimal_polynomial.to_expr(&symbol)
+                            )
+                            .expect("writing to String is infallible");
+                        }
+                    }
+                }
+            }
+            write!(&mut out, "\nevidence: {}", result.evidence().len())
+                .expect("writing to String is infallible");
+            for (index, item) in result.evidence().iter().enumerate() {
+                let detail = match item {
+                    AlgebraicRootEvidence::MonicNormalization(monic) => {
+                        format!(": {}", monic.to_expr(&symbol))
+                    }
+                    AlgebraicRootEvidence::Discriminant(value) => {
+                        format!(": {value}")
+                    }
+                    AlgebraicRootEvidence::Classification(_) => String::new(),
+                };
+                write!(
+                    &mut out,
+                    "\n{}. [{}]{}",
+                    index + 1,
+                    item.rule().stable_id(),
+                    detail
+                )
+                .expect("writing to String is infallible");
             }
             Ok(out)
         }

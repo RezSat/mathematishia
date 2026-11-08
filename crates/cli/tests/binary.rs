@@ -138,3 +138,16 @@ fn actual_binary_rejects_canceled_quadratic_root() {
     assert!(stdout.starts_with("rational roots: 3\n"));
     assert!(stdout.contains("condition:"));
 }
+
+#[test]
+fn binary_reports_exact_irrational_algebraic_roots_and_proof() {
+    let output = Command::new(env!("CARGO_BIN_EXE_mathematishia"))
+        .args(["roots2", "x^2-2", "x"])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    assert!(output.stderr.is_empty());
+    let displayed = String::from_utf8(output.stdout).unwrap();
+    assert!(displayed.contains("lower_real"));
+    assert!(displayed.contains("roots.quadratic.discriminant"));
+}

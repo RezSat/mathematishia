@@ -6,7 +6,8 @@
 use mathema::{Equation, Expr, ExprView, Rational, Symbol};
 use mathema_frontend::{Statement, parse_expression, parse_statement};
 use mathematishia_kernel::{
-    EvaluationContext, EvaluationError, LinearSolution, QuadraticRoots, RationalFunction,
+    AlgebraicRootEvidence, AlgebraicRootSet, EvaluationContext, EvaluationError,
+    ExactQuadraticRoot, LinearSolution, QuadraticBranch, QuadraticRoots, RationalFunction,
     RationalFunctionError, RationalPolynomial, RationalQuadraticRoots, ResourceLimitKind,
     VerifiedCondition,
 };
@@ -426,6 +427,73 @@ fn py_rational_solve_quadratic(
     Ok((kind, roots, excluded))
 }
 
+type PyAlgebraicValue = (String, Option<String>, Option<PyPolynomialData>, Option<String>);
+type PyAlgebraicStep = (String, Option<PyPolynomialData>, Option<String>);
+type PyAlgebraicResult = (String, Vec<PyAlgebraicValue>, Vec<PyAlgebraicStep>);
+
+#[pyfunction(name = "algebraic_roots")]
+fn py_algebraic_roots(source: &str, variable: &str) -> PyResult<PyAlgebraicResult> {
+    let selected = selected_variable(variable)?;
+    let polynomial = selected_polynomial(source, &selected)?;
+    let result = EvaluationContext::default()
+        .algebraic_roots(&polynomial)
+        .map_err(map_evaluation_error)?;
+    let (kind, roots) = match result.roots() {
+        AlgebraicRootSet::AllComplexNumbers => ("all_complex".to_owned(), Vec::new()),
+        AlgebraicRootSet::Finite(values) => (
+            "finite".to_owned(),
+            values
+                .iter()
+                .map(|value| match value {
+                    ExactQuadraticRoot::Rational(rational) => (
+                        "rational".to_owned(),
+                        Some(rational.to_string()),
+                        None,
+                        None,
+                    ),
+                    ExactQuadraticRoot::Algebraic {
+                        minimal_polynomial,
+                        branch,
+                    } => (
+                        if matches!(
+                            branch,
+                            QuadraticBranch::LowerReal | QuadraticBranch::UpperReal
+                        ) {
+                            "real_quadratic"
+                        } else {
+                            "complex_quadratic"
+                        }
+                        .to_owned(),
+                        None,
+                        Some(poly_data(minimal_polynomial, &selected)),
+                        Some(branch.stable_id().to_owned()),
+                    ),
+                })
+                .collect(),
+        ),
+    };
+    let evidence = result
+        .evidence()
+        .iter()
+        .map(|item| match item {
+            AlgebraicRootEvidence::MonicNormalization(monic) => (
+                item.rule().stable_id().to_owned(),
+                Some(poly_data(monic, &selected)),
+                None,
+            ),
+            AlgebraicRootEvidence::Discriminant(value) => (
+                item.rule().stable_id().to_owned(),
+                None,
+                Some(value.to_string()),
+            ),
+            AlgebraicRootEvidence::Classification(_) => {
+                (item.rule().stable_id().to_owned(), None, None)
+            }
+        })
+        .collect();
+    Ok((kind, roots, evidence))
+}
+
 #[pymodule]
 fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(py_expression, m)?)?;
@@ -443,6 +511,7 @@ fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(py_rational_differentiate, m)?)?;
     m.add_function(wrap_pyfunction!(py_rational_operation, m)?)?;
     m.add_function(wrap_pyfunction!(py_solve_quadratic, m)?)?;
+    m.add_function(wrap_pyfunction!(py_algebraic_roots, m)?)?;
     m.add_function(wrap_pyfunction!(py_rational_solve_quadratic, m)?)?;
     m.add("MathSyntaxError", m.py().get_type::<MathSyntaxError>())?;
     m.add(

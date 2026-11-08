@@ -249,3 +249,28 @@ fn quadratic_rational_cli_preserves_removed_poles() {
     assert!(identity.contains("condition:"));
     assert!(run(&["ratsolveq", "x^3", "1", "0", "1", "x"]).is_err());
 }
+
+#[test]
+fn exact_algebraic_roots_cli_exposes_typed_evidence() {
+    let real = run(&["roots2", "x^2-2", "x"]).unwrap();
+    assert!(real.starts_with("roots: 2\n"));
+    assert!(real.contains("lower_real"));
+    assert!(real.contains("upper_real"));
+    assert!(real.contains("roots.normalize_monic"));
+    assert!(real.contains("roots.quadratic.discriminant"));
+    assert!(real.contains("roots.quadratic.irrational_real_pair"));
+
+    let complex = run(&["roots2", "x^2+1", "x"]).unwrap();
+    assert!(complex.contains("negative_imaginary"));
+    assert!(complex.contains("positive_imaginary"));
+    assert!(complex.contains("roots.quadratic.nonreal_conjugates"));
+
+    let rational = run(&["roots2", "x^2-5*x+6", "x"]).unwrap();
+    assert!(rational.contains("root 1: 2"));
+    assert!(rational.contains("root 2: 3"));
+    assert_eq!(
+        run(&["roots2", "0", "x"]).unwrap().lines().next(),
+        Some("roots: all complex numbers")
+    );
+    assert!(run(&["roots2", "x^3-1", "x"]).is_err());
+}

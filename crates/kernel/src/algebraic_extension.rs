@@ -10,8 +10,7 @@ use mathema::{Integer, Rational};
 use crate::poly_division::rational_quotient;
 use crate::{
     EvaluationContext, EvaluationError, PolynomialResidue, RationalFactorization,
-    RationalFactorizationError, RationalPolynomial, ResidueError,
-    verify_rational_factorization,
+    RationalFactorizationError, RationalPolynomial, ResidueError, verify_rational_factorization,
 };
 
 fn one() -> Rational {
@@ -37,13 +36,19 @@ impl fmt::Display for AlgebraicExtensionError {
 }
 impl Error for AlgebraicExtensionError {}
 impl From<EvaluationError> for AlgebraicExtensionError {
-    fn from(value: EvaluationError) -> Self { Self::Evaluation(value) }
+    fn from(value: EvaluationError) -> Self {
+        Self::Evaluation(value)
+    }
 }
 impl From<RationalFactorizationError> for AlgebraicExtensionError {
-    fn from(value: RationalFactorizationError) -> Self { Self::Factorization(value) }
+    fn from(value: RationalFactorizationError) -> Self {
+        Self::Factorization(value)
+    }
 }
 impl From<ResidueError> for AlgebraicExtensionError {
-    fn from(value: ResidueError) -> Self { Self::Residue(value) }
+    fn from(value: ResidueError) -> Self {
+        Self::Residue(value)
+    }
 }
 
 /// A canonical abstract number field Q[alpha]/(f(alpha)) of degree 2 or 3.
@@ -66,19 +71,30 @@ impl CertifiedAlgebraicField {
         let leading = defining.coefficients().last().expect("nonzero polynomial");
         let inverse = rational_quotient(&one(), leading);
         let monic = RationalPolynomial::new(
-            defining.coefficients().iter().map(|c| c * &inverse).collect(),
+            defining
+                .coefficients()
+                .iter()
+                .map(|c| c * &inverse)
+                .collect(),
         );
         ctx.check_polynomial(&monic)?;
         let factorization = ctx.factor_rational_polynomial(&monic)?;
-        let result = Self { modulus: monic, certificate: factorization };
+        let result = Self {
+            modulus: monic,
+            certificate: factorization,
+        };
         if !verify_certified_algebraic_field(&result) {
             return Err(AlgebraicExtensionError::IrreducibilityNotCertified);
         }
         Ok(result)
     }
 
-    pub fn modulus(&self) -> &RationalPolynomial { &self.modulus }
-    pub fn certificate(&self) -> &RationalFactorization { &self.certificate }
+    pub fn modulus(&self) -> &RationalPolynomial {
+        &self.modulus
+    }
+    pub fn certificate(&self) -> &RationalFactorization {
+        &self.certificate
+    }
 
     pub fn element(
         &self,
@@ -92,7 +108,10 @@ impl CertifiedAlgebraicField {
         &self,
         ctx: &EvaluationContext,
     ) -> Result<AlgebraicExtensionElement, AlgebraicExtensionError> {
-        self.element(ctx, RationalPolynomial::new(vec![Rational::from(Integer::zero()), one()]))
+        self.element(
+            ctx,
+            RationalPolynomial::new(vec![Rational::from(Integer::zero()), one()]),
+        )
     }
 }
 
@@ -127,9 +146,15 @@ impl AlgebraicExtensionElement {
         Ok(Self { field, residue })
     }
 
-    pub fn field(&self) -> &CertifiedAlgebraicField { &self.field }
-    pub fn coefficients(&self) -> &RationalPolynomial { self.residue.representative() }
-    pub fn is_zero(&self) -> bool { self.residue.is_zero() }
+    pub fn field(&self) -> &CertifiedAlgebraicField {
+        &self.field
+    }
+    pub fn coefficients(&self) -> &RationalPolynomial {
+        self.residue.representative()
+    }
+    pub fn is_zero(&self) -> bool {
+        self.residue.is_zero()
+    }
 
     fn compatible(&self, other: &Self) -> Result<(), AlgebraicExtensionError> {
         if self.field.modulus == other.field.modulus {
@@ -145,7 +170,10 @@ impl AlgebraicExtensionElement {
         ctx: &EvaluationContext,
     ) -> Result<Self, AlgebraicExtensionError> {
         self.compatible(other)?;
-        Ok(Self { field: self.field.clone(), residue: self.residue.add(&other.residue, ctx)? })
+        Ok(Self {
+            field: self.field.clone(),
+            residue: self.residue.add(&other.residue, ctx)?,
+        })
     }
 
     pub fn subtract(
@@ -154,7 +182,10 @@ impl AlgebraicExtensionElement {
         ctx: &EvaluationContext,
     ) -> Result<Self, AlgebraicExtensionError> {
         self.compatible(other)?;
-        Ok(Self { field: self.field.clone(), residue: self.residue.subtract(&other.residue, ctx)? })
+        Ok(Self {
+            field: self.field.clone(),
+            residue: self.residue.subtract(&other.residue, ctx)?,
+        })
     }
 
     pub fn multiply(
@@ -163,14 +194,20 @@ impl AlgebraicExtensionElement {
         ctx: &EvaluationContext,
     ) -> Result<Self, AlgebraicExtensionError> {
         self.compatible(other)?;
-        Ok(Self { field: self.field.clone(), residue: self.residue.multiply(&other.residue, ctx)? })
+        Ok(Self {
+            field: self.field.clone(),
+            residue: self.residue.multiply(&other.residue, ctx)?,
+        })
     }
 
     pub fn inverse(&self, ctx: &EvaluationContext) -> Result<Self, AlgebraicExtensionError> {
         let Some(inverse) = self.residue.inverse(ctx)? else {
             return Err(AlgebraicExtensionError::DivisionByZero);
         };
-        Ok(Self { field: self.field.clone(), residue: inverse })
+        Ok(Self {
+            field: self.field.clone(),
+            residue: inverse,
+        })
     }
 
     pub fn divide(
@@ -190,6 +227,9 @@ impl AlgebraicExtensionElement {
         let Some(value) = self.residue.pow_signed(exponent, ctx)? else {
             return Err(AlgebraicExtensionError::DivisionByZero);
         };
-        Ok(Self { field: self.field.clone(), residue: value })
+        Ok(Self {
+            field: self.field.clone(),
+            residue: value,
+        })
     }
 }

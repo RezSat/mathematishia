@@ -347,7 +347,13 @@ mod tests {
         let polynomial = FiniteFieldPolynomial::new(2, vec![1; 33]).unwrap();
         let square = polynomial.multiply(&polynomial).unwrap();
         assert_eq!(square.degree(), Some(64));
-        assert!(square.divide_with_remainder(&polynomial).unwrap().1.is_zero());
+        assert!(
+            square
+                .divide_with_remainder(&polynomial)
+                .unwrap()
+                .1
+                .is_zero()
+        );
         assert!(FiniteFieldPolynomial::new(2, vec![1; 34]).is_err());
     }
 

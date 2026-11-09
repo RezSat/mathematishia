@@ -19,6 +19,7 @@ mod extension_minimal;
 mod finite_field;
 mod finite_field_factorization;
 mod guarded_rewrite;
+mod hensel_lift;
 mod modular_irreducibility;
 mod poly_convert;
 mod poly_division;
@@ -69,6 +70,8 @@ pub use finite_field_factorization::{
     FiniteFieldFactor, FiniteFieldFactorization, factor_finite_field,
     verify_finite_field_factorization,
 };
+pub use hensel_lift::{HenselError, HenselPair, IntegerPolynomial,
+    hensel_lift_pair, verify_hensel_pair};
 pub use guarded_rewrite::{
     GuardedRewriteOutcome, GuardedRewriteStep, GuardedRewriteVerificationError, GuardedRuleId,
     cancel_symbol_inverse_once, verify_guarded_rewrite_step,

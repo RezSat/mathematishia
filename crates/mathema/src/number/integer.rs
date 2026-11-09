@@ -3,6 +3,7 @@ use std::ops::{Add, Mul, Neg, Sub};
 use std::str::FromStr;
 
 use num_bigint::{BigInt, Sign};
+use num_integer::Integer as _;
 
 /// An exact, arbitrary-precision integer.
 ///
@@ -31,6 +32,30 @@ impl Integer {
     /// Magnitude bit length, excluding the sign (zero has length zero).
     pub fn bit_len(&self) -> u64 {
         self.0.bits()
+    }
+
+    /// Nonnegative greatest common divisor, including gcd(0,0)=0.
+    pub fn gcd(&self, other: &Self) -> Self {
+        Self(self.0.gcd(&other.0))
+    }
+
+    /// Nonnegative least common multiple; zero if either operand is zero.
+    pub fn lcm(&self, other: &Self) -> Self {
+        Self(self.0.lcm(&other.0))
+    }
+
+    /// Exact integer quotient. Returns None on zero divisors or a remainder.
+    pub fn divide_exact(&self, divisor: &Self) -> Option<Self> {
+        if divisor.is_zero() {
+            return None;
+        }
+        let (quotient, remainder) = self.0.div_rem(&divisor.0);
+        remainder.is_zero().then_some(Self(quotient))
+    }
+
+    /// Narrowing conversion for bounded algorithms; never truncates.
+    pub fn try_i64(&self) -> Option<i64> {
+        self.to_string().parse::<i64>().ok()
     }
 
     /// Returns the nonnegative exact integer square root, if one exists.
@@ -196,5 +221,32 @@ impl FromStr for Integer {
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         value.parse::<BigInt>().map(Self)
+    }
+}
+
+#[cfg(test)]
+mod arithmetic_helpers_tests {
+    use super::Integer;
+
+    #[test]
+    fn exact_division_and_sign_invariants() {
+        let a = Integer::from(-12);
+        let b = Integer::from(18);
+        assert_eq!(a.gcd(&b), Integer::from(6));
+        assert_eq!(a.lcm(&b), Integer::from(36));
+        assert_eq!(a.divide_exact(&Integer::from(3)), Some(Integer::from(-4)));
+        assert_eq!(a.divide_exact(&Integer::from(5)), None);
+        assert_eq!(a.divide_exact(&Integer::zero()), None);
+        assert_eq!(Integer::zero().lcm(&a), Integer::zero());
+        assert_eq!(Integer::zero().gcd(&a), Integer::from(12));
+    }
+
+    #[test]
+    fn narrowing_does_not_truncate_big_integers() {
+        let huge = "340282366920938463463374607431768211456"
+            .parse::<Integer>()
+            .unwrap();
+        assert_eq!(huge.try_i64(), None);
+        assert_eq!(Integer::from(-123).try_i64(), Some(-123));
     }
 }

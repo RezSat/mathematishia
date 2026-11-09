@@ -12,7 +12,8 @@ use mathema_frontend::{
     parse_statement,
 };
 use mathematishia_kernel::{
-    AlgebraicRootEvidence, AlgebraicRootSet, Assumptions, DomainRewriteOutcome, EvaluationContext,
+    AlgebraicRootEvidence, AlgebraicRootSet, Assumptions, CertifiedAlgebraicField,
+    DomainRewriteOutcome, EvaluationContext,
     ExactQuadraticRoot, LinearSolution, PolynomialResidue, QuadraticBranch, QuadraticElement,
     QuadraticField, QuadraticRoots, RationalFunction, RationalPolynomial, RationalQuadraticRoots,
     VerifiedCondition, rewrite_domain_once, substitute_domain,
@@ -42,6 +43,10 @@ Usage:
   mathematishia modpow <VALUE> <MODULUS> <EXPONENT> <VARIABLE>
   mathematishia diff <POLYNOMIAL> <VARIABLE>
   mathematishia sqfree <POLYNOMIAL> <VARIABLE>
+  mathematishia factor <POLYNOMIAL> <VARIABLE>
+  mathematishia fieldmin <MINPOLY> <VALUE> <VARIABLE>
+  mathematishia fieldpow <MINPOLY> <VALUE> <EXPONENT> <VARIABLE>
+  mathematishia fieldop <add|sub|mul|div> <MINPOLY> <LEFT> <RIGHT> <VARIABLE>
   mathematishia diffexpr <EXPRESSION> <VARIABLE>
   mathematishia rsimplify <EXPRESSION> <VARIABLE>
   mathematishia rdiff <EXPRESSION> <VARIABLE>
@@ -75,6 +80,9 @@ Examples:
   mathematishia modop mul x x 'x^2+1' x
   mathematishia diff 'x^3+1/2*x' x
   mathematishia sqfree '2*(x-1)^2*(x+2)^3' x
+  mathematishia factor '(x-1)*(x^2+1)' x
+  mathematishia fieldmin 'x^3-2' 'x^2' x
+  mathematishia fieldpow 'x^3-2' x -1 x
   mathematishia diffexpr 'x*y+(x+1)^3' x
   mathematishia rsimplify '(x^2-1)/(x-1)' x
   mathematishia rsolve '(x^2-1)/(x-1)=3' x
@@ -606,6 +614,90 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
                 "quotient: {}\nremainder: {}",
                 quotient.to_expr(&symbol),
                 remainder.to_expr(&symbol)
+            ))
+        }
+        ["factor", input, name] => {
+            let symbol = variable(name)?;
+            let poly = polynomial(input, &symbol)?;
+            let result = EvaluationContext::default()
+                .factor_rational_polynomial(&poly)
+                .map_err(|error| invalid(error.to_string()))?;
+            let mut output = format!(
+                "status: {}\nunit: {}",
+                if result.is_complete() { "complete" } else { "partial" },
+                result.unit(),
+            );
+            for factor in result.factors() {
+                write!(
+                    &mut output,
+                    "\nfactor: {} ; multiplicity: {}",
+                    factor.polynomial().to_expr(&symbol),
+                    factor.multiplicity(),
+                )
+                .expect("writing to String is infallible");
+            }
+            for factor in result.unresolved() {
+                write!(
+                    &mut output,
+                    "\nunresolved: {} ; multiplicity: {}",
+                    factor.polynomial().to_expr(&symbol),
+                    factor.multiplicity(),
+                )
+                .expect("writing to String is infallible");
+            }
+            Ok(output)
+        }
+        ["fieldmin", minimal, value, name] => {
+            let symbol = variable(name)?;
+            let ctx = EvaluationContext::default();
+            let field = CertifiedAlgebraicField::new(&ctx, polynomial(minimal, &symbol)?)
+                .map_err(|error| invalid(error.to_string()))?;
+            let value = field.element(&ctx, polynomial(value, &symbol)?)
+                .map_err(|error| invalid(error.to_string()))?;
+            let minimal = value.minimal_polynomial(&ctx)
+                .map_err(|error| invalid(error.to_string()))?;
+            Ok(format!(
+                "field: {}\nelement: {}\nminimal_polynomial: {}\nverified: true",
+                field.modulus().to_expr(&symbol),
+                value.coefficients().to_expr(&symbol),
+                minimal.to_expr(&symbol),
+            ))
+        }
+        ["fieldpow", minimal, value, exponent, name] => {
+            let symbol = variable(name)?;
+            let ctx = EvaluationContext::default();
+            let power = exponent.parse::<i64>().map_err(|_| invalid("invalid signed exponent"))?;
+            let field = CertifiedAlgebraicField::new(&ctx, polynomial(minimal, &symbol)?)
+                .map_err(|error| invalid(error.to_string()))?;
+            let value = field.element(&ctx, polynomial(value, &symbol)?)
+                .map_err(|error| invalid(error.to_string()))?;
+            let result = value.pow_signed(power, &ctx)
+                .map_err(|error| invalid(error.to_string()))?;
+            Ok(format!("element: {}\nfield: {}",
+                result.coefficients().to_expr(&symbol),
+                field.modulus().to_expr(&symbol),
+            ))
+        }
+        ["fieldop", operation, minimal, left, right, name] => {
+            let symbol = variable(name)?;
+            let ctx = EvaluationContext::default();
+            let field = CertifiedAlgebraicField::new(&ctx, polynomial(minimal, &symbol)?)
+                .map_err(|error| invalid(error.to_string()))?;
+            let a = field.element(&ctx, polynomial(left, &symbol)?)
+                .map_err(|error| invalid(error.to_string()))?;
+            let b = field.element(&ctx, polynomial(right, &symbol)?)
+                .map_err(|error| invalid(error.to_string()))?;
+            let result = match *operation {
+                "add" => a.add(&b, &ctx),
+                "sub" => a.subtract(&b, &ctx),
+                "mul" => a.multiply(&b, &ctx),
+                "div" => a.divide(&b, &ctx),
+                _ => return Err(invalid("expected fieldop add, sub, mul or div")),
+            }
+            .map_err(|error| invalid(error.to_string()))?;
+            Ok(format!("element: {}\nfield: {}",
+                result.coefficients().to_expr(&symbol),
+                field.modulus().to_expr(&symbol),
             ))
         }
         ["gcd", left, right, name] => {

@@ -222,10 +222,7 @@ pub fn verify_rational_factorization(
         {
             return Err(E::InvalidFactor);
         }
-        if all
-            .iter()
-            .any(|existing: &&RationalPolynomial| *existing == &item.polynomial)
-        {
+        if all.contains(&&item.polynomial) {
             return Err(E::DuplicateFactor);
         }
         all.push(&item.polynomial);

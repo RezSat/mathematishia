@@ -22,6 +22,7 @@ mod modular_irreducibility;
 mod poly_convert;
 mod poly_division;
 mod polynomial;
+mod quartic_factor;
 mod polynomial_residue;
 mod proof_graph;
 mod quadratic;

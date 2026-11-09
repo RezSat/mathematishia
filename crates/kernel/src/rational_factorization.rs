@@ -9,7 +9,11 @@ use std::fmt;
 
 use mathema::{Integer, Rational};
 
-use crate::{EvaluationContext, EvaluationError, RationalPolynomial};
+use crate::quartic_factor::{QuarticSearch, search_quartic_quadratic};
+use crate::{
+    EvaluationContext, EvaluationError, RationalPolynomial,
+    modular_irreducibility_witness,
+};
 
 const MAX_PRIMITIVE_COEFFICIENT: i64 = 100_000;
 const MAX_CANDIDATES: usize = 4_096;
@@ -110,7 +114,12 @@ fn irreducible_small(poly: &RationalPolynomial) -> bool {
             let delta = &(b * b) - &(&Rational::from(Integer::from(4)) * c);
             delta.exact_sqrt().is_none()
         }
-        Some(3) => rational_root(poly) == Some(None),
+        Some(3) => rational_root(poly) == Some(None) || modular_irreducibility_witness(poly).is_some(),
+        Some(4) => matches!(
+            search_quartic_quadratic(poly, &EvaluationContext::default()),
+            Ok(QuarticSearch::Exhausted)
+        ) || modular_irreducibility_witness(poly).is_some(),
+        Some(degree) if degree > 4 => modular_irreducibility_witness(poly).is_some(),
         _ => false,
     }
 }
@@ -294,7 +303,25 @@ fn factor_squarefree(
                 break;
             }
             _ => {
-                record(unresolved, polynomial, multiplicity);
+                if degree == 4 {
+                    match search_quartic_quadratic(&polynomial, ctx)? {
+                        QuarticSearch::Split(first, second) => {
+                            factor_squarefree(first, multiplicity, factors, unresolved, ctx)?;
+                            factor_squarefree(second, multiplicity, factors, unresolved, ctx)?;
+                            break;
+                        }
+                        QuarticSearch::Exhausted => {
+                            record(factors, polynomial, multiplicity);
+                            break;
+                        }
+                        QuarticSearch::Inconclusive => {}
+                    }
+                }
+                if modular_irreducibility_witness(&polynomial).is_some() {
+                    record(factors, polynomial, multiplicity);
+                } else {
+                    record(unresolved, polynomial, multiplicity);
+                }
                 break;
             }
         }

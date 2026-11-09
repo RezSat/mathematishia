@@ -17,6 +17,7 @@ mod domain_operations;
 mod extended_gcd;
 mod extension_minimal;
 mod finite_field;
+mod finite_field_factorization;
 mod guarded_rewrite;
 mod modular_irreducibility;
 mod poly_convert;
@@ -64,6 +65,10 @@ pub use extended_gcd::{
 };
 pub use extension_minimal::verify_extension_minimal_polynomial;
 pub use finite_field::{FiniteFieldError, FiniteFieldPolynomial, is_small_prime};
+pub use finite_field_factorization::{
+    FiniteFieldFactor, FiniteFieldFactorization, factor_finite_field,
+    verify_finite_field_factorization,
+};
 pub use guarded_rewrite::{
     GuardedRewriteOutcome, GuardedRewriteStep, GuardedRewriteVerificationError, GuardedRuleId,
     cancel_symbol_inverse_once, verify_guarded_rewrite_step,

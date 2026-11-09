@@ -86,24 +86,39 @@ impl FiniteFieldPolynomial {
             .map(|value| value.rem_euclid(modulus) as u32)
             .collect::<Vec<_>>();
         trim(&mut coefficients);
-        Ok(Self { prime, coefficients })
+        Ok(Self {
+            prime,
+            coefficients,
+        })
     }
 
     fn from_canonical(prime: u32, mut coefficients: Vec<u32>) -> Self {
         trim(&mut coefficients);
-        Self { prime, coefficients }
+        Self {
+            prime,
+            coefficients,
+        }
     }
 
     fn zero(prime: u32) -> Self {
-        Self { prime, coefficients: Vec::new() }
+        Self {
+            prime,
+            coefficients: Vec::new(),
+        }
     }
 
     fn one(prime: u32) -> Self {
-        Self { prime, coefficients: vec![1] }
+        Self {
+            prime,
+            coefficients: vec![1],
+        }
     }
 
     fn x(prime: u32) -> Self {
-        Self { prime, coefficients: vec![0, 1] }
+        Self {
+            prime,
+            coefficients: vec![0, 1],
+        }
     }
 
     pub fn prime(&self) -> u32 {
@@ -135,7 +150,8 @@ impl FiniteFieldPolynomial {
         let mut result = vec![0; self.coefficients.len().max(other.coefficients.len())];
         for (index, coefficient) in result.iter_mut().enumerate() {
             *coefficient = (self.coefficients.get(index).copied().unwrap_or(0)
-                + other.coefficients.get(index).copied().unwrap_or(0)) % self.prime;
+                + other.coefficients.get(index).copied().unwrap_or(0))
+                % self.prime;
         }
         Ok(Self::from_canonical(self.prime, result))
     }
@@ -144,8 +160,9 @@ impl FiniteFieldPolynomial {
         self.compatible(other)?;
         let mut result = vec![0; self.coefficients.len().max(other.coefficients.len())];
         for (index, coefficient) in result.iter_mut().enumerate() {
-            *coefficient = (self.coefficients.get(index).copied().unwrap_or(0)
-                + self.prime - other.coefficients.get(index).copied().unwrap_or(0)) % self.prime;
+            *coefficient = (self.coefficients.get(index).copied().unwrap_or(0) + self.prime
+                - other.coefficients.get(index).copied().unwrap_or(0))
+                % self.prime;
         }
         Ok(Self::from_canonical(self.prime, result))
     }
@@ -171,9 +188,12 @@ impl FiniteFieldPolynomial {
     pub fn scale(&self, coefficient: u32) -> Self {
         Self::from_canonical(
             self.prime,
-            self.coefficients.iter()
-                .map(|&value| ((value as u64 * u64::from(coefficient % self.prime))
-                    % u64::from(self.prime)) as u32)
+            self.coefficients
+                .iter()
+                .map(|&value| {
+                    ((value as u64 * u64::from(coefficient % self.prime)) % u64::from(self.prime))
+                        as u32
+                })
                 .collect(),
         )
     }
@@ -185,10 +205,7 @@ impl FiniteFieldPolynomial {
         }
     }
 
-    pub fn divide_with_remainder(
-        &self,
-        divisor: &Self,
-    ) -> Result<(Self, Self), FiniteFieldError> {
+    pub fn divide_with_remainder(&self, divisor: &Self) -> Result<(Self, Self), FiniteFieldError> {
         self.compatible(divisor)?;
         if divisor.is_zero() {
             return Err(FiniteFieldError::ZeroDivisor);
@@ -212,7 +229,8 @@ impl FiniteFieldPolynomial {
             for (index, &value) in divisor.coefficients.iter().enumerate() {
                 let position = index + shift;
                 remainder[position] = (remainder[position] + self.prime
-                    - coefficient * value % self.prime) % self.prime;
+                    - coefficient * value % self.prime)
+                    % self.prime;
             }
             trim(&mut remainder);
             remainder_degree = remainder.len().saturating_sub(1);
@@ -236,11 +254,7 @@ impl FiniteFieldPolynomial {
     }
 
     /// Computes a^exponent mod modulus, reducing after every multiplication.
-    pub fn pow_mod(
-        &self,
-        mut exponent: u64,
-        modulus: &Self,
-    ) -> Result<Self, FiniteFieldError> {
+    pub fn pow_mod(&self, mut exponent: u64, modulus: &Self) -> Result<Self, FiniteFieldError> {
         self.compatible(modulus)?;
         if modulus.is_zero() {
             return Err(FiniteFieldError::ZeroDivisor);
@@ -262,9 +276,13 @@ impl FiniteFieldPolynomial {
     pub fn derivative(&self) -> Self {
         Self::from_canonical(
             self.prime,
-            self.coefficients.iter().enumerate().skip(1)
-                .map(|(index, coefficient)| ((index as u64 * u64::from(*coefficient))
-                    % u64::from(self.prime)) as u32)
+            self.coefficients
+                .iter()
+                .enumerate()
+                .skip(1)
+                .map(|(index, coefficient)| {
+                    ((index as u64 * u64::from(*coefficient)) % u64::from(self.prime)) as u32
+                })
                 .collect(),
         )
     }
@@ -294,8 +312,12 @@ impl FiniteFieldPolynomial {
 }
 
 fn is_prime_degree(n: usize) -> bool {
-    if n < 2 { return false; }
-    (2..).take_while(|d| d * d <= n).all(|d| !n.is_multiple_of(d))
+    if n < 2 {
+        return false;
+    }
+    (2..)
+        .take_while(|d| d * d <= n)
+        .all(|d| !n.is_multiple_of(d))
 }
 
 #[cfg(test)]
@@ -305,9 +327,17 @@ mod tests {
     #[test]
     fn primality_and_canonical_coefficients_are_enforced() {
         for composite in [0, 1, 4, 9, 251 + 2] {
-            assert_eq!(FiniteFieldPolynomial::new(composite, vec![1]), Err(FiniteFieldError::InvalidPrime));
+            assert_eq!(
+                FiniteFieldPolynomial::new(composite, vec![1]),
+                Err(FiniteFieldError::InvalidPrime)
+            );
         }
-        assert_eq!(FiniteFieldPolynomial::new(5, vec![-1, 6, 5]).unwrap().coefficients(), &[4, 1]);
+        assert_eq!(
+            FiniteFieldPolynomial::new(5, vec![-1, 6, 5])
+                .unwrap()
+                .coefficients(),
+            &[4, 1]
+        );
     }
 
     #[test]
@@ -315,7 +345,14 @@ mod tests {
         let polynomial = FiniteFieldPolynomial::new(2, vec![1; 33]).unwrap();
         let square = polynomial.multiply(&polynomial).unwrap();
         assert_eq!(square.degree(), Some(64));
-        assert_eq!(square.divide_with_remainder(&polynomial).unwrap().1.is_zero(), true);
+        assert_eq!(
+            square
+                .divide_with_remainder(&polynomial)
+                .unwrap()
+                .1
+                .is_zero(),
+            true
+        );
         assert!(FiniteFieldPolynomial::new(2, vec![1; 34]).is_err());
     }
 

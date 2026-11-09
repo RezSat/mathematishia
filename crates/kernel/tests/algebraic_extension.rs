@@ -133,8 +133,12 @@ fn irreducible_quartic_and_degree_eight_fields_have_exact_inverses() {
             &p(&[1]),
         );
         let power = generator.pow_signed(expected_power, &ctx).unwrap();
-        assert!(power.coefficients().degree().is_none_or(|d|
-            d < expected_power as usize));
+        assert!(
+            power
+                .coefficients()
+                .degree()
+                .is_none_or(|d| d < expected_power as usize)
+        );
     }
 }
 

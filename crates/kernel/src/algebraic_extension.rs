@@ -65,7 +65,10 @@ impl CertifiedAlgebraicField {
         defining: RationalPolynomial,
     ) -> Result<Self, AlgebraicExtensionError> {
         ctx.check_polynomial(&defining)?;
-        if !defining.degree().is_some_and(|degree| (2..=8).contains(&degree)) {
+        if !defining
+            .degree()
+            .is_some_and(|degree| (2..=8).contains(&degree))
+        {
             return Err(AlgebraicExtensionError::UnsupportedDegree);
         }
         let leading = defining.coefficients().last().expect("nonzero polynomial");
@@ -117,7 +120,10 @@ impl CertifiedAlgebraicField {
 
 /// Verifies the defining polynomial is exactly one certified irreducible factor.
 pub fn verify_certified_algebraic_field(field: &CertifiedAlgebraicField) -> bool {
-    if !field.modulus.degree().is_some_and(|degree| (2..=8).contains(&degree))
+    if !field
+        .modulus
+        .degree()
+        .is_some_and(|degree| (2..=8).contains(&degree))
         || field.modulus.coefficients().last() != Some(&one())
         || verify_rational_factorization(&field.modulus, &field.certificate).is_err()
         || !field.certificate.is_complete()

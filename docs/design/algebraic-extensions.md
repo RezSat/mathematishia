@@ -1,30 +1,31 @@
 # Abstract algebraic extensions
 
-`CertifiedAlgebraicField` presents Q[alpha] using a monic irreducible defining
-polynomial of degree two or three. Its constructor checks irreducibility using
-the exact rational factorizer. If the factorizer cannot certify the defining
-polynomial, construction fails. There is no default root selection or complex
-embedding.
+`CertifiedAlgebraicField` constructs Q[alpha] from a monic defining
+polynomial whose irreducibility over Q has been certified. The current
+degree range is 2 through 8. Its certificate is independently checked
+before the field is admitted.
 
-Elements are canonical coefficient polynomials of degree less than the
-defining polynomial. Their arithmetic uses exact quotient-ring operations.
-A nonzero element in a certified field has an inverse; the inverse is computed
-using the extended polynomial GCD. Operations between different defining
-polynomials are rejected, even when the corresponding number fields are
-abstractly isomorphic.
+An element is represented by a polynomial of degree less than the
+defining polynomial. Arithmetic uses exact polynomial quotient
+operations; inverses use the extended Euclidean algorithm. An
+operation between elements with different defining polynomials fails
+rather than silently identifying field isomorphisms.
+
+The type does not select a real or complex embedding. The
+`QuadraticField` representation handles the embedded quadratic case
+separately.
 
 ## Minimal polynomials
 
-For an element a of an extension of degree n, the powers
-1, a, ..., a^n are linearly dependent over Q. The kernel solves the exact
-rational linear systems for the least degree dependency and constructs a
-monic annihilating polynomial.
+For an element a in a degree-n extension, 1, a, ..., a^n are
+linearly dependent over Q. The kernel constructs the first monic
+annihilator found by exact rational elimination, then checks it
+independently: substitution into the quotient ring must give zero,
+and the candidate must be certified irreducible over Q.
 
-The verifier separately evaluates the proposed polynomial at the element in
-the quotient ring, checks its degree and monicity, and certifies
-irreducibility over Q using the rational factorizer. If the proof cannot
-be completed under the factorization bounds, the minimal-polynomial
-operation returns an explicit error rather than claiming success.
+For larger degrees, certification can fail because the rational
+factorizer is bounded. In that case the operation returns an error,
+not an unproved minimal polynomial.
 
 ## Interfaces
 
@@ -35,10 +36,5 @@ CLI: `fieldmin`, `fieldpow`, `fieldop`.
 Python: `extension_value`, `extension_operation`,
 `extension_power`, `extension_minimal_polynomial`.
 
-The embedded quadratic API is separate. Cross-field composita, compatible
-complex embeddings, general root isolation and higher-degree extension
-certification are not implemented.
-
-Sources: `crates/kernel/src/algebraic_extension.rs`,
-`extension_minimal.rs`, `polynomial_residue.rs`,
-`rational_factorization.rs`.
+Cross-field composita, compatible embeddings and arbitrary higher-degree
+field construction are not yet implemented.

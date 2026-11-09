@@ -10,8 +10,9 @@ This file tracks implemented areas and the next domain extensions. See [CAPABILI
 - Extended Euclidean algorithm with verified polynomial Bézout certificates and modular inverses in Q[x].
 - Canonical quotient-ring arithmetic in Q[x]/(m), including nonunits and signed powers.
 - Certified embedded quadratic fields with exact arithmetic, conjugation, trace, norm and independently checked minimal polynomials.
-- Certified rational factors through cubic degree with bounded rational-root enumeration; unresolved cofactors are explicit.
-- Abstract quadratic and cubic extensions with exact arithmetic and verified minimal polynomials for extension elements.
+- Certified rational factors, including bounded quartic splitting and modular irreducibility proofs for higher degrees.
+- Exact small-prime polynomial arithmetic, bounded finite-field factorization, coprime Hensel lifting and verified factor reconstruction. Unresolved cofactors remain explicit.
+- Abstract irreducibility-certified extensions of degrees two through eight, with exact field arithmetic and checked minimal polynomials for supported elements.
 - Domain-aware rational expression parsing, exact normalization over Q(x), differentiation, point evaluation and rational-root solving through degree two.
 - Exact rational-linear, selected quadratic and rational-equation solving with domain exclusions.
 - Exact representation and verification of quadratic real irrational and complex roots.
@@ -24,8 +25,8 @@ This file tracks implemented areas and the next domain extensions. See [CAPABILI
 
 1. Provide verified arithmetic traces for general rational-expression conversions and extend proof obligations to equation transformations and domain-specific evidence.
 2. Extend conditional rewriting to wider expression classes and analytic branch semantics.
-3. Add general factorization over Q, including irreducible quartic and higher-degree factors with exact certificates.
-4. Extend abstract algebraic fields beyond degree three and implement compatible embeddings, field composita and cross-field arithmetic.
+3. Expand rational factorization beyond the current bounded monic reconstruction path, including arbitrary primitive integer polynomials, better modular splitting, general Hensel recombination and coefficient bounds.
+4. Extend algebraic fields beyond degree eight and implement compatible embeddings, field composita and cross-field arithmetic.
 5. Add analytic functions, broader differentiation and integration.
 6. Add numerical precision policies and certified approximations.
 7. Build explanatory renderers and stabilize external data formats.

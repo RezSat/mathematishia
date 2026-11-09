@@ -356,6 +356,77 @@ def algebraic_roots(source: str, variable: str) -> AlgebraicRootsResult:
     return AlgebraicRootsResult(kind, roots, steps)
 
 
+@dataclass(frozen=True)
+class RationalFactor:
+    polynomial: Polynomial
+    multiplicity: int
+
+
+@dataclass(frozen=True)
+class RationalFactorization:
+    unit: Fraction
+    factors: tuple[RationalFactor, ...]
+    unresolved: tuple[RationalFactor, ...]
+
+    @property
+    def complete(self) -> bool:
+        return not self.unresolved
+
+
+def factor_polynomial(source: str, variable: str) -> RationalFactorization:
+    """Return certified rational factors and any explicitly unresolved cofactors."""
+    unit, factors, unresolved = _native.factor_polynomial(source, variable)
+    return RationalFactorization(
+        Fraction(unit),
+        tuple(RationalFactor(_poly(poly), multiplicity) for poly, multiplicity in factors),
+        tuple(RationalFactor(_poly(poly), multiplicity) for poly, multiplicity in unresolved),
+    )
+
+
+@dataclass(frozen=True)
+class AlgebraicExtensionValue:
+    field_polynomial: Polynomial
+    representative: Polynomial
+
+
+def _extension(data) -> AlgebraicExtensionValue:
+    field, value = data
+    return AlgebraicExtensionValue(_poly(field), _poly(value))
+
+
+def extension_value(
+    modulus: str, value: str, variable: str
+) -> AlgebraicExtensionValue:
+    """Exact coordinates in a certified abstract quadratic or cubic extension."""
+    return _extension(_native.extension_value(modulus, value, variable))
+
+
+def extension_operation(
+    operation: Literal["add", "sub", "mul", "div"],
+    modulus: str, left: str, right: str, variable: str
+) -> AlgebraicExtensionValue:
+    """Operate within one certified field presentation over Q."""
+    return _extension(_native.extension_operation(
+        operation, modulus, left, right, variable
+    ))
+
+
+def extension_power(
+    modulus: str, value: str, variable: str, exponent: int
+) -> AlgebraicExtensionValue:
+    """Exact positive or negative powers of a field element."""
+    return _extension(_native.extension_power(
+        modulus, value, variable, exponent
+    ))
+
+
+def extension_minimal_polynomial(
+    modulus: str, value: str, variable: str
+) -> Polynomial:
+    """Find and verify the monic minimal polynomial over Q."""
+    return _poly(_native.extension_minimal_polynomial(modulus, value, variable))
+
+
 def polynomial(source: str, variable: str) -> Polynomial:
     """Convert a supported expression into the exact Q[x] domain."""
     return _poly(_native.polynomial(source, variable))
@@ -519,6 +590,9 @@ __all__ = [
     "QuadraticFieldValue", "quadratic_value", "quadratic_operation", "quadratic_inverse",
     "PolynomialResidue", "modular_reduce", "modular_operation", "modular_power",
     "SquareFreeFactor", "SquareFreeDecomposition",
+    "RationalFactor", "RationalFactorization", "factor_polynomial",
+    "AlgebraicExtensionValue", "extension_value", "extension_operation",
+    "extension_power", "extension_minimal_polynomial",
     "SymbolicDifferentiationStep", "SymbolicDerivative",
     "expression", "expand", "solve", "solve_quadratic", "algebraic_roots", "polynomial", "differentiate", "differentiate_expression", "square_free",
     "evaluate", "divide", "gcd", "rational_function", "rational_evaluate",

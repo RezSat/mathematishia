@@ -507,5 +507,43 @@ class PolynomialQuotientRingTests(unittest.TestCase):
             m.modular_reduce("x", "0", "x")
 
 
+
+class CertifiedAlgebraicExtensionTests(unittest.TestCase):
+    def test_certified_factors_and_unresolved_quartic(self):
+        complete = m.factor_polynomial("(x-1)*(x^2+1)", "x")
+        self.assertTrue(complete.complete)
+        self.assertEqual(len(complete.factors), 2)
+        self.assertEqual(len(complete.unresolved), 0)
+        partial = m.factor_polynomial("x^4+1", "x")
+        self.assertFalse(partial.complete)
+        self.assertEqual(len(partial.unresolved), 1)
+        with self.assertRaises(FrozenInstanceError):
+            complete.unit = Fraction(5)
+
+    def test_cubic_extension_arithmetic_and_minimal_polynomials(self):
+        element = m.extension_value("x^3-2", "x^3", "x")
+        self.assertEqual(element.representative.coefficients, (Fraction(2),))
+        cube = m.extension_power("x^3-2", "x", "x", 3)
+        self.assertEqual(cube.representative.coefficients, (Fraction(2),))
+        inverse = m.extension_power("x^3-2", "x", "x", -1)
+        self.assertEqual(inverse.representative.coefficients,
+                         (Fraction(0), Fraction(0), Fraction(1, 2)))
+        product = m.extension_operation("mul", "x^3-2", "x", "x^2", "x")
+        self.assertEqual(product.representative.coefficients, (Fraction(2),))
+        minimal = m.extension_minimal_polynomial("x^3-2", "x^2", "x")
+        self.assertEqual(minimal.coefficients,
+                         (Fraction(-4), Fraction(0), Fraction(0), Fraction(1)))
+
+    def test_reducible_unproven_and_zero_inverse_are_rejected(self):
+        with self.assertRaises(m.UnsupportedMathematicsError):
+            m.extension_value("x^3-1", "x", "x")
+        with self.assertRaises(m.UnsupportedMathematicsError):
+            m.extension_value("x^3-100003", "x", "x")
+        with self.assertRaises(m.UnsupportedMathematicsError):
+            m.extension_power("x^3-2", "0", "x", -1)
+        with self.assertRaises(m.UnsupportedMathematicsError):
+            m.extension_operation("div", "x^3-2", "1", "0", "x")
+
+
 if __name__ == "__main__":
     unittest.main()

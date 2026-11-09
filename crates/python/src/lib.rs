@@ -9,7 +9,8 @@ use mathema_frontend::{
     parse_expression, parse_statement,
 };
 use mathematishia_kernel::{
-    AlgebraicRootEvidence, AlgebraicRootSet, Assumptions, DefinednessError, DomainOperationError,
+    AlgebraicExtensionError, AlgebraicRootEvidence, AlgebraicRootSet, Assumptions,
+    CertifiedAlgebraicField, DefinednessError, DomainOperationError,
     DomainRewriteOutcome, EvaluationContext, EvaluationError, ExactQuadraticRoot, LinearSolution,
     PolynomialResidue, ProofNodeKind, QuadraticBranch, QuadraticElement, QuadraticField,
     QuadraticFieldError, QuadraticRoots, RationalExpressionError, RationalFunction,
@@ -485,6 +486,146 @@ fn py_modular_inverse(
         .inverse_mod_polynomial(&left, &modulus)
         .map(|value| value.map(|polynomial| poly_data(&polynomial, &symbol)))
         .map_err(map_evaluation_error)
+}
+
+fn map_factorization_error(error: mathematishia_kernel::RationalFactorizationError) -> PyErr {
+    match error {
+        mathematishia_kernel::RationalFactorizationError::Evaluation(error) => {
+            map_evaluation_error(error)
+        }
+        mathematishia_kernel::RationalFactorizationError::InvalidCertificate(error) => {
+            VerificationFailure::new_err(error.to_string())
+        }
+        _ => UnsupportedMathematicsError::new_err(error.to_string()),
+    }
+}
+
+fn map_extension_error(error: AlgebraicExtensionError) -> PyErr {
+    match error {
+        AlgebraicExtensionError::Evaluation(error) => map_evaluation_error(error),
+        AlgebraicExtensionError::Factorization(error) => map_factorization_error(error),
+        AlgebraicExtensionError::Residue(ResidueError::Evaluation(error)) => {
+            map_evaluation_error(error)
+        }
+        _ => UnsupportedMathematicsError::new_err(error.to_string()),
+    }
+}
+
+type PyFactorData = (PyPolynomialData, usize);
+type PyFactorizationData = (String, Vec<PyFactorData>, Vec<PyFactorData>);
+
+#[pyfunction(name = "factor_polynomial")]
+fn py_factor_polynomial(source: &str, variable: &str) -> PyResult<PyFactorizationData> {
+    let symbol = selected_variable(variable)?;
+    let poly = selected_polynomial(source, &symbol)?;
+    let result = EvaluationContext::default()
+        .factor_rational_polynomial(&poly)
+        .map_err(map_factorization_error)?;
+    Ok((
+        result.unit().to_string(),
+        result.factors().iter().map(|factor| (
+            poly_data(factor.polynomial(), &symbol),
+            factor.multiplicity(),
+        )).collect(),
+        result.unresolved().iter().map(|factor| (
+            poly_data(factor.polynomial(), &symbol),
+            factor.multiplicity(),
+        )).collect(),
+    ))
+}
+
+fn selected_extension(
+    polynomial: &str,
+    variable: &Symbol,
+) -> PyResult<CertifiedAlgebraicField> {
+    let defining = selected_polynomial(polynomial, variable)?;
+    CertifiedAlgebraicField::new(&EvaluationContext::default(), defining)
+        .map_err(map_extension_error)
+}
+
+type PyExtensionValue = (PyPolynomialData, PyPolynomialData);
+
+fn extension_data(
+    element: &mathematishia_kernel::AlgebraicExtensionElement,
+    variable: &Symbol,
+) -> PyExtensionValue {
+    (
+        poly_data(element.field().modulus(), variable),
+        poly_data(element.coefficients(), variable),
+    )
+}
+
+#[pyfunction(name = "extension_value")]
+fn py_extension_value(
+    modulus: &str,
+    value: &str,
+    variable: &str,
+) -> PyResult<PyExtensionValue> {
+    let symbol = selected_variable(variable)?;
+    let ctx = EvaluationContext::default();
+    let field = selected_extension(modulus, &symbol)?;
+    let element = field
+        .element(&ctx, selected_polynomial(value, &symbol)?)
+        .map_err(map_extension_error)?;
+    Ok(extension_data(&element, &symbol))
+}
+
+#[pyfunction(name = "extension_operation")]
+fn py_extension_operation(
+    operation: &str,
+    modulus: &str,
+    left: &str,
+    right: &str,
+    variable: &str,
+) -> PyResult<PyExtensionValue> {
+    let symbol = selected_variable(variable)?;
+    let ctx = EvaluationContext::default();
+    let field = selected_extension(modulus, &symbol)?;
+    let a = field.element(&ctx, selected_polynomial(left, &symbol)?)
+        .map_err(map_extension_error)?;
+    let b = field.element(&ctx, selected_polynomial(right, &symbol)?)
+        .map_err(map_extension_error)?;
+    let result = match operation {
+        "add" => a.add(&b, &ctx),
+        "sub" => a.subtract(&b, &ctx),
+        "mul" => a.multiply(&b, &ctx),
+        "div" => a.divide(&b, &ctx),
+        _ => return Err(UnsupportedMathematicsError::new_err(
+            "expected add, sub, mul or div"
+        )),
+    }.map_err(map_extension_error)?;
+    Ok(extension_data(&result, &symbol))
+}
+
+#[pyfunction(name = "extension_power")]
+fn py_extension_power(
+    modulus: &str,
+    value: &str,
+    variable: &str,
+    exponent: i64,
+) -> PyResult<PyExtensionValue> {
+    let symbol = selected_variable(variable)?;
+    let ctx = EvaluationContext::default();
+    let field = selected_extension(modulus, &symbol)?;
+    let element = field.element(&ctx, selected_polynomial(value, &symbol)?)
+        .map_err(map_extension_error)?;
+    let result = element.pow_signed(exponent, &ctx).map_err(map_extension_error)?;
+    Ok(extension_data(&result, &symbol))
+}
+
+#[pyfunction(name = "extension_minimal_polynomial")]
+fn py_extension_minimal_polynomial(
+    modulus: &str,
+    value: &str,
+    variable: &str,
+) -> PyResult<PyPolynomialData> {
+    let symbol = selected_variable(variable)?;
+    let ctx = EvaluationContext::default();
+    let field = selected_extension(modulus, &symbol)?;
+    let element = field.element(&ctx, selected_polynomial(value, &symbol)?)
+        .map_err(map_extension_error)?;
+    let minimal = element.minimal_polynomial(&ctx).map_err(map_extension_error)?;
+    Ok(poly_data(&minimal, &symbol))
 }
 
 #[pyfunction(name = "gcd")]
@@ -1068,6 +1209,11 @@ fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(py_evaluate, m)?)?;
     m.add_function(wrap_pyfunction!(py_divide, m)?)?;
     m.add_function(wrap_pyfunction!(py_gcd, m)?)?;
+    m.add_function(wrap_pyfunction!(py_factor_polynomial, m)?)?;
+    m.add_function(wrap_pyfunction!(py_extension_value, m)?)?;
+    m.add_function(wrap_pyfunction!(py_extension_operation, m)?)?;
+    m.add_function(wrap_pyfunction!(py_extension_power, m)?)?;
+    m.add_function(wrap_pyfunction!(py_extension_minimal_polynomial, m)?)?;
     m.add_function(wrap_pyfunction!(py_extended_gcd, m)?)?;
     m.add_function(wrap_pyfunction!(py_modular_inverse, m)?)?;
     m.add_function(wrap_pyfunction!(py_differentiate, m)?)?;

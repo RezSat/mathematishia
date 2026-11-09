@@ -258,8 +258,15 @@ mod arithmetic_helpers_tests {
         assert_eq!(Integer::from(-13).modulo_u32(5), Some(2));
         assert_eq!(Integer::from(13).modulo_u32(5), Some(3));
         assert_eq!(Integer::from(13).modulo_u32(0), None);
-        assert_eq!(huge.modulo_u32(7), Some(huge.to_string().bytes()
-            .fold(0_u32, |value, digit| (value * 10 + u32::from(digit - b'0')) % 7)));
+        assert_eq!(
+            huge.modulo_u32(7),
+            Some(
+                huge.to_string()
+                    .bytes()
+                    .fold(0_u32, |value, digit| (value * 10 + u32::from(digit - b'0'))
+                        % 7)
+            )
+        );
     }
 
     #[test]

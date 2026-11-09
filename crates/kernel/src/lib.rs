@@ -70,11 +70,12 @@ pub use finite_field_factorization::{
     FiniteFieldFactor, FiniteFieldFactorization, factor_finite_field,
     verify_finite_field_factorization,
 };
-pub use hensel_lift::{HenselError, HenselPair, IntegerPolynomial,
-    hensel_lift_pair, verify_hensel_pair};
 pub use guarded_rewrite::{
     GuardedRewriteOutcome, GuardedRewriteStep, GuardedRewriteVerificationError, GuardedRuleId,
     cancel_symbol_inverse_once, verify_guarded_rewrite_step,
+};
+pub use hensel_lift::{
+    HenselError, HenselPair, IntegerPolynomial, hensel_lift_pair, verify_hensel_pair,
 };
 pub use mathema::{DefinednessError, DomainExpression, definedness_obligations};
 pub use modular_irreducibility::{

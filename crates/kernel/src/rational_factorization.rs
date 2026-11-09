@@ -11,8 +11,7 @@ use mathema::{Integer, Rational};
 
 use crate::quartic_factor::{QuarticSearch, search_quartic_quadratic};
 use crate::{
-    EvaluationContext, EvaluationError, RationalPolynomial,
-    modular_irreducibility_witness,
+    EvaluationContext, EvaluationError, RationalPolynomial, modular_irreducibility_witness,
 };
 
 const MAX_PRIMITIVE_COEFFICIENT: i64 = 100_000;
@@ -114,11 +113,15 @@ fn irreducible_small(poly: &RationalPolynomial) -> bool {
             let delta = &(b * b) - &(&Rational::from(Integer::from(4)) * c);
             delta.exact_sqrt().is_none()
         }
-        Some(3) => rational_root(poly) == Some(None) || modular_irreducibility_witness(poly).is_some(),
-        Some(4) => matches!(
-            search_quartic_quadratic(poly, &EvaluationContext::default()),
-            Ok(QuarticSearch::Exhausted)
-        ) || modular_irreducibility_witness(poly).is_some(),
+        Some(3) => {
+            rational_root(poly) == Some(None) || modular_irreducibility_witness(poly).is_some()
+        }
+        Some(4) => {
+            matches!(
+                search_quartic_quadratic(poly, &EvaluationContext::default()),
+                Ok(QuarticSearch::Exhausted)
+            ) || modular_irreducibility_witness(poly).is_some()
+        }
         Some(degree) if degree > 4 => modular_irreducibility_witness(poly).is_some(),
         _ => false,
     }

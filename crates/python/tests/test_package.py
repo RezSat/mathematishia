@@ -509,12 +509,12 @@ class PolynomialQuotientRingTests(unittest.TestCase):
 
 
 class CertifiedAlgebraicExtensionTests(unittest.TestCase):
-    def test_certified_factors_and_unresolved_quartic(self):
+    def test_certified_factors_and_bounded_unresolved_quartic(self):
         complete = m.factor_polynomial("(x-1)*(x^2+1)", "x")
         self.assertTrue(complete.complete)
         self.assertEqual(len(complete.factors), 2)
         self.assertEqual(len(complete.unresolved), 0)
-        partial = m.factor_polynomial("x^4+1", "x")
+        partial = m.factor_polynomial("(x^2+1000)*(x^2+2000)", "x")
         self.assertFalse(partial.complete)
         self.assertEqual(len(partial.unresolved), 1)
         with self.assertRaises(FrozenInstanceError):
@@ -537,8 +537,9 @@ class CertifiedAlgebraicExtensionTests(unittest.TestCase):
     def test_reducible_unproven_and_zero_inverse_are_rejected(self):
         with self.assertRaises(m.UnsupportedMathematicsError):
             m.extension_value("x^3-1", "x", "x")
-        with self.assertRaises(m.UnsupportedMathematicsError):
-            m.extension_value("x^3-100003", "x", "x")
+        # A modular certificate can now establish irreducibility here.
+        large = m.extension_value("x^3-100003", "x", "x")
+        self.assertEqual(large.representative.coefficients, (Fraction(0), Fraction(1)))
         with self.assertRaises(m.UnsupportedMathematicsError):
             m.extension_power("x^3-2", "0", "x", -1)
         with self.assertRaises(m.UnsupportedMathematicsError):

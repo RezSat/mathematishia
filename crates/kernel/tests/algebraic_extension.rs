@@ -54,10 +54,7 @@ fn reducible_and_unproven_moduli_are_rejected() {
         CertifiedAlgebraicField::new(&ctx, p(&[1, 0, 0, 0, 1])),
         Err(AlgebraicExtensionError::UnsupportedDegree),
     );
-    assert_eq!(
-        CertifiedAlgebraicField::new(&ctx, p(&[-100_003, 0, 0, 1])),
-        Err(AlgebraicExtensionError::IrreducibilityNotCertified),
-    );
+    assert!(CertifiedAlgebraicField::new(&ctx, p(&[-100_003, 0, 0, 1])).is_ok());
 }
 
 #[test]

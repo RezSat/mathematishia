@@ -41,9 +41,9 @@ fn repeated_quadratic_factors_are_not_left_unresolved() {
 }
 
 #[test]
-fn quartic_without_rational_factors_is_explicitly_unresolved() {
+fn bounded_quartic_search_does_not_guess_irreducibility() {
     let ctx = EvaluationContext::default();
-    let polynomial = p(&[1, 0, 0, 0, 1]);
+    let polynomial = p(&[2_000_000, 0, 3_000, 0, 1]);
     let result = ctx.factor_rational_polynomial(&polynomial).unwrap();
     assert!(!result.is_complete());
     assert_eq!(result.unresolved()[0].polynomial(), &polynomial);
@@ -51,12 +51,12 @@ fn quartic_without_rational_factors_is_explicitly_unresolved() {
 }
 
 #[test]
-fn bounded_root_search_does_not_claim_irreducibility() {
+fn modular_certificate_handles_large_cubic_coefficients() {
     let ctx = EvaluationContext::default();
     let large = p(&[-100_003, 0, 0, 1]);
     let result = ctx.factor_rational_polynomial(&large).unwrap();
-    assert!(!result.is_complete());
-    assert_eq!(result.unresolved()[0].polynomial(), &large);
+    assert!(result.is_complete());
+    assert_eq!(result.factors()[0].polynomial(), &large);
 }
 
 #[test]

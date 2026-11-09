@@ -45,7 +45,9 @@ pub(crate) fn search_quartic_quadratic(
     {
         return Ok(QuarticSearch::Inconclusive);
     }
-    let integers = polynomial.coefficients().iter()
+    let integers = polynomial
+        .coefficients()
+        .iter()
         .map(|coefficient| {
             if !coefficient.denominator().is_one() {
                 return None;
@@ -60,16 +62,18 @@ pub(crate) fn search_quartic_quadratic(
         return Ok(QuarticSearch::Inconclusive);
     }
 
-    let max_coefficient = values[..4].iter().map(|value| value.unsigned_abs())
-        .max().unwrap_or(0);
+    let max_coefficient = values[..4]
+        .iter()
+        .map(|value| value.unsigned_abs())
+        .max()
+        .unwrap_or(0);
     let bound = max_coefficient.saturating_add(1);
     if bound > MAX_ROOT_BOUND {
         return Ok(QuarticSearch::Inconclusive);
     }
     let constant_divisors = divisors(values[0].unsigned_abs());
     let linear_bound = (2 * bound) as i64;
-    let trial_count = (2 * constant_divisors.len())
-        .saturating_mul((2 * linear_bound + 1) as usize);
+    let trial_count = (2 * constant_divisors.len()).saturating_mul((2 * linear_bound + 1) as usize);
     if trial_count > MAX_SEARCH_PAIRS {
         return Ok(QuarticSearch::Inconclusive);
     }
@@ -99,24 +103,30 @@ mod tests {
     use super::*;
 
     fn p(values: &[i64]) -> RationalPolynomial {
-        RationalPolynomial::new(values.iter()
-            .map(|&n| Rational::from(Integer::from(n))).collect())
+        RationalPolynomial::new(
+            values
+                .iter()
+                .map(|&n| Rational::from(Integer::from(n)))
+                .collect(),
+        )
     }
 
     #[test]
     fn splits_sophie_germain_quartic() {
-        let original = p(&[4,0,0,0,1]);
+        let original = p(&[4, 0, 0, 0, 1]);
         let found = search_quartic_quadratic(&original, &EvaluationContext::default()).unwrap();
-        let QuarticSearch::Split(first, second) = found else { panic!("must split") };
+        let QuarticSearch::Split(first, second) = found else {
+            panic!("must split")
+        };
         assert_eq!(first.multiply(&second), original);
-        assert_eq!(first.degree(),Some(2));
-        assert_eq!(second.degree(),Some(2));
+        assert_eq!(first.degree(), Some(2));
+        assert_eq!(second.degree(), Some(2));
     }
 
     #[test]
     fn certifies_x_four_plus_one_by_exhaustion() {
         assert_eq!(
-            search_quartic_quadratic(&p(&[1,0,0,0,1]), &EvaluationContext::default()).unwrap(),
+            search_quartic_quadratic(&p(&[1, 0, 0, 0, 1]), &EvaluationContext::default()).unwrap(),
             QuarticSearch::Exhausted,
         );
     }
@@ -124,7 +134,13 @@ mod tests {
     #[test]
     fn unsupported_nonmonic_and_large_inputs_are_not_certified() {
         let ctx = EvaluationContext::default();
-        assert_eq!(search_quartic_quadratic(&p(&[1,0,0,0,2]), &ctx).unwrap(),QuarticSearch::Inconclusive);
-        assert_eq!(search_quartic_quadratic(&p(&[41,0,0,0,1]), &ctx).unwrap(),QuarticSearch::Inconclusive);
+        assert_eq!(
+            search_quartic_quadratic(&p(&[1, 0, 0, 0, 2]), &ctx).unwrap(),
+            QuarticSearch::Inconclusive
+        );
+        assert_eq!(
+            search_quartic_quadratic(&p(&[41, 0, 0, 0, 1]), &ctx).unwrap(),
+            QuarticSearch::Inconclusive
+        );
     }
 }

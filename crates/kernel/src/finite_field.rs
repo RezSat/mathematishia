@@ -301,10 +301,12 @@ impl FiniteFieldPolynomial {
         let mut power = x_mod.clone();
         for n in 1..=degree {
             power = power.pow_mod(u64::from(self.prime), &polynomial)?;
-            if degree.is_multiple_of(n) && degree / n > 1 && is_prime_degree(degree / n) {
-                if polynomial.gcd(&power.subtract(&x_mod)?)?.degree() != Some(0) {
-                    return Ok(false);
-                }
+            if degree.is_multiple_of(n)
+                && degree / n > 1
+                && is_prime_degree(degree / n)
+                && polynomial.gcd(&power.subtract(&x_mod)?)?.degree() != Some(0)
+            {
+                return Ok(false);
             }
         }
         Ok(power == x_mod)
@@ -345,14 +347,7 @@ mod tests {
         let polynomial = FiniteFieldPolynomial::new(2, vec![1; 33]).unwrap();
         let square = polynomial.multiply(&polynomial).unwrap();
         assert_eq!(square.degree(), Some(64));
-        assert_eq!(
-            square
-                .divide_with_remainder(&polynomial)
-                .unwrap()
-                .1
-                .is_zero(),
-            true
-        );
+        assert!(square.divide_with_remainder(&polynomial).unwrap().1.is_zero());
         assert!(FiniteFieldPolynomial::new(2, vec![1; 34]).is_err());
     }
 

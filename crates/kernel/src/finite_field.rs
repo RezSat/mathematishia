@@ -8,6 +8,7 @@ use std::fmt;
 
 const MAX_PRIME: u32 = 251;
 const MAX_DEGREE: usize = 32;
+const MAX_INTERMEDIATE_DEGREE: usize = 2 * MAX_DEGREE;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum FiniteFieldError {
@@ -155,7 +156,7 @@ impl FiniteFieldPolynomial {
             return Ok(Self::zero(self.prime));
         }
         let degree = self.degree().unwrap_or(0) + other.degree().unwrap_or(0);
-        if degree > MAX_DEGREE {
+        if degree > MAX_INTERMEDIATE_DEGREE {
             return Err(FiniteFieldError::DegreeLimit);
         }
         let mut result = vec![0_u32; degree + 1];
@@ -307,6 +308,15 @@ mod tests {
             assert_eq!(FiniteFieldPolynomial::new(composite, vec![1]), Err(FiniteFieldError::InvalidPrime));
         }
         assert_eq!(FiniteFieldPolynomial::new(5, vec![-1, 6, 5]).unwrap().coefficients(), &[4, 1]);
+    }
+
+    #[test]
+    fn degree_limit_supports_modular_products_of_degree_32() {
+        let polynomial = FiniteFieldPolynomial::new(2, vec![1; 33]).unwrap();
+        let square = polynomial.multiply(&polynomial).unwrap();
+        assert_eq!(square.degree(), Some(64));
+        assert_eq!(square.divide_with_remainder(&polynomial).unwrap().1.is_zero(), true);
+        assert!(FiniteFieldPolynomial::new(2, vec![1; 34]).is_err());
     }
 
     #[test]

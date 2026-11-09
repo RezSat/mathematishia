@@ -10,12 +10,12 @@ use mathema_frontend::{
 };
 use mathematishia_kernel::{
     AlgebraicExtensionError, AlgebraicRootEvidence, AlgebraicRootSet, Assumptions,
-    CertifiedAlgebraicField, DefinednessError, DomainOperationError,
-    DomainRewriteOutcome, EvaluationContext, EvaluationError, ExactQuadraticRoot, LinearSolution,
-    PolynomialResidue, ProofNodeKind, QuadraticBranch, QuadraticElement, QuadraticField,
-    QuadraticFieldError, QuadraticRoots, RationalExpressionError, RationalFunction,
-    RationalFunctionError, RationalPolynomial, RationalQuadraticRoots, ResidueError,
-    ResourceLimitKind, VerifiedCondition, rewrite_domain_once, substitute_domain,
+    CertifiedAlgebraicField, DefinednessError, DomainOperationError, DomainRewriteOutcome,
+    EvaluationContext, EvaluationError, ExactQuadraticRoot, LinearSolution, PolynomialResidue,
+    ProofNodeKind, QuadraticBranch, QuadraticElement, QuadraticField, QuadraticFieldError,
+    QuadraticRoots, RationalExpressionError, RationalFunction, RationalFunctionError,
+    RationalPolynomial, RationalQuadraticRoots, ResidueError, ResourceLimitKind, VerifiedCondition,
+    rewrite_domain_once, substitute_domain,
 };
 use pyo3::create_exception;
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
@@ -523,21 +523,30 @@ fn py_factor_polynomial(source: &str, variable: &str) -> PyResult<PyFactorizatio
         .map_err(map_factorization_error)?;
     Ok((
         result.unit().to_string(),
-        result.factors().iter().map(|factor| (
-            poly_data(factor.polynomial(), &symbol),
-            factor.multiplicity(),
-        )).collect(),
-        result.unresolved().iter().map(|factor| (
-            poly_data(factor.polynomial(), &symbol),
-            factor.multiplicity(),
-        )).collect(),
+        result
+            .factors()
+            .iter()
+            .map(|factor| {
+                (
+                    poly_data(factor.polynomial(), &symbol),
+                    factor.multiplicity(),
+                )
+            })
+            .collect(),
+        result
+            .unresolved()
+            .iter()
+            .map(|factor| {
+                (
+                    poly_data(factor.polynomial(), &symbol),
+                    factor.multiplicity(),
+                )
+            })
+            .collect(),
     ))
 }
 
-fn selected_extension(
-    polynomial: &str,
-    variable: &Symbol,
-) -> PyResult<CertifiedAlgebraicField> {
+fn selected_extension(polynomial: &str, variable: &Symbol) -> PyResult<CertifiedAlgebraicField> {
     let defining = selected_polynomial(polynomial, variable)?;
     CertifiedAlgebraicField::new(&EvaluationContext::default(), defining)
         .map_err(map_extension_error)
@@ -556,11 +565,7 @@ fn extension_data(
 }
 
 #[pyfunction(name = "extension_value")]
-fn py_extension_value(
-    modulus: &str,
-    value: &str,
-    variable: &str,
-) -> PyResult<PyExtensionValue> {
+fn py_extension_value(modulus: &str, value: &str, variable: &str) -> PyResult<PyExtensionValue> {
     let symbol = selected_variable(variable)?;
     let ctx = EvaluationContext::default();
     let field = selected_extension(modulus, &symbol)?;
@@ -581,19 +586,24 @@ fn py_extension_operation(
     let symbol = selected_variable(variable)?;
     let ctx = EvaluationContext::default();
     let field = selected_extension(modulus, &symbol)?;
-    let a = field.element(&ctx, selected_polynomial(left, &symbol)?)
+    let a = field
+        .element(&ctx, selected_polynomial(left, &symbol)?)
         .map_err(map_extension_error)?;
-    let b = field.element(&ctx, selected_polynomial(right, &symbol)?)
+    let b = field
+        .element(&ctx, selected_polynomial(right, &symbol)?)
         .map_err(map_extension_error)?;
     let result = match operation {
         "add" => a.add(&b, &ctx),
         "sub" => a.subtract(&b, &ctx),
         "mul" => a.multiply(&b, &ctx),
         "div" => a.divide(&b, &ctx),
-        _ => return Err(UnsupportedMathematicsError::new_err(
-            "expected add, sub, mul or div"
-        )),
-    }.map_err(map_extension_error)?;
+        _ => {
+            return Err(UnsupportedMathematicsError::new_err(
+                "expected add, sub, mul or div",
+            ));
+        }
+    }
+    .map_err(map_extension_error)?;
     Ok(extension_data(&result, &symbol))
 }
 
@@ -607,9 +617,12 @@ fn py_extension_power(
     let symbol = selected_variable(variable)?;
     let ctx = EvaluationContext::default();
     let field = selected_extension(modulus, &symbol)?;
-    let element = field.element(&ctx, selected_polynomial(value, &symbol)?)
+    let element = field
+        .element(&ctx, selected_polynomial(value, &symbol)?)
         .map_err(map_extension_error)?;
-    let result = element.pow_signed(exponent, &ctx).map_err(map_extension_error)?;
+    let result = element
+        .pow_signed(exponent, &ctx)
+        .map_err(map_extension_error)?;
     Ok(extension_data(&result, &symbol))
 }
 
@@ -622,9 +635,12 @@ fn py_extension_minimal_polynomial(
     let symbol = selected_variable(variable)?;
     let ctx = EvaluationContext::default();
     let field = selected_extension(modulus, &symbol)?;
-    let element = field.element(&ctx, selected_polynomial(value, &symbol)?)
+    let element = field
+        .element(&ctx, selected_polynomial(value, &symbol)?)
         .map_err(map_extension_error)?;
-    let minimal = element.minimal_polynomial(&ctx).map_err(map_extension_error)?;
+    let minimal = element
+        .minimal_polynomial(&ctx)
+        .map_err(map_extension_error)?;
     Ok(poly_data(&minimal, &symbol))
 }
 

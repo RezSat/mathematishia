@@ -7,6 +7,7 @@
 use mathema::{Expr, ExprView, Symbol};
 
 mod algebraic;
+mod algebraic_extension;
 mod assumptions;
 mod budget;
 mod conditional_rewrite;
@@ -34,6 +35,10 @@ mod verification;
 pub use algebraic::{
     AlgebraicRootEvidence, AlgebraicRootResult, AlgebraicRootRule, AlgebraicRootSet,
     AlgebraicVerificationError, ExactQuadraticRoot, QuadraticBranch, verify_algebraic_roots,
+};
+pub use algebraic_extension::{
+    AlgebraicExtensionElement, AlgebraicExtensionError, CertifiedAlgebraicField,
+    verify_certified_algebraic_field,
 };
 pub use assumptions::{AssumptionError, Assumptions, ConditionStatus};
 pub use conditional_rewrite::{

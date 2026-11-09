@@ -74,3 +74,13 @@ fn deterministic_general_cubic_values_are_annhilated() {
         }
     }
 }
+
+#[test]
+fn exact_minimal_polynomial_for_certified_quartic_generator() {
+    let ctx = EvaluationContext::default();
+    let field = CertifiedAlgebraicField::new(&ctx, p(&[1, 0, 0, 0, 1])).unwrap();
+    let alpha = field.generator(&ctx).unwrap();
+    let minimal = alpha.minimal_polynomial(&ctx).unwrap();
+    assert_eq!(minimal, p(&[1, 0, 0, 0, 1]));
+    assert!(verify_extension_minimal_polynomial(&ctx, &alpha, &minimal).unwrap());
+}

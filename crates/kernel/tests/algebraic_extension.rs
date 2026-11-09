@@ -115,3 +115,34 @@ fn deterministic_field_distributivity() {
         }
     }
 }
+
+#[test]
+fn irreducible_quartic_and_degree_eight_fields_have_exact_inverses() {
+    let ctx = EvaluationContext::default();
+    for (defining, expected_power) in [
+        (p(&[1, 0, 0, 0, 1]), 4_i64),
+        (p(&[1, 1, 0, 1, 1]), 4_i64),
+        (p(&[1, 1, 0, 1, 1, 0, 0, 0, 1]), 8_i64),
+    ] {
+        let field = CertifiedAlgebraicField::new(&ctx, defining).unwrap();
+        assert!(verify_certified_algebraic_field(&field));
+        let generator = field.generator(&ctx).unwrap();
+        let inverse = generator.inverse(&ctx).unwrap();
+        assert_eq!(
+            generator.multiply(&inverse, &ctx).unwrap().coefficients(),
+            &p(&[1]),
+        );
+        let power = generator.pow_signed(expected_power, &ctx).unwrap();
+        assert!(power.coefficients().degree().is_none_or(|d|
+            d < expected_power as usize));
+    }
+}
+
+#[test]
+fn degree_limit_rejects_uncertified_broad_extensions() {
+    let ctx = EvaluationContext::default();
+    assert_eq!(
+        CertifiedAlgebraicField::new(&ctx, p(&[1, 0, 0, 0, 0, 0, 0, 0, 0, 1])),
+        Err(AlgebraicExtensionError::UnsupportedDegree),
+    );
+}

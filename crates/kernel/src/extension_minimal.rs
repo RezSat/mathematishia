@@ -116,7 +116,7 @@ pub fn verify_extension_minimal_polynomial(
 }
 
 impl AlgebraicExtensionElement {
-    /// Computes the monic minimal polynomial over Q (degree at most three).
+    /// Computes the monic minimal polynomial over Q for a certified degree-2..8 field.
     /// Unsupported large-coefficient irreducibility checks fail explicitly.
     pub fn minimal_polynomial(
         &self,

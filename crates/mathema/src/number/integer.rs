@@ -53,6 +53,15 @@ impl Integer {
         (remainder.sign() == Sign::NoSign).then_some(Self(quotient))
     }
 
+    /// Exact nonnegative residue modulo a small positive integer.
+    pub fn modulo_u32(&self, modulus: u32) -> Option<u32> {
+        if modulus == 0 {
+            return None;
+        }
+        let residue = self.0.mod_floor(&BigInt::from(modulus));
+        residue.to_string().parse::<u32>().ok()
+    }
+
     /// Narrowing conversion for bounded algorithms; never truncates.
     pub fn try_i64(&self) -> Option<i64> {
         self.to_string().parse::<i64>().ok()
@@ -239,6 +248,18 @@ mod arithmetic_helpers_tests {
         assert_eq!(a.divide_exact(&Integer::zero()), None);
         assert_eq!(Integer::zero().lcm(&a), Integer::zero());
         assert_eq!(Integer::zero().gcd(&a), Integer::from(12));
+    }
+
+    #[test]
+    fn modular_residue_handles_negative_and_large_integers() {
+        let huge = "340282366920938463463374607431768211457"
+            .parse::<Integer>()
+            .unwrap();
+        assert_eq!(Integer::from(-13).modulo_u32(5), Some(2));
+        assert_eq!(Integer::from(13).modulo_u32(5), Some(3));
+        assert_eq!(Integer::from(13).modulo_u32(0), None);
+        assert_eq!(huge.modulo_u32(7), Some(huge.to_string().bytes()
+            .fold(0_u32, |value, digit| (value * 10 + u32::from(digit - b'0')) % 7)));
     }
 
     #[test]

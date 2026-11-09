@@ -55,7 +55,7 @@ fn centered(poly: &IntegerPolynomial, modulus: &Integer) -> Option<RationalPolyn
     let two = Integer::from(2);
     let coefficients = poly.coefficients().iter().map(|number| {
         let residue = number.modulo_positive(modulus)?;
-        let centered = if &residue * &two > *modulus {
+        let centered = if &(&residue * &two) > modulus {
             &residue - modulus
         } else {
             residue
@@ -112,7 +112,7 @@ pub(crate) fn reconstruct_factor(
             let mut g = lift_start(&left);
             let mut h = lift_start(&right);
             let mut modulus = Integer::from(prime);
-            for _ in 0..=MAX_LIFTS {
+            for attempt in 0..MAX_LIFTS {
                 if let Some(candidate) = centered(&g, &modulus) {
                     let (quotient, remainder) = ctx.divide(polynomial, &candidate)?;
                     if remainder.is_zero() && quotient.degree().is_some_and(|d| d > 0) {
@@ -120,6 +120,9 @@ pub(crate) fn reconstruct_factor(
                         // cofactor, regardless of lifted representative.
                         return Ok(Some((candidate, quotient)));
                     }
+                }
+                if attempt + 1 == MAX_LIFTS {
+                    break;
                 }
                 let step = hensel_lift_pair(ctx, &target, &g, &h, prime, &modulus)?;
                 g = step.left().clone();

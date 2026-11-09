@@ -32,6 +32,7 @@ mod quartic_factor;
 mod rational_equation;
 mod rational_expression;
 mod rational_factorization;
+mod modular_reconstruction;
 mod rational_function;
 mod rational_quadratic;
 mod solve_linear;

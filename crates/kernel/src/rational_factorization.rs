@@ -10,6 +10,7 @@ use std::fmt;
 use mathema::{Integer, Rational};
 
 use crate::quartic_factor::{QuarticSearch, search_quartic_quadratic};
+use crate::modular_reconstruction::reconstruct_factor;
 use crate::{
     EvaluationContext, EvaluationError, RationalPolynomial, modular_irreducibility_witness,
 };
@@ -190,6 +191,7 @@ pub enum RationalFactorizationError {
     Evaluation(EvaluationError),
     ZeroPolynomial,
     InvalidCertificate(FactorizationVerificationError),
+    Reconstruction(crate::HenselError),
 }
 impl fmt::Display for RationalFactorizationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -197,6 +199,11 @@ impl fmt::Display for RationalFactorizationError {
     }
 }
 impl Error for RationalFactorizationError {}
+impl From<crate::HenselError> for RationalFactorizationError {
+    fn from(value: crate::HenselError) -> Self {
+        Self::Reconstruction(value)
+    }
+}
 impl From<EvaluationError> for RationalFactorizationError {
     fn from(value: EvaluationError) -> Self {
         Self::Evaluation(value)
@@ -318,6 +325,16 @@ fn factor_squarefree(
                             break;
                         }
                         QuarticSearch::Inconclusive => {}
+                    }
+                }
+                if degree > 4 || matches!(
+                    search_quartic_quadratic(&polynomial, ctx)?,
+                    QuarticSearch::Inconclusive
+                ) {
+                    if let Some((left, right)) = reconstruct_factor(ctx, &polynomial)? {
+                        factor_squarefree(left, multiplicity, factors, unresolved, ctx)?;
+                        factor_squarefree(right, multiplicity, factors, unresolved, ctx)?;
+                        break;
                     }
                 }
                 if modular_irreducibility_witness(&polynomial).is_some() {

@@ -33,25 +33,38 @@ pub struct FiniteFieldFactorization {
 }
 
 impl FiniteFieldFactorization {
-    pub fn prime(&self) -> u32 { self.prime }
-    pub fn unit(&self) -> u32 { self.unit }
-    pub fn factors(&self) -> &[FiniteFieldFactor] { &self.factors }
-    pub fn unresolved(&self) -> &[FiniteFieldFactor] { &self.unresolved }
-    pub fn is_complete(&self) -> bool { self.unresolved.is_empty() }
+    pub fn prime(&self) -> u32 {
+        self.prime
+    }
+    pub fn unit(&self) -> u32 {
+        self.unit
+    }
+    pub fn factors(&self) -> &[FiniteFieldFactor] {
+        &self.factors
+    }
+    pub fn unresolved(&self) -> &[FiniteFieldFactor] {
+        &self.unresolved
+    }
+    pub fn is_complete(&self) -> bool {
+        self.unresolved.is_empty()
+    }
 }
 
 fn one(prime: u32) -> FiniteFieldPolynomial {
     FiniteFieldPolynomial::new(prime, vec![1]).expect("validated prime")
 }
 
-fn record(
-    target: &mut Vec<FiniteFieldFactor>,
-    polynomial: FiniteFieldPolynomial,
-) {
-    if let Some(existing) = target.iter_mut().find(|factor| factor.polynomial == polynomial) {
+fn record(target: &mut Vec<FiniteFieldFactor>, polynomial: FiniteFieldPolynomial) {
+    if let Some(existing) = target
+        .iter_mut()
+        .find(|factor| factor.polynomial == polynomial)
+    {
         existing.multiplicity += 1;
     } else {
-        target.push(FiniteFieldFactor { polynomial, multiplicity: 1 });
+        target.push(FiniteFieldFactor {
+            polynomial,
+            multiplicity: 1,
+        });
     }
 }
 
@@ -121,7 +134,8 @@ pub fn verify_finite_field_factorization(
     original: &FiniteFieldPolynomial,
     result: &FiniteFieldFactorization,
 ) -> Result<bool, FiniteFieldError> {
-    if original.is_zero() || original.prime() != result.prime
+    if original.is_zero()
+        || original.prime() != result.prime
         || original.coefficients().last() != Some(&result.unit)
         || result.unit == 0
     {
@@ -130,10 +144,11 @@ pub fn verify_finite_field_factorization(
     let mut product = one(original.prime()).scale(result.unit);
     let mut seen = Vec::new();
     for factor in result.factors.iter().chain(result.unresolved.iter()) {
-        if factor.multiplicity == 0 || factor.polynomial.prime() != original.prime()
+        if factor.multiplicity == 0
+            || factor.polynomial.prime() != original.prime()
             || factor.polynomial.degree().is_none_or(|degree| degree == 0)
             || factor.polynomial.coefficients().last() != Some(&1)
-            || seen.contains(&factor.polynomial)
+            || seen.contains(&&factor.polynomial)
         {
             return Ok(false);
         }
@@ -161,7 +176,10 @@ pub fn factor_finite_field(
     if polynomial.is_zero() {
         return Err(FiniteFieldError::ZeroDivisor);
     }
-    let unit = *polynomial.coefficients().last().expect("nonzero polynomial");
+    let unit = *polynomial
+        .coefficients()
+        .last()
+        .expect("nonzero polynomial");
     let mut result = FiniteFieldFactorization {
         prime: polynomial.prime(),
         unit,
@@ -170,7 +188,10 @@ pub fn factor_finite_field(
     };
     factor_recursive(polynomial.monic(), &mut result)?;
     let order = |factor: &FiniteFieldFactor| {
-        (factor.polynomial.degree().unwrap_or(0),factor.polynomial.coefficients().to_vec())
+        (
+            factor.polynomial.degree().unwrap_or(0),
+            factor.polynomial.coefficients().to_vec(),
+        )
     };
     result.factors.sort_by_key(&order);
     result.unresolved.sort_by_key(order);
@@ -190,46 +211,63 @@ mod tests {
 
     #[test]
     fn factors_repeated_and_irreducible_components() {
-        let one_plus_x = p(2, &[1,1]);
-        let irreducible = p(2, &[1,1,1]);
-        let f = one_plus_x.multiply(&one_plus_x).unwrap().multiply(&irreducible).unwrap();
+        let one_plus_x = p(2, &[1, 1]);
+        let irreducible = p(2, &[1, 1, 1]);
+        let f = one_plus_x
+            .multiply(&one_plus_x)
+            .unwrap()
+            .multiply(&irreducible)
+            .unwrap();
         let result = factor_finite_field(&f).unwrap();
         assert!(result.is_complete());
         assert!(verify_finite_field_factorization(&f, &result).unwrap());
         assert_eq!(result.factors().len(), 2);
-        assert!(result.factors().iter().any(|factor|
-            factor.polynomial() == &one_plus_x && factor.multiplicity() == 2));
-        assert!(result.factors().iter().any(|factor|
-            factor.polynomial() == &irreducible && factor.multiplicity() == 1));
+        assert!(
+            result
+                .factors()
+                .iter()
+                .any(|factor| factor.polynomial() == &one_plus_x && factor.multiplicity() == 2)
+        );
+        assert!(
+            result
+                .factors()
+                .iter()
+                .any(|factor| factor.polynomial() == &irreducible && factor.multiplicity() == 1)
+        );
     }
 
     #[test]
     fn factors_quartic_without_linear_roots() {
-        let f=p(3, &[1,0,0,0,1]);
-        let result=factor_finite_field(&f).unwrap();
+        let f = p(3, &[1, 0, 0, 0, 1]);
+        let result = factor_finite_field(&f).unwrap();
         assert!(result.is_complete());
-        assert_eq!(result.factors().len(),2);
-        assert!(result.factors().iter().all(|x|x.polynomial().degree()==Some(2)));
-        assert!(verify_finite_field_factorization(&f,&result).unwrap());
+        assert_eq!(result.factors().len(), 2);
+        assert!(
+            result
+                .factors()
+                .iter()
+                .all(|x| x.polynomial().degree() == Some(2))
+        );
+        assert!(verify_finite_field_factorization(&f, &result).unwrap());
     }
 
     #[test]
     fn rejects_modified_factor_evidence() {
-        let f=p(3,&[1,0,0,0,1]);
-        let mut result=factor_finite_field(&f).unwrap();
+        let f = p(3, &[1, 0, 0, 0, 1]);
+        let mut result = factor_finite_field(&f).unwrap();
         result.factors.pop();
-        assert!(!verify_finite_field_factorization(&f,&result).unwrap());
+        assert!(!verify_finite_field_factorization(&f, &result).unwrap());
     }
 
     #[test]
     fn grid_reconstructs_every_degree_four_binary_polynomial() {
         for bits in 0..16 {
-            let mut coefficients=(0..4).map(|k|((bits>>k)&1) as i64).collect::<Vec<_>>();
+            let mut coefficients = (0..4).map(|k| ((bits >> k) & 1) as i64).collect::<Vec<_>>();
             coefficients.push(1);
-            let f=p(2,&coefficients);
-            let result=factor_finite_field(&f).unwrap();
+            let f = p(2, &coefficients);
+            let result = factor_finite_field(&f).unwrap();
             assert!(result.is_complete());
-            assert!(verify_finite_field_factorization(&f,&result).unwrap());
+            assert!(verify_finite_field_factorization(&f, &result).unwrap());
         }
     }
 }

@@ -6,7 +6,7 @@ fn polynomial_factorization_distinguishes_certified_from_partial() {
     assert!(complete.contains("status: complete"));
     assert!(complete.contains("factor:"));
     assert!(!complete.contains("unresolved:"));
-    let partial = run(&["factor", "x^4+1", "x"]).unwrap();
+    let partial = run(&["factor", "(x^2+1000)*(x^2+2000)", "x"]).unwrap();
     assert!(partial.contains("status: partial"));
     assert!(partial.contains("unresolved:"));
 }

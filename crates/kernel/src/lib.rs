@@ -14,7 +14,6 @@ mod context;
 mod differentiate_expr;
 mod domain_operations;
 mod extended_gcd;
-mod rational_factorization;
 mod guarded_rewrite;
 mod poly_convert;
 mod poly_division;
@@ -25,6 +24,7 @@ mod quadratic;
 mod quadratic_field;
 mod rational_equation;
 mod rational_expression;
+mod rational_factorization;
 mod rational_function;
 mod rational_quadratic;
 mod solve_linear;
@@ -73,15 +73,15 @@ pub use quadratic::{
 pub use quadratic_field::{
     QuadraticElement, QuadraticField, QuadraticFieldError, verify_quadratic_minimal_polynomial,
 };
-pub use rational_factorization::{
-    RationalFactor, RationalFactorization, RationalFactorizationError,
-    FactorizationVerificationError, verify_rational_factorization,
-};
 pub use rational_equation::{
     RationalEquationError, RationalEquationResult, RationalEquationSolution,
     RationalEquationVerificationError, verify_rational_equation,
 };
 pub use rational_expression::RationalExpressionError;
+pub use rational_factorization::{
+    FactorizationVerificationError, RationalFactor, RationalFactorization,
+    RationalFactorizationError, verify_rational_factorization,
+};
 pub use rational_function::{RationalFunction, RationalFunctionError};
 pub use rational_quadratic::{
     RationalQuadraticResult, RationalQuadraticRoots, verify_rational_quadratic_equation,

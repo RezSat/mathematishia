@@ -2,7 +2,12 @@ use mathema::{Integer, Rational};
 use mathematishia_kernel::{EvaluationContext, RationalPolynomial, verify_rational_factorization};
 
 fn p(values: &[i64]) -> RationalPolynomial {
-    RationalPolynomial::new(values.iter().map(|&v| Rational::from(Integer::from(v))).collect())
+    RationalPolynomial::new(
+        values
+            .iter()
+            .map(|&v| Rational::from(Integer::from(v)))
+            .collect(),
+    )
 }
 
 #[test]
@@ -26,7 +31,12 @@ fn repeated_quadratic_factors_are_not_left_unresolved() {
     let original = irreducible.multiply(&irreducible).multiply(&p(&[-3, 1]));
     let result = ctx.factor_rational_polynomial(&original).unwrap();
     assert!(result.is_complete());
-    assert!(result.factors().iter().any(|f| f.polynomial() == &irreducible && f.multiplicity() == 2));
+    assert!(
+        result
+            .factors()
+            .iter()
+            .any(|f| f.polynomial() == &irreducible && f.multiplicity() == 2)
+    );
     assert_eq!(verify_rational_factorization(&original, &result), Ok(()));
 }
 
@@ -63,9 +73,7 @@ fn scalar_units_and_zero_are_distinguished() {
 fn exact_rational_roots_use_primitive_integer_scaling() {
     let ctx = EvaluationContext::default();
     let half = Rational::new(Integer::from(1), Integer::from(2)).unwrap();
-    let polynomial = RationalPolynomial::new(vec![
-        -&half, Rational::from(Integer::one())
-    ]);
+    let polynomial = RationalPolynomial::new(vec![-&half, Rational::from(Integer::one())]);
     let result = ctx.factor_rational_polynomial(&polynomial).unwrap();
     assert!(result.is_complete());
     assert_eq!(result.factors()[0].polynomial(), &polynomial);
@@ -82,7 +90,14 @@ fn deterministic_bivariate_linear_factor_grid() {
             let result = ctx.factor_rational_polynomial(&product).unwrap();
             assert!(result.is_complete());
             assert_eq!(verify_rational_factorization(&product, &result), Ok(()));
-            assert_eq!(result.factors().iter().map(|f| f.multiplicity()).sum::<usize>(), 2);
+            assert_eq!(
+                result
+                    .factors()
+                    .iter()
+                    .map(|f| f.multiplicity())
+                    .sum::<usize>(),
+                2
+            );
         }
     }
 }

@@ -51,7 +51,9 @@ fn root_candidates(poly: &RationalPolynomial) -> Option<Vec<Rational>> {
     let lcm = poly
         .coefficients()
         .iter()
-        .fold(Integer::one(), |l, coefficient| l.lcm(coefficient.denominator()));
+        .fold(Integer::one(), |l, coefficient| {
+            l.lcm(coefficient.denominator())
+        });
     let integral = poly
         .coefficients()
         .iter()
@@ -85,7 +87,8 @@ fn root_candidates(poly: &RationalPolynomial) -> Option<Vec<Rational>> {
                 let value = Rational::new(
                     Integer::from(sign * numerator as i64),
                     Integer::from(denominator as i64),
-                ).expect("positive candidate denominator");
+                )
+                .expect("positive candidate denominator");
                 candidates.insert(value);
                 if candidates.len() > MAX_CANDIDATES {
                     return None;
@@ -98,7 +101,11 @@ fn root_candidates(poly: &RationalPolynomial) -> Option<Vec<Rational>> {
 
 fn rational_root(poly: &RationalPolynomial) -> Option<Option<Rational>> {
     let candidates = root_candidates(poly)?;
-    Some(candidates.into_iter().find(|candidate| poly.evaluate(candidate).numerator().is_zero()))
+    Some(
+        candidates
+            .into_iter()
+            .find(|candidate| poly.evaluate(candidate).numerator().is_zero()),
+    )
 }
 
 fn irreducible_small(poly: &RationalPolynomial) -> bool {
@@ -126,8 +133,12 @@ pub struct RationalFactor {
 }
 
 impl RationalFactor {
-    pub fn polynomial(&self) -> &RationalPolynomial { &self.polynomial }
-    pub fn multiplicity(&self) -> usize { self.multiplicity }
+    pub fn polynomial(&self) -> &RationalPolynomial {
+        &self.polynomial
+    }
+    pub fn multiplicity(&self) -> usize {
+        self.multiplicity
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -138,10 +149,18 @@ pub struct RationalFactorization {
 }
 
 impl RationalFactorization {
-    pub fn unit(&self) -> &Rational { &self.unit }
-    pub fn factors(&self) -> &[RationalFactor] { &self.factors }
-    pub fn unresolved(&self) -> &[RationalFactor] { &self.unresolved }
-    pub fn is_complete(&self) -> bool { self.unresolved.is_empty() }
+    pub fn unit(&self) -> &Rational {
+        &self.unit
+    }
+    pub fn factors(&self) -> &[RationalFactor] {
+        &self.factors
+    }
+    pub fn unresolved(&self) -> &[RationalFactor] {
+        &self.unresolved
+    }
+    pub fn is_complete(&self) -> bool {
+        self.unresolved.is_empty()
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -174,12 +193,12 @@ impl fmt::Display for RationalFactorizationError {
 }
 impl Error for RationalFactorizationError {}
 impl From<EvaluationError> for RationalFactorizationError {
-    fn from(value: EvaluationError) -> Self { Self::Evaluation(value) }
+    fn from(value: EvaluationError) -> Self {
+        Self::Evaluation(value)
+    }
 }
 
-fn reconstruct_product(
-    result: &RationalFactorization,
-) -> RationalPolynomial {
+fn reconstruct_product(result: &RationalFactorization) -> RationalPolynomial {
     let mut product = RationalPolynomial::new(vec![result.unit.clone()]);
     for factor in result.factors.iter().chain(result.unresolved.iter()) {
         for _ in 0..factor.multiplicity {
@@ -199,7 +218,9 @@ pub fn verify_rational_factorization(
     let Some(lead) = original.coefficients().last() else {
         return Err(E::ZeroPolynomial);
     };
-    if &result.unit != lead { return Err(E::IncorrectUnit); }
+    if &result.unit != lead {
+        return Err(E::IncorrectUnit);
+    }
     let mut all = Vec::new();
     for item in result.factors.iter().chain(result.unresolved.iter()) {
         if item.multiplicity == 0
@@ -208,7 +229,10 @@ pub fn verify_rational_factorization(
         {
             return Err(E::InvalidFactor);
         }
-        if all.iter().any(|existing: &&RationalPolynomial| *existing == &item.polynomial) {
+        if all
+            .iter()
+            .any(|existing: &&RationalPolynomial| *existing == &item.polynomial)
+        {
             return Err(E::DuplicateFactor);
         }
         all.push(&item.polynomial);
@@ -228,7 +252,10 @@ fn record(target: &mut Vec<RationalFactor>, polynomial: RationalPolynomial, mult
     if let Some(existing) = target.iter_mut().find(|f| f.polynomial == polynomial) {
         existing.multiplicity += multiplicity;
     } else {
-        target.push(RationalFactor { polynomial, multiplicity });
+        target.push(RationalFactor {
+            polynomial,
+            multiplicity,
+        });
     }
 }
 
@@ -240,7 +267,9 @@ fn factor_squarefree(
     ctx: &EvaluationContext,
 ) -> Result<(), RationalFactorizationError> {
     while let Some(degree) = polynomial.degree() {
-        if degree == 0 { break; }
+        if degree == 0 {
+            break;
+        }
         if degree == 1 {
             record(factors, polynomial, multiplicity);
             break;
@@ -291,7 +320,9 @@ impl EvaluationContext {
         polynomial: &RationalPolynomial,
     ) -> Result<RationalFactorization, RationalFactorizationError> {
         self.check_polynomial(polynomial)?;
-        if polynomial.is_zero() { return Err(RationalFactorizationError::ZeroPolynomial); }
+        if polynomial.is_zero() {
+            return Err(RationalFactorizationError::ZeroPolynomial);
+        }
         let decomposition = self.square_free_decomposition(polynomial)?;
         let mut result = RationalFactorization {
             unit: decomposition.unit().clone(),
@@ -310,7 +341,11 @@ impl EvaluationContext {
         let order = |factor: &RationalFactor| {
             (
                 factor.polynomial.degree().unwrap_or(0),
-                factor.polynomial.coefficients().iter().map(ToString::to_string)
+                factor
+                    .polynomial
+                    .coefficients()
+                    .iter()
+                    .map(ToString::to_string)
                     .collect::<Vec<_>>(),
             )
         };
@@ -327,7 +362,12 @@ mod tests {
     use super::*;
 
     fn p(coeffs: &[i64]) -> RationalPolynomial {
-        RationalPolynomial::new(coeffs.iter().map(|&n| Rational::from(Integer::from(n))).collect())
+        RationalPolynomial::new(
+            coeffs
+                .iter()
+                .map(|&n| Rational::from(Integer::from(n)))
+                .collect(),
+        )
     }
 
     #[test]
@@ -335,7 +375,10 @@ mod tests {
         let original = p(&[-1, 0, 1]);
         let forged = RationalFactorization {
             unit: one(),
-            factors: vec![RationalFactor { polynomial: original.clone(), multiplicity: 1 }],
+            factors: vec![RationalFactor {
+                polynomial: original.clone(),
+                multiplicity: 1,
+            }],
             unresolved: Vec::new(),
         };
         assert_eq!(
@@ -347,7 +390,9 @@ mod tests {
     #[test]
     fn reject_wrong_multiplicity_and_missing_product() {
         let original = p(&[1, 2, 1]);
-        let mut evidence = EvaluationContext::default().factor_rational_polynomial(&original).unwrap();
+        let mut evidence = EvaluationContext::default()
+            .factor_rational_polynomial(&original)
+            .unwrap();
         evidence.factors[0].multiplicity += 1;
         assert_eq!(
             verify_rational_factorization(&original, &evidence),

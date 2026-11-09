@@ -50,7 +50,7 @@ impl Integer {
             return None;
         }
         let (quotient, remainder) = self.0.div_rem(&divisor.0);
-        remainder.is_zero().then_some(Self(quotient))
+        (remainder.sign() == Sign::NoSign).then_some(Self(quotient))
     }
 
     /// Narrowing conversion for bounded algorithms; never truncates.

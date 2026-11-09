@@ -327,17 +327,10 @@ fn factor_squarefree(
                         QuarticSearch::Inconclusive => {}
                     }
                 }
-                if degree > 4
-                    || matches!(
-                        search_quartic_quadratic(&polynomial, ctx)?,
-                        QuarticSearch::Inconclusive
-                    )
-                {
-                    if let Some((left, right)) = reconstruct_factor(ctx, &polynomial)? {
-                        factor_squarefree(left, multiplicity, factors, unresolved, ctx)?;
-                        factor_squarefree(right, multiplicity, factors, unresolved, ctx)?;
-                        break;
-                    }
+                if let Some((left, right)) = reconstruct_factor(ctx, &polynomial)? {
+                    factor_squarefree(left, multiplicity, factors, unresolved, ctx)?;
+                    factor_squarefree(right, multiplicity, factors, unresolved, ctx)?;
+                    break;
                 }
                 if modular_irreducibility_witness(&polynomial).is_some() {
                     record(factors, polynomial, multiplicity);

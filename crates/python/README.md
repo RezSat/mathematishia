@@ -30,8 +30,10 @@ for root in roots.roots:
 - `rational_function`, `rational_evaluate`, `rational_differentiate`, `rational_operation`: partial rational functions with recorded domain restrictions.
 - `rational_simplify`, `rational_derivative`, `rational_value`, `rational_solve`: full univariate rational expressions and equations over Q, preserving source-domain exclusions.
 - `algebraic_roots`: exact quadratic roots, represented as rationals or as a monic minimal polynomial with a branch selector.
+- `factor_polynomial`: certified rational linear, quadratic and bounded cubic factors, plus unresolved cofactors.
+- `extension_value`, `extension_operation`, `extension_power`, `extension_minimal_polynomial`: arithmetic and minimal polynomials in certified abstract quadratic and cubic fields.
 
-The parser covers a bounded grammar. General function calculus, arbitrary algebraic-number arithmetic, and a stable Python compatibility contract have not yet been implemented. See [the syntax specification](../../docs/design/mathema-surface.md).
+The parser covers a bounded grammar. General function calculus, cross-field arithmetic, higher-degree factorization and a stable Python compatibility contract have not yet been implemented. See [the syntax specification](../../docs/design/mathema-surface.md).
 
 ## Domain-aware expressions
 
@@ -125,3 +127,29 @@ quotient rings. Nonunits have no negative powers. `quadratic_value`,
 `quadratic_operation` and `quadratic_inverse` require a certified irreducible
 quadratic with one selected embedding. These APIs do not combine elements from
 different quadratic fields.
+
+## Rational factors and abstract cubic fields
+
+```python
+from fractions import Fraction
+import mathematishia as m
+
+factors = m.factor_polynomial("(x-1)*(x^2+1)", "x")
+assert factors.complete
+assert len(factors.factors) == 2
+
+partial = m.factor_polynomial("x^4+1", "x")
+assert not partial.complete
+
+cube = m.extension_power("x^3-2", "x", "x", 3)
+assert cube.representative.coefficients == (Fraction(2),)
+
+minimal = m.extension_minimal_polynomial("x^3-2", "x^2", "x")
+assert minimal.coefficients == (
+    Fraction(-4), Fraction(0), Fraction(0), Fraction(1)
+)
+```
+
+The cubic field API defines an abstract generator `alpha` satisfying the
+given irreducible polynomial. It does not select a real or complex root.
+A reducible or uncertified defining polynomial is rejected.

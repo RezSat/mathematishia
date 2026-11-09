@@ -36,6 +36,9 @@ cargo run -p mathematishia-cli -- divide 'x^2-1' 'x-1' x
 cargo run -p mathematishia-cli -- egcd 'x^3-1' 'x^2-1' x
 cargo run -p mathematishia-cli -- modinv x 'x^2+1' x
 cargo run -p mathematishia-cli -- sqfree '2*(x-1)^2*(x+2)^3' x
+cargo run -p mathematishia-cli -- factor '(x-1)*(x^2+1)' x
+cargo run -p mathematishia-cli -- fieldmin 'x^3-2' 'x^2' x
+cargo run -p mathematishia-cli -- fieldpow 'x^3-2' x -1 x
 cargo run -p mathematishia-cli -- diffexpr 'x*y+(x+1)^3' x
 ```
 
@@ -76,14 +79,20 @@ rational expressions over Q, preserving excluded denominator zeros after
 cancellation. Solving currently returns admissible rational roots when the
 residual numerator has degree at most two.
 
-The domain-aware parser retains restrictions removed by structural normalization.
-`domain`, `subdomain`, and `rewrite` expose these conditions; older
-expression-returning operations may discard them. Exact arithmetic is implemented within an individual certified quadratic field,
-including inversion, trace, norm, and minimal-polynomial verification. Polynomial
-quotient rings support canonical residues modulo an arbitrary positive-degree
-polynomial, without assuming the quotient is a field. Arithmetic across unrelated
-algebraic extensions and analytic functions are not implemented. Resource budgets bound selected algorithms, not
-process memory or execution time.
+Domain-aware parsing retains restrictions removed by structural normalization;
+`domain`, `subdomain`, and `rewrite` expose them. Some older expression
+operations do not preserve this provenance.
+
+`factor` extracts rational linear factors and certifies supported quadratic
+and cubic factors. Higher-degree cofactors remain explicitly unresolved.
+`fieldmin`, `fieldpow`, and `fieldop` operate in abstract, certified
+quadratic or cubic extensions of Q. These field values do not carry a
+real or complex embedding. The earlier `qvalue` interface separately supports
+embedded quadratic arithmetic. Arithmetic across unrelated fields, general
+high-degree irreducibility and analytic functions are not implemented.
+
+Resource limits bound selected algebraic operations; they are not process
+memory or execution-time limits.
 
 For implemented operations and source locations, see [CAPABILITIES.md](CAPABILITIES.md). Architectural contracts are in [docs/design](docs/design), with planned work in [ROADMAP.md](ROADMAP.md).
 

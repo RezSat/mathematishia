@@ -7,11 +7,14 @@
 | Extended polynomial GCD, Bézout verification, modular inverses | `crates/kernel/src/extended_gcd.rs` |
 | Polynomial quotient rings and canonical residue arithmetic | `crates/kernel/src/polynomial_residue.rs` |
 | Square-free factorization | `crates/kernel/src/square_free.rs` |
+| Certified rational factors and unresolved cofactors | `crates/kernel/src/rational_factorization.rs` |
 | Rational functions with domain exclusions | `crates/kernel/src/rational_function.rs` |
 | Rational-expression conversion and simplification over Q(x) | `crates/kernel/src/rational_expression.rs` |
 | Linear, quadratic and rational equations | `crates/kernel/src/solve_linear.rs`, `quadratic.rs`, `rational_equation.rs`, `rational_quadratic.rs` |
 | Exact quadratic roots | `crates/kernel/src/algebraic.rs` |
 | Embedded quadratic fields, arithmetic, trace, norm and minimal-polynomial checks | `crates/kernel/src/quadratic_field.rs` |
+| Certified abstract quadratic/cubic extensions | `crates/kernel/src/algebraic_extension.rs` |
+| Exact minimal polynomials of extension elements | `crates/kernel/src/extension_minimal.rs` |
 | Symbolic differentiation | `crates/kernel/src/differentiate_expr.rs` |
 | Assumptions and guarded rewrites | `crates/kernel/src/assumptions.rs`, `guarded_rewrite.rs`, `conditional_rewrite.rs` |
 | Definedness and domain-preserving expression composition | `crates/mathema/src/definedness.rs` |
@@ -29,7 +32,9 @@ The rational-expression converter supports exact scalars, one variable, sums, pr
 
 The proof graph records exact expression inputs, condition nodes, rule evidence and typed parent references, including composite cancellation with multiple conditions. Its verifier rejects invalid steps, unsupported conditions, forward dependencies and disconnected nodes. It does not yet compose equation proofs, establish new symbolic assumptions or cover fractional/analytic definedness. `parse_domain_expression` and `parse_domain_statement` retain construction-time restrictions for integer powers. The legacy `parse_expression` and `parse_statement` interfaces still return ordinary `Expr` values; consumers must opt into the domain-aware path.
 
-The quotient-ring type does not assume a polynomial modulus is irreducible. Embedded quadratic fields require an irreducible quadratic and a compatible root branch. Arithmetic across different field presentations, degree-three-or-higher algebraic fields, irreducible polynomial factorization, analytic functions, certified numerics, and general proof rendering remain outside the implemented scope.
+The factorizer separates square-free multiplicities, extracts rational roots and certifies irreducible factors of degrees one through three. Cubic rational-root enumeration is exhaustive only when primitive integer coefficients and candidate counts are within the documented limits. It returns unresolved factors otherwise. It does not claim full factorization of arbitrary higher-degree polynomials.
+
+The quotient-ring type does not assume irreducibility. Embedded quadratic fields require compatible root branches. Abstract degree-two and degree-three extensions require certified defining polynomials but have no selected complex embedding. Cross-field arithmetic, quartic-and-higher irreducibility certification, general factorization, analytic functions, certified numerics and proof rendering remain outside the supported scope.
 
 ## Checks
 

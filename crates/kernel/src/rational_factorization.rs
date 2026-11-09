@@ -9,7 +9,6 @@ use std::fmt;
 
 use mathema::{Integer, Rational};
 
-use crate::poly_division::rational_quotient;
 use crate::{EvaluationContext, EvaluationError, RationalPolynomial};
 
 const MAX_PRIMITIVE_COEFFICIENT: i64 = 100_000;
@@ -17,12 +16,6 @@ const MAX_CANDIDATES: usize = 4_096;
 
 fn one() -> Rational {
     Rational::from(Integer::one())
-}
-
-fn monic(poly: &RationalPolynomial) -> RationalPolynomial {
-    let lead = poly.coefficients().last().expect("nonzero polynomial");
-    let inv = rational_quotient(&one(), lead);
-    RationalPolynomial::new(poly.coefficients().iter().map(|a| a * &inv).collect())
 }
 
 fn positive_divisors(value: u64) -> Vec<u64> {

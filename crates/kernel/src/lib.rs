@@ -15,6 +15,7 @@ mod context;
 mod differentiate_expr;
 mod domain_operations;
 mod extended_gcd;
+mod extension_minimal;
 mod guarded_rewrite;
 mod poly_convert;
 mod poly_division;
@@ -58,6 +59,7 @@ pub use domain_operations::{
 pub use extended_gcd::{
     EuclideanStep, ExtendedGcdResult, ExtendedGcdVerificationError, verify_extended_gcd,
 };
+pub use extension_minimal::verify_extension_minimal_polynomial;
 pub use guarded_rewrite::{
     GuardedRewriteOutcome, GuardedRewriteStep, GuardedRewriteVerificationError, GuardedRuleId,
     cancel_symbol_inverse_once, verify_guarded_rewrite_step,

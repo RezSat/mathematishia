@@ -13,10 +13,10 @@ use mathema_frontend::{
 };
 use mathematishia_kernel::{
     AlgebraicRootEvidence, AlgebraicRootSet, Assumptions, CertifiedAlgebraicField,
-    DomainRewriteOutcome, EvaluationContext,
-    ExactQuadraticRoot, LinearSolution, PolynomialResidue, QuadraticBranch, QuadraticElement,
-    QuadraticField, QuadraticRoots, RationalFunction, RationalPolynomial, RationalQuadraticRoots,
-    VerifiedCondition, rewrite_domain_once, substitute_domain,
+    DomainRewriteOutcome, EvaluationContext, ExactQuadraticRoot, LinearSolution, PolynomialResidue,
+    QuadraticBranch, QuadraticElement, QuadraticField, QuadraticRoots, RationalFunction,
+    RationalPolynomial, RationalQuadraticRoots, VerifiedCondition, rewrite_domain_once,
+    substitute_domain,
 };
 
 pub const HELP: &str = "Mathematishia (early exact-math CLI)
@@ -624,7 +624,11 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
                 .map_err(|error| invalid(error.to_string()))?;
             let mut output = format!(
                 "status: {}\nunit: {}",
-                if result.is_complete() { "complete" } else { "partial" },
+                if result.is_complete() {
+                    "complete"
+                } else {
+                    "partial"
+                },
                 result.unit(),
             );
             for factor in result.factors() {
@@ -652,9 +656,11 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
             let ctx = EvaluationContext::default();
             let field = CertifiedAlgebraicField::new(&ctx, polynomial(minimal, &symbol)?)
                 .map_err(|error| invalid(error.to_string()))?;
-            let value = field.element(&ctx, polynomial(value, &symbol)?)
+            let value = field
+                .element(&ctx, polynomial(value, &symbol)?)
                 .map_err(|error| invalid(error.to_string()))?;
-            let minimal = value.minimal_polynomial(&ctx)
+            let minimal = value
+                .minimal_polynomial(&ctx)
                 .map_err(|error| invalid(error.to_string()))?;
             Ok(format!(
                 "field: {}\nelement: {}\nminimal_polynomial: {}\nverified: true",
@@ -666,14 +672,19 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
         ["fieldpow", minimal, value, exponent, name] => {
             let symbol = variable(name)?;
             let ctx = EvaluationContext::default();
-            let power = exponent.parse::<i64>().map_err(|_| invalid("invalid signed exponent"))?;
+            let power = exponent
+                .parse::<i64>()
+                .map_err(|_| invalid("invalid signed exponent"))?;
             let field = CertifiedAlgebraicField::new(&ctx, polynomial(minimal, &symbol)?)
                 .map_err(|error| invalid(error.to_string()))?;
-            let value = field.element(&ctx, polynomial(value, &symbol)?)
+            let value = field
+                .element(&ctx, polynomial(value, &symbol)?)
                 .map_err(|error| invalid(error.to_string()))?;
-            let result = value.pow_signed(power, &ctx)
+            let result = value
+                .pow_signed(power, &ctx)
                 .map_err(|error| invalid(error.to_string()))?;
-            Ok(format!("element: {}\nfield: {}",
+            Ok(format!(
+                "element: {}\nfield: {}",
                 result.coefficients().to_expr(&symbol),
                 field.modulus().to_expr(&symbol),
             ))
@@ -683,9 +694,11 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
             let ctx = EvaluationContext::default();
             let field = CertifiedAlgebraicField::new(&ctx, polynomial(minimal, &symbol)?)
                 .map_err(|error| invalid(error.to_string()))?;
-            let a = field.element(&ctx, polynomial(left, &symbol)?)
+            let a = field
+                .element(&ctx, polynomial(left, &symbol)?)
                 .map_err(|error| invalid(error.to_string()))?;
-            let b = field.element(&ctx, polynomial(right, &symbol)?)
+            let b = field
+                .element(&ctx, polynomial(right, &symbol)?)
                 .map_err(|error| invalid(error.to_string()))?;
             let result = match *operation {
                 "add" => a.add(&b, &ctx),
@@ -695,7 +708,8 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
                 _ => return Err(invalid("expected fieldop add, sub, mul or div")),
             }
             .map_err(|error| invalid(error.to_string()))?;
-            Ok(format!("element: {}\nfield: {}",
+            Ok(format!(
+                "element: {}\nfield: {}",
                 result.coefficients().to_expr(&symbol),
                 field.modulus().to_expr(&symbol),
             ))

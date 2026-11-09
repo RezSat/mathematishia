@@ -19,7 +19,13 @@ fn one() -> Rational {
 
 fn coefficients(value: &RationalPolynomial, dimension: usize) -> Vec<Rational> {
     (0..dimension)
-        .map(|index| value.coefficients().get(index).cloned().unwrap_or_else(zero))
+        .map(|index| {
+            value
+                .coefficients()
+                .get(index)
+                .cloned()
+                .unwrap_or_else(zero)
+        })
         .collect()
 }
 
@@ -42,8 +48,7 @@ fn dependence(
         .collect::<Vec<_>>();
 
     for col in 0..k {
-        let Some(pivot) = (col..dimension)
-            .find(|&row| !matrix[row][col].numerator().is_zero())
+        let Some(pivot) = (col..dimension).find(|&row| !matrix[row][col].numerator().is_zero())
         else {
             return Ok(None);
         };
@@ -65,7 +70,11 @@ fn dependence(
             }
         }
     }
-    if matrix.iter().skip(k).any(|row| !row[k].numerator().is_zero()) {
+    if matrix
+        .iter()
+        .skip(k)
+        .any(|row| !row[k].numerator().is_zero())
+    {
         return Ok(None);
     }
     Ok(Some(matrix[..k].iter().map(|row| row[k].clone()).collect()))
@@ -112,11 +121,14 @@ impl AlgebraicExtensionElement {
         &self,
         ctx: &EvaluationContext,
     ) -> Result<RationalPolynomial, AlgebraicExtensionError> {
-        let dimension = self.field().modulus().degree().expect("certified field degree");
-        let one_element = self.field().element(
-            ctx,
-            RationalPolynomial::new(vec![one()]),
-        )?;
+        let dimension = self
+            .field()
+            .modulus()
+            .degree()
+            .expect("certified field degree");
+        let one_element = self
+            .field()
+            .element(ctx, RationalPolynomial::new(vec![one()]))?;
         let mut powers = vec![one_element];
         for k in 1..=dimension {
             let next = powers[k - 1].multiply(self, ctx)?;

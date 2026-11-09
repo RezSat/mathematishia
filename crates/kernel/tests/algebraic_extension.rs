@@ -121,7 +121,7 @@ fn irreducible_quartic_and_degree_eight_fields_have_exact_inverses() {
     let ctx = EvaluationContext::default();
     for (defining, expected_power) in [
         (p(&[1, 0, 0, 0, 1]), 4_i64),
-        (p(&[1, 1, 0, 1, 1]), 4_i64),
+        (p(&[1, 1, 0, 0, 1]), 4_i64),
         (p(&[1, 1, 0, 1, 1, 0, 0, 0, 1]), 8_i64),
     ] {
         let field = CertifiedAlgebraicField::new(&ctx, defining).unwrap();

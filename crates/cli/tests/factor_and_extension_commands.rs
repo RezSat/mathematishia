@@ -26,5 +26,6 @@ fn cubic_field_arithmetic_and_minimal_polynomials_are_exact() {
 fn field_commands_reject_reducible_inputs_and_zero_inversion() {
     assert!(run(&["fieldpow", "x^3-1", "x", "2", "x"]).is_err());
     assert!(run(&["fieldpow", "x^3-2", "0", "-1", "x"]).is_err());
-    assert!(run(&["fieldmin", "x^4+1", "x", "x"]).is_err());
+    let quartic = run(&["fieldmin", "x^4+1", "x", "x"]).unwrap();
+    assert!(quartic.contains("verified: true"));
 }

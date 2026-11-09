@@ -261,10 +261,17 @@ mod arithmetic_helpers_tests {
     #[test]
     fn arbitrary_precision_modulus_is_exact_and_positive() {
         let base = "340282366920938463463374607431768211457"
-            .parse::<Integer>().unwrap();
+            .parse::<Integer>()
+            .unwrap();
         let modulus = Integer::from(97);
-        assert_eq!(Integer::from(-13).modulo_positive(&modulus), Some(Integer::from(84)));
-        assert_eq!((&base * &modulus).modulo_positive(&modulus), Some(Integer::zero()));
+        assert_eq!(
+            Integer::from(-13).modulo_positive(&modulus),
+            Some(Integer::from(84))
+        );
+        assert_eq!(
+            (&base * &modulus).modulo_positive(&modulus),
+            Some(Integer::zero())
+        );
         assert_eq!(base.modulo_positive(&Integer::zero()), None);
         assert_eq!(base.modulo_positive(&Integer::from(-2)), None);
     }

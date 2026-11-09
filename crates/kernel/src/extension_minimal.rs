@@ -54,19 +54,20 @@ fn dependence(
         };
         matrix.swap(col, pivot);
         let inverse = rational_quotient(&one(), &matrix[col][col]);
-        for entry in col..=k {
-            matrix[col][entry] = &matrix[col][entry] * &inverse;
-            ctx.check_rational(&matrix[col][entry])?;
+        for entry in &mut matrix[col][col..=k] {
+            *entry = &*entry * &inverse;
+            ctx.check_rational(entry)?;
         }
-        for row in 0..dimension {
-            if row == col || matrix[row][col].numerator().is_zero() {
+        let pivot_entries = matrix[col][col..=k].to_vec();
+        for (row_index, row) in matrix.iter_mut().enumerate() {
+            if row_index == col || row[col].numerator().is_zero() {
                 continue;
             }
-            let factor = matrix[row][col].clone();
-            for entry in col..=k {
-                let subtracted = &factor * &matrix[col][entry];
-                matrix[row][entry] = &matrix[row][entry] - &subtracted;
-                ctx.check_rational(&matrix[row][entry])?;
+            let factor = row[col].clone();
+            for (entry, pivot_entry) in row[col..=k].iter_mut().zip(pivot_entries.iter()) {
+                let subtracted = &factor * pivot_entry;
+                *entry = &*entry - &subtracted;
+                ctx.check_rational(entry)?;
             }
         }
     }

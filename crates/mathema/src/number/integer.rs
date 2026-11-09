@@ -53,6 +53,14 @@ impl Integer {
         (remainder.sign() == Sign::NoSign).then_some(Self(quotient))
     }
 
+    /// Canonical residue modulo a positive arbitrary-precision integer.
+    pub fn modulo_positive(&self, modulus: &Self) -> Option<Self> {
+        if modulus <= &Self::zero() {
+            return None;
+        }
+        Some(Self(self.0.mod_floor(&modulus.0)))
+    }
+
     /// Exact nonnegative residue modulo a small positive integer.
     pub fn modulo_u32(&self, modulus: u32) -> Option<u32> {
         if modulus == 0 {
@@ -248,6 +256,17 @@ mod arithmetic_helpers_tests {
         assert_eq!(a.divide_exact(&Integer::zero()), None);
         assert_eq!(Integer::zero().lcm(&a), Integer::zero());
         assert_eq!(Integer::zero().gcd(&a), Integer::from(12));
+    }
+
+    #[test]
+    fn arbitrary_precision_modulus_is_exact_and_positive() {
+        let base = "340282366920938463463374607431768211457"
+            .parse::<Integer>().unwrap();
+        let modulus = Integer::from(97);
+        assert_eq!(Integer::from(-13).modulo_positive(&modulus), Some(Integer::from(84)));
+        assert_eq!((&base * &modulus).modulo_positive(&modulus), Some(Integer::zero()));
+        assert_eq!(base.modulo_positive(&Integer::zero()), None);
+        assert_eq!(base.modulo_positive(&Integer::from(-2)), None);
     }
 
     #[test]

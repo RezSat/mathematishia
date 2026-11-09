@@ -9,8 +9,8 @@ use std::fmt;
 
 use mathema::{Integer, Rational};
 
-use crate::quartic_factor::{QuarticSearch, search_quartic_quadratic};
 use crate::modular_reconstruction::reconstruct_factor;
+use crate::quartic_factor::{QuarticSearch, search_quartic_quadratic};
 use crate::{
     EvaluationContext, EvaluationError, RationalPolynomial, modular_irreducibility_witness,
 };
@@ -327,10 +327,12 @@ fn factor_squarefree(
                         QuarticSearch::Inconclusive => {}
                     }
                 }
-                if degree > 4 || matches!(
-                    search_quartic_quadratic(&polynomial, ctx)?,
-                    QuarticSearch::Inconclusive
-                ) {
+                if degree > 4
+                    || matches!(
+                        search_quartic_quadratic(&polynomial, ctx)?,
+                        QuarticSearch::Inconclusive
+                    )
+                {
                     if let Some((left, right)) = reconstruct_factor(ctx, &polynomial)? {
                         factor_squarefree(left, multiplicity, factors, unresolved, ctx)?;
                         factor_squarefree(right, multiplicity, factors, unresolved, ctx)?;

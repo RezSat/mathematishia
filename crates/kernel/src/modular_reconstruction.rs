@@ -7,8 +7,8 @@
 use mathema::{Integer, Rational};
 
 use crate::{
-    EvaluationContext, HenselError, IntegerPolynomial, RationalPolynomial,
-    factor_finite_field, hensel_lift_pair, FiniteFieldPolynomial,
+    EvaluationContext, FiniteFieldPolynomial, HenselError, IntegerPolynomial, RationalPolynomial,
+    factor_finite_field, hensel_lift_pair,
 };
 
 const PRIMES: [u32; 5] = [2, 3, 5, 7, 11];
@@ -23,45 +23,56 @@ fn integral_monic(value: &RationalPolynomial) -> Option<IntegerPolynomial> {
     {
         return None;
     }
-    let coefficients = value.coefficients().iter().map(|coefficient| {
-        if coefficient.denominator() != &Integer::one() {
-            return None;
-        }
-        let n = coefficient.numerator().try_i64()?;
-        (n.unsigned_abs() <= MAX_COEFFICIENT as u64).then_some(Integer::from(n))
-    }).collect::<Option<Vec<_>>>()?;
+    let coefficients = value
+        .coefficients()
+        .iter()
+        .map(|coefficient| {
+            if coefficient.denominator() != &Integer::one() {
+                return None;
+            }
+            let n = coefficient.numerator().try_i64()?;
+            (n.unsigned_abs() <= MAX_COEFFICIENT as u64).then_some(Integer::from(n))
+        })
+        .collect::<Option<Vec<_>>>()?;
     Some(IntegerPolynomial::new(coefficients))
 }
 
-fn reduce(
-    polynomial: &IntegerPolynomial,
-    prime: u32,
-) -> Option<FiniteFieldPolynomial> {
-    let coefficients = polynomial.coefficients().iter()
+fn reduce(polynomial: &IntegerPolynomial, prime: u32) -> Option<FiniteFieldPolynomial> {
+    let coefficients = polynomial
+        .coefficients()
+        .iter()
         .map(|number| number.modulo_u32(prime).map(i64::from))
         .collect::<Option<Vec<_>>>()?;
     FiniteFieldPolynomial::new(prime, coefficients).ok()
 }
 
 fn lift_start(value: &FiniteFieldPolynomial) -> IntegerPolynomial {
-    IntegerPolynomial::new(value.coefficients().iter()
-        .map(|&number| Integer::from(number))
-        .collect())
+    IntegerPolynomial::new(
+        value
+            .coefficients()
+            .iter()
+            .map(|&number| Integer::from(number))
+            .collect(),
+    )
 }
 
 /// Symmetric representatives of Z/(m); these are only trial factors.
 /// Their exact integer divisibility is checked independently.
 fn centered(poly: &IntegerPolynomial, modulus: &Integer) -> Option<RationalPolynomial> {
     let two = Integer::from(2);
-    let coefficients = poly.coefficients().iter().map(|number| {
-        let residue = number.modulo_positive(modulus)?;
-        let centered = if &(&residue * &two) > modulus {
-            &residue - modulus
-        } else {
-            residue
-        };
-        Some(Rational::from(centered))
-    }).collect::<Option<Vec<_>>>()?;
+    let coefficients = poly
+        .coefficients()
+        .iter()
+        .map(|number| {
+            let residue = number.modulo_positive(modulus)?;
+            let centered = if &(&residue * &two) > modulus {
+                &residue - modulus
+            } else {
+                residue
+            };
+            Some(Rational::from(centered))
+        })
+        .collect::<Option<Vec<_>>>()?;
     Some(RationalPolynomial::new(coefficients))
 }
 
@@ -86,7 +97,10 @@ pub(crate) fn reconstruct_factor(
         let factorization = factor_finite_field(&reduced)?;
         if !factorization.is_complete()
             || factorization.factors().len() < 2
-            || factorization.factors().iter().any(|f| f.multiplicity() != 1)
+            || factorization
+                .factors()
+                .iter()
+                .any(|f| f.multiplicity() != 1)
         {
             continue;
         }
@@ -139,17 +153,21 @@ mod tests {
     use super::*;
 
     fn p(coefficients: &[i64]) -> RationalPolynomial {
-        RationalPolynomial::new(coefficients.iter()
-            .map(|&number| Rational::from(Integer::from(number))).collect())
+        RationalPolynomial::new(
+            coefficients
+                .iter()
+                .map(|&number| Rational::from(Integer::from(number)))
+                .collect(),
+        )
     }
 
     #[test]
     fn reconstructs_two_irreducible_cubics_with_no_rational_roots() {
         let ctx = EvaluationContext::default();
-        let first = p(&[1,1,0,1]);
-        let second = p(&[1,0,1,1]);
+        let first = p(&[1, 1, 0, 1]);
+        let second = p(&[1, 0, 1, 1]);
         let original = first.multiply(&second);
-        let (a,b) = reconstruct_factor(&ctx, &original).unwrap().unwrap();
+        let (a, b) = reconstruct_factor(&ctx, &original).unwrap().unwrap();
         assert_eq!(a.multiply(&b), original);
         assert!(a.degree().is_some_and(|degree| degree >= 2));
     }
@@ -157,14 +175,20 @@ mod tests {
     #[test]
     fn reconstruction_never_guesses_a_factor_of_irreducible_quartic() {
         let ctx = EvaluationContext::default();
-        assert_eq!(reconstruct_factor(&ctx, &p(&[1,0,0,0,1])).unwrap(), None);
+        assert_eq!(
+            reconstruct_factor(&ctx, &p(&[1, 0, 0, 0, 1])).unwrap(),
+            None
+        );
     }
 
     #[test]
     fn integral_monic_check_rejects_nonintegral_inputs() {
         let half = Rational::new(Integer::one(), Integer::from(2)).unwrap();
-        let value = RationalPolynomial::new(vec![half,Rational::from(Integer::zero()),
-            Rational::from(Integer::one())]);
+        let value = RationalPolynomial::new(vec![
+            half,
+            Rational::from(Integer::zero()),
+            Rational::from(Integer::one()),
+        ]);
         assert!(integral_monic(&value).is_none());
     }
 }

@@ -2,9 +2,12 @@ use mathema::{Integer, Rational};
 use mathematishia_kernel::{EvaluationContext, RationalPolynomial, verify_rational_factorization};
 
 fn p(coefficients: &[i64]) -> RationalPolynomial {
-    RationalPolynomial::new(coefficients.iter()
-        .map(|&number| Rational::from(Integer::from(number)))
-        .collect())
+    RationalPolynomial::new(
+        coefficients
+            .iter()
+            .map(|&number| Rational::from(Integer::from(number)))
+            .collect(),
+    )
 }
 
 #[test]
@@ -17,8 +20,18 @@ fn modular_hensel_reconstruction_splits_degree_six_without_linear_roots() {
     assert!(result.is_complete());
     assert_eq!(result.factors().len(), 2);
     assert_eq!(verify_rational_factorization(&original, &result), Ok(()));
-    assert!(result.factors().iter().any(|factor| factor.polynomial() == &first));
-    assert!(result.factors().iter().any(|factor| factor.polynomial() == &second));
+    assert!(
+        result
+            .factors()
+            .iter()
+            .any(|factor| factor.polynomial() == &first)
+    );
+    assert!(
+        result
+            .factors()
+            .iter()
+            .any(|factor| factor.polynomial() == &second)
+    );
 }
 
 #[test]

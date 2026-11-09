@@ -15,6 +15,7 @@ mod context;
 mod differentiate_expr;
 mod domain_operations;
 mod extended_gcd;
+mod finite_field;
 mod extension_minimal;
 mod guarded_rewrite;
 mod poly_convert;
@@ -60,6 +61,7 @@ pub use extended_gcd::{
     EuclideanStep, ExtendedGcdResult, ExtendedGcdVerificationError, verify_extended_gcd,
 };
 pub use extension_minimal::verify_extension_minimal_polynomial;
+pub use finite_field::{FiniteFieldError, FiniteFieldPolynomial, is_small_prime};
 pub use guarded_rewrite::{
     GuardedRewriteOutcome, GuardedRewriteStep, GuardedRewriteVerificationError, GuardedRuleId,
     cancel_symbol_inverse_once, verify_guarded_rewrite_step,

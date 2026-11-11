@@ -13,7 +13,8 @@ use mathema_frontend::{
 };
 use mathematishia_kernel::{
     AlgebraicRootEvidence, AlgebraicRootSet, Assumptions, CertifiedAlgebraicField,
-    DomainRewriteOutcome, EvaluationContext, ExactQuadraticRoot, LinearSolution, PolynomialResidue,
+    DomainRewriteOutcome, EvaluationContext, ExactMatrix, ExactQuadraticRoot, LinearSolution,
+    LinearSystemSolution, PolynomialResidue,
     QuadraticBranch, QuadraticElement, QuadraticField, QuadraticRoots, RationalFunction,
     RationalPolynomial, RationalQuadraticRoots, VerifiedCondition, rewrite_domain_once,
     substitute_domain,
@@ -47,6 +48,11 @@ Usage:
   mathematishia fieldmin <MINPOLY> <VALUE> <VARIABLE>
   mathematishia fieldpow <MINPOLY> <VALUE> <EXPONENT> <VARIABLE>
   mathematishia fieldop <add|sub|mul|div> <MINPOLY> <LEFT> <RIGHT> <VARIABLE>
+  mathematishia matdet <ROWS>
+  mathematishia matinv <ROWS>
+  mathematishia matrref <ROWS>
+  mathematishia matmul <LEFT_ROWS> <RIGHT_ROWS>
+  mathematishia matsolve <ROWS> <VECTOR>
   mathematishia diffexpr <EXPRESSION> <VARIABLE>
   mathematishia rsimplify <EXPRESSION> <VARIABLE>
   mathematishia rdiff <EXPRESSION> <VARIABLE>
@@ -83,6 +89,8 @@ Examples:
   mathematishia factor '(x-1)*(x^2+1)' x
   mathematishia fieldmin 'x^3-2' 'x^2' x
   mathematishia fieldpow 'x^3-2' x -1 x
+  mathematishia matdet '2,1;5,3'
+  mathematishia matsolve '2,1;5,3' '5,13'
   mathematishia diffexpr 'x*y+(x+1)^3' x
   mathematishia rsimplify '(x^2-1)/(x-1)' x
   mathematishia rsolve '(x^2-1)/(x-1)=3' x
@@ -118,6 +126,40 @@ fn expression(input: &str) -> Result<Expr, CliError> {
         .check_expression(&parsed)
         .map_err(|error| invalid(error.to_string()))?;
     Ok(parsed)
+}
+
+fn exact_vector(source: &str) -> Result<Vec<Rational>, CliError> {
+    if source.trim().is_empty() {
+        return Err(invalid("vector cannot be empty"));
+    }
+    source
+        .split(',')
+        .map(|entry| scalar(entry.trim()))
+        .collect()
+}
+
+fn exact_matrix(source: &str) -> Result<ExactMatrix, CliError> {
+    if source.trim().is_empty() {
+        return Err(invalid("matrix cannot be empty"));
+    }
+    let rows = source
+        .split(';')
+        .map(exact_vector)
+        .collect::<Result<Vec<_>, _>>()?;
+    ExactMatrix::new(&EvaluationContext::default(), rows)
+        .map_err(|error| invalid(error.to_string()))
+}
+
+fn format_vector(values: &[Rational]) -> String {
+    values
+        .iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
+fn format_matrix(matrix: &ExactMatrix) -> String {
+    matrix.rows().iter().map(|row| format_vector(row)).collect::<Vec<_>>().join(";")
 }
 
 fn quadratic_branch(input: &str) -> Result<QuadraticBranch, CliError> {
@@ -576,6 +618,59 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
             }
             .map_err(|error| invalid(error.to_string()))?;
             show_quadratic(&result, &variable(name)?)
+        }
+        ["matdet", source] => {
+            let ctx = EvaluationContext::default();
+            let determinant = exact_matrix(source)?
+                .determinant(&ctx)
+                .map_err(|error| invalid(error.to_string()))?;
+            Ok(format!("determinant: {determinant}"))
+        }
+        ["matinv", source] => {
+            let ctx = EvaluationContext::default();
+            let inverse = exact_matrix(source)?
+                .inverse(&ctx)
+                .map_err(|error| invalid(error.to_string()))?;
+            Ok(match inverse {
+                Some(matrix) => format!("inverse: {}", format_matrix(&matrix)),
+                None => "inverse: none (singular)".to_owned(),
+            })
+        }
+        ["matrref", source] => {
+            let ctx = EvaluationContext::default();
+            let reduced = exact_matrix(source)?
+                .rref(&ctx)
+                .map_err(|error| invalid(error.to_string()))?;
+            Ok(format!("rref: {}\nrank: {}", format_matrix(reduced.matrix()), reduced.rank()))
+        }
+        ["matmul", left, right] => {
+            let ctx = EvaluationContext::default();
+            let product = exact_matrix(left)?
+                .multiply(&exact_matrix(right)?, &ctx)
+                .map_err(|error| invalid(error.to_string()))?;
+            Ok(format!("product: {}", format_matrix(&product)))
+        }
+        ["matsolve", source, rhs] => {
+            let ctx = EvaluationContext::default();
+            let result = exact_matrix(source)?
+                .solve(&ctx, &exact_vector(rhs)?)
+                .map_err(|error| invalid(error.to_string()))?;
+            Ok(match result {
+                LinearSystemSolution::Inconsistent => "solution: inconsistent".to_owned(),
+                LinearSystemSolution::Unique(value) =>
+                    format!("solution: unique\nvalue: {}", format_vector(&value)),
+                LinearSystemSolution::Infinite { particular, nullspace_basis } => {
+                    let mut output = format!(
+                        "solution: infinite\nparticular: {}",
+                        format_vector(&particular),
+                    );
+                    for vector in nullspace_basis {
+                        write!(&mut output, "\nnullspace: {}", format_vector(&vector))
+                            .expect("writing to String is infallible");
+                    }
+                    output
+                }
+            })
         }
         ["poly", input, name] => {
             let symbol = variable(name)?;

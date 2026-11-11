@@ -546,5 +546,47 @@ class CertifiedAlgebraicExtensionTests(unittest.TestCase):
             m.extension_operation("div", "x^3-2", "1", "0", "x")
 
 
+
+class ExactMatrixTests(unittest.TestCase):
+    def test_determinant_inverse_and_multiply(self):
+        matrix = [[2, 1], [5, 3]]
+        self.assertEqual(m.matrix_determinant(matrix), Fraction(1))
+        inverse = m.matrix_inverse(matrix)
+        self.assertEqual(inverse.rows,
+                         ((Fraction(3), Fraction(-1)),
+                          (Fraction(-5), Fraction(2))))
+        product = m.matrix_multiply(matrix, inverse.rows)
+        self.assertEqual(product.rows,
+                         ((Fraction(1), Fraction(0)), (Fraction(0), Fraction(1))))
+        self.assertIsNone(m.matrix_inverse([[1, 2], [2, 4]]))
+        with self.assertRaises(FrozenInstanceError):
+            inverse.rows = ()
+
+    def test_rref_and_system_solution_families(self):
+        form = m.matrix_rref([[1, 2, 3], [2, 4, 6], [1, 1, 1]])
+        self.assertEqual(form.rank, 2)
+        self.assertEqual(form.pivot_columns, (0, 1))
+        unique = m.matrix_solve([[2, 1], [5, 3]], [5, 13])
+        self.assertEqual(unique.kind, "unique")
+        self.assertEqual(unique.particular, (Fraction(2), Fraction(1)))
+        inconsistent = m.matrix_solve([[1, 1], [2, 2]], [3, 7])
+        self.assertEqual(inconsistent.kind, "inconsistent")
+        affine = m.matrix_solve([[1, 1, 1], [2, 2, 2]], [3, 6])
+        self.assertEqual(affine.kind, "infinite")
+        self.assertEqual(len(affine.nullspace_basis), 2)
+
+    def test_invalid_shape_and_float_inputs(self):
+        with self.assertRaises(m.UnsupportedMathematicsError):
+            m.matrix_determinant([[1, 2], [3]])
+        with self.assertRaises(m.UnsupportedMathematicsError):
+            m.matrix_multiply([[1, 2]], [[1, 2]])
+        with self.assertRaises(TypeError):
+            m.matrix_determinant([[0.1]])
+        self.assertEqual(
+            m.matrix_determinant([["1/2", 0], [0, Fraction(1, 3)]]),
+            Fraction(1, 6),
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

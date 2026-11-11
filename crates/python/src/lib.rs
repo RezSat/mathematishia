@@ -11,7 +11,7 @@ use mathema_frontend::{
 use mathematishia_kernel::{
     AlgebraicExtensionError, AlgebraicRootEvidence, AlgebraicRootSet, Assumptions,
     CertifiedAlgebraicField, DefinednessError, DomainOperationError, DomainRewriteOutcome,
-    EvaluationContext, EvaluationError, ExactQuadraticRoot, LinearSolution, PolynomialResidue,
+    EvaluationContext, EvaluationError, ExactMatrix, LinearSystemSolution, MatrixError, ExactQuadraticRoot, LinearSolution, PolynomialResidue,
     ProofNodeKind, QuadraticBranch, QuadraticElement, QuadraticField, QuadraticFieldError,
     QuadraticRoots, RationalExpressionError, RationalFunction, RationalFunctionError,
     RationalPolynomial, RationalQuadraticRoots, ResidueError, ResourceLimitKind, VerifiedCondition,
@@ -644,6 +644,86 @@ fn py_extension_minimal_polynomial(
     Ok(poly_data(&minimal, &symbol))
 }
 
+fn matrix_error(error: MatrixError) -> PyErr {
+    match error {
+        MatrixError::Evaluation(reason) => map_evaluation_error(reason),
+        _ => UnsupportedMathematicsError::new_err(error.to_string()),
+    }
+}
+
+fn selected_matrix(rows: Vec<Vec<String>>) -> PyResult<ExactMatrix> {
+    let parsed = rows
+        .iter()
+        .map(|row| row.iter().map(|source| selected_scalar(source)).collect::<PyResult<Vec<_>>>())
+        .collect::<PyResult<Vec<_>>>()?;
+    ExactMatrix::new(&EvaluationContext::default(), parsed).map_err(matrix_error)
+}
+
+fn matrix_strings(matrix: &ExactMatrix) -> Vec<Vec<String>> {
+    matrix.rows().iter().map(|row| row.iter().map(ToString::to_string).collect()).collect()
+}
+
+#[pyfunction(name = "matrix_determinant")]
+fn py_matrix_determinant(rows: Vec<Vec<String>>) -> PyResult<String> {
+    selected_matrix(rows)?
+        .determinant(&EvaluationContext::default())
+        .map(|value| value.to_string())
+        .map_err(matrix_error)
+}
+
+#[pyfunction(name = "matrix_inverse")]
+fn py_matrix_inverse(rows: Vec<Vec<String>>) -> PyResult<Option<Vec<Vec<String>>>> {
+    selected_matrix(rows)?
+        .inverse(&EvaluationContext::default())
+        .map(|value| value.as_ref().map(matrix_strings))
+        .map_err(matrix_error)
+}
+
+#[pyfunction(name = "matrix_rref")]
+fn py_matrix_rref(rows: Vec<Vec<String>>) -> PyResult<(Vec<Vec<String>>, Vec<usize>)> {
+    let reduced = selected_matrix(rows)?
+        .rref(&EvaluationContext::default())
+        .map_err(matrix_error)?;
+    Ok((matrix_strings(reduced.matrix()), reduced.pivot_columns().to_vec()))
+}
+
+#[pyfunction(name = "matrix_multiply")]
+fn py_matrix_multiply(
+    left: Vec<Vec<String>>,
+    right: Vec<Vec<String>>,
+) -> PyResult<Vec<Vec<String>>> {
+    let ctx = EvaluationContext::default();
+    let result = selected_matrix(left)?
+        .multiply(&selected_matrix(right)?, &ctx)
+        .map_err(matrix_error)?;
+    Ok(matrix_strings(&result))
+}
+
+type PyMatrixSolution = (String, Vec<String>, Vec<Vec<String>>);
+
+#[pyfunction(name = "matrix_solve")]
+fn py_matrix_solve(
+    rows: Vec<Vec<String>>,
+    rhs: Vec<String>,
+) -> PyResult<PyMatrixSolution> {
+    let rhs = rhs.iter().map(|value| selected_scalar(value))
+        .collect::<PyResult<Vec<_>>>()?;
+    let solution = selected_matrix(rows)?
+        .solve(&EvaluationContext::default(), &rhs)
+        .map_err(matrix_error)?;
+    let result = match solution {
+        LinearSystemSolution::Inconsistent => ("inconsistent".to_owned(), Vec::new(), Vec::new()),
+        LinearSystemSolution::Unique(values) =>
+            ("unique".to_owned(), values.iter().map(ToString::to_string).collect(), Vec::new()),
+        LinearSystemSolution::Infinite { particular, nullspace_basis } =>
+            ("infinite".to_owned(),
+             particular.iter().map(ToString::to_string).collect(),
+             nullspace_basis.iter().map(|basis|
+                basis.iter().map(ToString::to_string).collect()).collect()),
+    };
+    Ok(result)
+}
+
 #[pyfunction(name = "gcd")]
 fn py_gcd(left: &str, right: &str, variable: &str) -> PyResult<(String, Vec<String>)> {
     let symbol = selected_variable(variable)?;
@@ -1225,6 +1305,11 @@ fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(py_evaluate, m)?)?;
     m.add_function(wrap_pyfunction!(py_divide, m)?)?;
     m.add_function(wrap_pyfunction!(py_gcd, m)?)?;
+    m.add_function(wrap_pyfunction!(py_matrix_determinant, m)?)?;
+    m.add_function(wrap_pyfunction!(py_matrix_inverse, m)?)?;
+    m.add_function(wrap_pyfunction!(py_matrix_rref, m)?)?;
+    m.add_function(wrap_pyfunction!(py_matrix_multiply, m)?)?;
+    m.add_function(wrap_pyfunction!(py_matrix_solve, m)?)?;
     m.add_function(wrap_pyfunction!(py_factor_polynomial, m)?)?;
     m.add_function(wrap_pyfunction!(py_extension_value, m)?)?;
     m.add_function(wrap_pyfunction!(py_extension_operation, m)?)?;

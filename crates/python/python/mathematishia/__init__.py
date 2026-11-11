@@ -298,6 +298,86 @@ def modular_power(
     return _residue(result) if result is not None else None
 
 
+@dataclass(frozen=True)
+class Matrix:
+    rows: tuple[tuple[Fraction, ...], ...]
+
+    @property
+    def shape(self) -> tuple[int, int]:
+        return len(self.rows), len(self.rows[0])
+
+
+@dataclass(frozen=True)
+class MatrixRref:
+    matrix: Matrix
+    pivot_columns: tuple[int, ...]
+
+    @property
+    def rank(self) -> int:
+        return len(self.pivot_columns)
+
+
+@dataclass(frozen=True)
+class MatrixSolution:
+    kind: Literal["unique", "infinite", "inconsistent"]
+    particular: tuple[Fraction, ...]
+    nullspace_basis: tuple[tuple[Fraction, ...], ...]
+
+
+def _matrix_input(rows) -> list[list[str]]:
+    # Reject binary floating-point input rather than silently treating its
+    # decimal display as an exact mathematical value.
+    result = []
+    for row in rows:
+        converted = []
+        for value in row:
+            if isinstance(value, bool) or not isinstance(value, (str, int, Fraction)):
+                raise TypeError("matrix entries must be exact integers, fractions or strings")
+            converted.append(str(value))
+        result.append(converted)
+    return result
+
+
+def _matrix_output(rows) -> Matrix:
+    return Matrix(tuple(tuple(Fraction(value) for value in row) for row in rows))
+
+
+def matrix_determinant(rows) -> Fraction:
+    """Exact determinant of a square rational matrix."""
+    return Fraction(_native.matrix_determinant(_matrix_input(rows)))
+
+
+def matrix_inverse(rows) -> Matrix | None:
+    """Exact inverse, or None when the square matrix is singular."""
+    result = _native.matrix_inverse(_matrix_input(rows))
+    return _matrix_output(result) if result is not None else None
+
+
+def matrix_rref(rows) -> MatrixRref:
+    """Reduced row echelon form and exact pivot columns."""
+    result, pivots = _native.matrix_rref(_matrix_input(rows))
+    return MatrixRref(_matrix_output(result), tuple(pivots))
+
+
+def matrix_multiply(left, right) -> Matrix:
+    """Multiply two rational matrices exactly."""
+    return _matrix_output(_native.matrix_multiply(
+        _matrix_input(left), _matrix_input(right)
+    ))
+
+
+def matrix_solve(rows, rhs) -> MatrixSolution:
+    """Solve Ax=b, including inconsistent and affine solution families."""
+    converted = _matrix_input(rows)
+    values = _matrix_input([rhs])[0]
+    kind, particular, basis = _native.matrix_solve(converted, values)
+    return MatrixSolution(
+        kind,
+        tuple(Fraction(value) for value in particular),
+        tuple(tuple(Fraction(value) for value in row) for row in basis),
+    )
+
+
 def quadratic_value(
     polynomial: str, variable: str, branch: str,
     constant: str, coefficient: str,
@@ -588,6 +668,8 @@ __all__ = [
     "EuclideanDivision", "ExtendedGcd", "extended_gcd", "modular_inverse",
     "ExactQuadraticRoot", "AlgebraicRootStep", "AlgebraicRootsResult",
     "QuadraticFieldValue", "quadratic_value", "quadratic_operation", "quadratic_inverse",
+    "Matrix", "MatrixRref", "MatrixSolution", "matrix_determinant", "matrix_inverse",
+    "matrix_rref", "matrix_multiply", "matrix_solve",
     "PolynomialResidue", "modular_reduce", "modular_operation", "modular_power",
     "SquareFreeFactor", "SquareFreeDecomposition",
     "RationalFactor", "RationalFactorization", "factor_polynomial",

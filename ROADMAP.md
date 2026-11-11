@@ -9,6 +9,7 @@ This file tracks implemented areas and the next domain extensions. See [CAPABILI
 - Univariate rational-polynomial arithmetic, long division, GCD, differentiation and verified square-free decomposition.
 - Extended Euclidean algorithm with verified polynomial Bézout certificates and modular inverses in Q[x].
 - Canonical quotient-ring arithmetic in Q[x]/(m), including nonunits and signed powers.
+- Exact rational matrices, rank, RREF, determinant, inverse and linear systems including affine solution families.
 - Certified embedded quadratic fields with exact arithmetic, conjugation, trace, norm and independently checked minimal polynomials.
 - Certified rational factors, including bounded quartic splitting and modular irreducibility proofs for higher degrees.
 - Exact small-prime polynomial arithmetic, bounded finite-field factorization, coprime Hensel lifting and verified factor reconstruction. Unresolved cofactors remain explicit.
@@ -23,13 +24,13 @@ This file tracks implemented areas and the next domain extensions. See [CAPABILI
 
 ## In progress / next
 
-1. Provide verified arithmetic traces for general rational-expression conversions and extend proof obligations to equation transformations and domain-specific evidence.
-2. Extend conditional rewriting to wider expression classes and analytic branch semantics.
-3. Expand rational factorization beyond the current bounded monic reconstruction path, including arbitrary primitive integer polynomials, better modular splitting, general Hensel recombination and coefficient bounds.
-4. Extend algebraic fields beyond degree eight and implement compatible embeddings, field composita and cross-field arithmetic.
-5. Add analytic functions, broader differentiation and integration.
-6. Add numerical precision policies and certified approximations.
-7. Build explanatory renderers and stabilize external data formats.
-8. Publish Python distributions after versioning and release checks.
+1. Expand multivariate polynomial and rational-expression representations and connect them to a general algebra simplifier.
+2. Introduce trigonometric, exponential and logarithmic expression nodes with domain conditions and verified differentiation rules.
+3. Extend equation and inequality solving, including systems and selected polynomial roots beyond quadratic degree.
+4. Implement rule-verified student-facing derivations and stable structured outputs for algebra and calculus.
+5. Add elementary integration, limits and series with explicit supported domains and unresolved results.
+6. Expand rational factorization beyond the bounded reconstruction path; improve algebraic embeddings and general arithmetic.
+7. Add exact linear-algebra extensions, certified numerics and targeted symbolic matrix operations.
+8. Stabilize the computation API, benchmark coverage and package releases for multiple frontends.
 
 The implemented proof graph checks dependencies and supported rule evidence; it is not a general theorem prover.

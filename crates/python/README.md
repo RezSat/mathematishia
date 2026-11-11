@@ -31,7 +31,7 @@ for root in roots.roots:
 - `rational_simplify`, `rational_derivative`, `rational_value`, `rational_solve`: full univariate rational expressions and equations over Q, preserving source-domain exclusions.
 - `algebraic_roots`: exact quadratic roots, represented as rationals or as a monic minimal polynomial with a branch selector.
 - `factor_polynomial`: certified rational linear, quadratic and bounded cubic factors, plus unresolved cofactors.
-- `extension_value`, `extension_operation`, `extension_power`, `extension_minimal_polynomial`: arithmetic and minimal polynomials in certified abstract quadratic and cubic fields.
+- `extension_value`, `extension_operation`, `extension_power`, `extension_minimal_polynomial`: arithmetic and minimal polynomials in supported certified abstract algebraic fields.
 
 The parser covers a bounded grammar. General function calculus, cross-field arithmetic, higher-degree factorization and a stable Python compatibility contract have not yet been implemented. See [the syntax specification](../../docs/design/mathema-surface.md).
 
@@ -153,3 +153,35 @@ assert minimal.coefficients == (
 The cubic field API defines an abstract generator `alpha` satisfying the
 given irreducible polynomial. It does not select a real or complex root.
 A reducible or uncertified defining polynomial is rejected.
+
+## Exact rational matrices
+
+Matrix entries accept integers, exact fraction strings or `fractions.Fraction`.
+Binary floating-point entries are rejected rather than implicitly interpreted
+as exact decimal values.
+
+```python
+from fractions import Fraction
+import mathematishia as m
+
+a = [[2, 1], [5, 3]]
+assert m.matrix_determinant(a) == Fraction(1)
+
+inverse = m.matrix_inverse(a)
+assert inverse.rows == (
+    (Fraction(3), Fraction(-1)),
+    (Fraction(-5), Fraction(2)),
+)
+
+solution = m.matrix_solve(a, [5, 13])
+assert solution.kind == "unique"
+assert solution.particular == (Fraction(2), Fraction(1))
+
+affine = m.matrix_solve([[1, 1, 1], [2, 2, 2]], [3, 6])
+assert affine.kind == "infinite"
+assert len(affine.nullspace_basis) == 2
+```
+
+Other operations: `matrix_rref` returns the row-reduced matrix, pivot
+columns and rank; `matrix_multiply` multiplies two matrices. The exact
+kernel currently accepts dimensions up to 16.

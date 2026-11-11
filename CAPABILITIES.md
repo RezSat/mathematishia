@@ -6,6 +6,7 @@
 | Polynomial arithmetic, division and GCD | `crates/kernel/src/polynomial.rs`, `poly_division.rs` |
 | Extended polynomial GCD, Bézout verification, modular inverses | `crates/kernel/src/extended_gcd.rs` |
 | Polynomial quotient rings and canonical residue arithmetic | `crates/kernel/src/polynomial_residue.rs` |
+| Exact rational matrices, RREF, determinant, inverse and affine linear systems | `crates/kernel/src/exact_matrix.rs` |
 | Square-free factorization | `crates/kernel/src/square_free.rs` |
 | Certified rational factors and unresolved cofactors | `crates/kernel/src/rational_factorization.rs` |
 | Small-prime polynomial arithmetic and irreducibility | `crates/kernel/src/finite_field.rs`, `modular_irreducibility.rs` |
@@ -39,6 +40,8 @@ The proof graph records exact expression inputs, condition nodes, rule evidence 
 Rational factorization first removes repeated factors. It uses the rational root theorem, exact quadratic discriminants, exhaustive bounded monic quartic splitting, and finite-field irreducibility certificates. Supported monic integral polynomials through degree eight can also be split by square-free modular factorization, coprime Hensel lifts and exact division. None of these bounds imply complete factorization for arbitrary inputs. When no factor or irreducibility proof is found, the remainder is unresolved.
 
 Small-prime polynomial arithmetic admits primes through 251 and input degrees through 32. The finite-field factorizer uses capped divisor enumeration through degree eight. Hensel reconstruction is restricted to bounded monic integer polynomials and a fixed small-prime search.
+
+Exact rational matrices permit up to 16 rows and 16 columns. Inverse candidates are checked against both multiplication identities. Solvers distinguish unique, inconsistent and infinite families. This is exact linear algebra over Q; eigenvalues, eigenvectors, symbolic matrices and floating-point matrix algorithms remain outside the implemented scope.
 
 The quotient-ring type does not assume irreducibility. Embedded quadratic fields use explicit root branches. Abstract algebraic fields accept irreducibility-certified defining polynomials of degree two through eight but do not have selected complex embeddings. General factorization, arithmetic across distinct field presentations, analytic functions, certified numerics and broader proof rendering remain unimplemented.
 

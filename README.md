@@ -37,6 +37,8 @@ cargo run -p mathematishia-cli -- egcd 'x^3-1' 'x^2-1' x
 cargo run -p mathematishia-cli -- modinv x 'x^2+1' x
 cargo run -p mathematishia-cli -- sqfree '2*(x-1)^2*(x+2)^3' x
 cargo run -p mathematishia-cli -- factor '(x-1)*(x^2+1)' x
+cargo run -p mathematishia-cli -- matdet '2,1;5,3'
+cargo run -p mathematishia-cli -- matsolve '2,1;5,3' '5,13'
 cargo run -p mathematishia-cli -- factor '(x^3+x+1)*(x^3+x^2+1)' x
 cargo run -p mathematishia-cli -- fieldmin 'x^3-2' 'x^2' x
 cargo run -p mathematishia-cli -- fieldpow 'x^3-2' x -1 x
@@ -44,6 +46,14 @@ cargo run -p mathematishia-cli -- diffexpr 'x*y+(x+1)^3' x
 ```
 
 The CLI also exposes polynomial evaluation and GCD, rational-function operations, and rational equation solving. Run `cargo run -p mathematishia-cli -- --help` for the command reference.
+
+## Matrices
+
+Rational matrices support exact determinants, inverses, row reduction,
+rank, multiplication and linear systems. A system can have no solution,
+one solution or an affine family of solutions. CLI matrix rows are
+semicolon-separated; entries within each row are comma-separated.
+The current matrix solver limits each dimension to 16.
 
 ## Python
 

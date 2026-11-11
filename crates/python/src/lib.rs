@@ -11,11 +11,11 @@ use mathema_frontend::{
 use mathematishia_kernel::{
     AlgebraicExtensionError, AlgebraicRootEvidence, AlgebraicRootSet, Assumptions,
     CertifiedAlgebraicField, DefinednessError, DomainOperationError, DomainRewriteOutcome,
-    EvaluationContext, EvaluationError, ExactMatrix, LinearSystemSolution, MatrixError, ExactQuadraticRoot, LinearSolution, PolynomialResidue,
-    ProofNodeKind, QuadraticBranch, QuadraticElement, QuadraticField, QuadraticFieldError,
-    QuadraticRoots, RationalExpressionError, RationalFunction, RationalFunctionError,
-    RationalPolynomial, RationalQuadraticRoots, ResidueError, ResourceLimitKind, VerifiedCondition,
-    rewrite_domain_once, substitute_domain,
+    EvaluationContext, EvaluationError, ExactMatrix, ExactQuadraticRoot, LinearSolution,
+    LinearSystemSolution, MatrixError, PolynomialResidue, ProofNodeKind, QuadraticBranch,
+    QuadraticElement, QuadraticField, QuadraticFieldError, QuadraticRoots, RationalExpressionError,
+    RationalFunction, RationalFunctionError, RationalPolynomial, RationalQuadraticRoots,
+    ResidueError, ResourceLimitKind, VerifiedCondition, rewrite_domain_once, substitute_domain,
 };
 use pyo3::create_exception;
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
@@ -654,13 +654,21 @@ fn matrix_error(error: MatrixError) -> PyErr {
 fn selected_matrix(rows: Vec<Vec<String>>) -> PyResult<ExactMatrix> {
     let parsed = rows
         .iter()
-        .map(|row| row.iter().map(|source| selected_scalar(source)).collect::<PyResult<Vec<_>>>())
+        .map(|row| {
+            row.iter()
+                .map(|source| selected_scalar(source))
+                .collect::<PyResult<Vec<_>>>()
+        })
         .collect::<PyResult<Vec<_>>>()?;
     ExactMatrix::new(&EvaluationContext::default(), parsed).map_err(matrix_error)
 }
 
 fn matrix_strings(matrix: &ExactMatrix) -> Vec<Vec<String>> {
-    matrix.rows().iter().map(|row| row.iter().map(ToString::to_string).collect()).collect()
+    matrix
+        .rows()
+        .iter()
+        .map(|row| row.iter().map(ToString::to_string).collect())
+        .collect()
 }
 
 #[pyfunction(name = "matrix_determinant")]
@@ -684,7 +692,10 @@ fn py_matrix_rref(rows: Vec<Vec<String>>) -> PyResult<(Vec<Vec<String>>, Vec<usi
     let reduced = selected_matrix(rows)?
         .rref(&EvaluationContext::default())
         .map_err(matrix_error)?;
-    Ok((matrix_strings(reduced.matrix()), reduced.pivot_columns().to_vec()))
+    Ok((
+        matrix_strings(reduced.matrix()),
+        reduced.pivot_columns().to_vec(),
+    ))
 }
 
 #[pyfunction(name = "matrix_multiply")]
@@ -702,24 +713,32 @@ fn py_matrix_multiply(
 type PyMatrixSolution = (String, Vec<String>, Vec<Vec<String>>);
 
 #[pyfunction(name = "matrix_solve")]
-fn py_matrix_solve(
-    rows: Vec<Vec<String>>,
-    rhs: Vec<String>,
-) -> PyResult<PyMatrixSolution> {
-    let rhs = rhs.iter().map(|value| selected_scalar(value))
+fn py_matrix_solve(rows: Vec<Vec<String>>, rhs: Vec<String>) -> PyResult<PyMatrixSolution> {
+    let rhs = rhs
+        .iter()
+        .map(|value| selected_scalar(value))
         .collect::<PyResult<Vec<_>>>()?;
     let solution = selected_matrix(rows)?
         .solve(&EvaluationContext::default(), &rhs)
         .map_err(matrix_error)?;
     let result = match solution {
         LinearSystemSolution::Inconsistent => ("inconsistent".to_owned(), Vec::new(), Vec::new()),
-        LinearSystemSolution::Unique(values) =>
-            ("unique".to_owned(), values.iter().map(ToString::to_string).collect(), Vec::new()),
-        LinearSystemSolution::Infinite { particular, nullspace_basis } =>
-            ("infinite".to_owned(),
-             particular.iter().map(ToString::to_string).collect(),
-             nullspace_basis.iter().map(|basis|
-                basis.iter().map(ToString::to_string).collect()).collect()),
+        LinearSystemSolution::Unique(values) => (
+            "unique".to_owned(),
+            values.iter().map(ToString::to_string).collect(),
+            Vec::new(),
+        ),
+        LinearSystemSolution::Infinite {
+            particular,
+            nullspace_basis,
+        } => (
+            "infinite".to_owned(),
+            particular.iter().map(ToString::to_string).collect(),
+            nullspace_basis
+                .iter()
+                .map(|basis| basis.iter().map(ToString::to_string).collect())
+                .collect(),
+        ),
     };
     Ok(result)
 }

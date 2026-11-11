@@ -14,10 +14,9 @@ use mathema_frontend::{
 use mathematishia_kernel::{
     AlgebraicRootEvidence, AlgebraicRootSet, Assumptions, CertifiedAlgebraicField,
     DomainRewriteOutcome, EvaluationContext, ExactMatrix, ExactQuadraticRoot, LinearSolution,
-    LinearSystemSolution, PolynomialResidue,
-    QuadraticBranch, QuadraticElement, QuadraticField, QuadraticRoots, RationalFunction,
-    RationalPolynomial, RationalQuadraticRoots, VerifiedCondition, rewrite_domain_once,
-    substitute_domain,
+    LinearSystemSolution, PolynomialResidue, QuadraticBranch, QuadraticElement, QuadraticField,
+    QuadraticRoots, RationalFunction, RationalPolynomial, RationalQuadraticRoots,
+    VerifiedCondition, rewrite_domain_once, substitute_domain,
 };
 
 pub const HELP: &str = "Mathematishia (early exact-math CLI)
@@ -159,7 +158,12 @@ fn format_vector(values: &[Rational]) -> String {
 }
 
 fn format_matrix(matrix: &ExactMatrix) -> String {
-    matrix.rows().iter().map(|row| format_vector(row)).collect::<Vec<_>>().join(";")
+    matrix
+        .rows()
+        .iter()
+        .map(|row| format_vector(row))
+        .collect::<Vec<_>>()
+        .join(";")
 }
 
 fn quadratic_branch(input: &str) -> Result<QuadraticBranch, CliError> {
@@ -641,7 +645,11 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
             let reduced = exact_matrix(source)?
                 .rref(&ctx)
                 .map_err(|error| invalid(error.to_string()))?;
-            Ok(format!("rref: {}\nrank: {}", format_matrix(reduced.matrix()), reduced.rank()))
+            Ok(format!(
+                "rref: {}\nrank: {}",
+                format_matrix(reduced.matrix()),
+                reduced.rank()
+            ))
         }
         ["matmul", left, right] => {
             let ctx = EvaluationContext::default();
@@ -657,9 +665,13 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
                 .map_err(|error| invalid(error.to_string()))?;
             Ok(match result {
                 LinearSystemSolution::Inconsistent => "solution: inconsistent".to_owned(),
-                LinearSystemSolution::Unique(value) =>
-                    format!("solution: unique\nvalue: {}", format_vector(&value)),
-                LinearSystemSolution::Infinite { particular, nullspace_basis } => {
+                LinearSystemSolution::Unique(value) => {
+                    format!("solution: unique\nvalue: {}", format_vector(&value))
+                }
+                LinearSystemSolution::Infinite {
+                    particular,
+                    nullspace_basis,
+                } => {
                     let mut output = format!(
                         "solution: infinite\nparticular: {}",
                         format_vector(&particular),

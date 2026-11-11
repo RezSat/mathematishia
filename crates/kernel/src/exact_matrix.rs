@@ -97,10 +97,7 @@ pub enum LinearSystemSolution {
 }
 
 impl ExactMatrix {
-    pub fn new(
-        ctx: &EvaluationContext,
-        rows: Vec<Vec<Rational>>,
-    ) -> Result<Self, MatrixError> {
+    pub fn new(ctx: &EvaluationContext, rows: Vec<Vec<Rational>>) -> Result<Self, MatrixError> {
         let Some(first) = rows.first() else {
             return Err(MatrixError::Empty);
         };
@@ -153,11 +150,7 @@ impl ExactMatrix {
         self.columns
     }
 
-    pub fn multiply(
-        &self,
-        right: &Self,
-        ctx: &EvaluationContext,
-    ) -> Result<Self, MatrixError> {
+    pub fn multiply(&self, right: &Self, ctx: &EvaluationContext) -> Result<Self, MatrixError> {
         if self.columns != right.row_count() {
             return Err(MatrixError::DimensionMismatch);
         }
@@ -178,12 +171,7 @@ impl ExactMatrix {
         Self::new(
             ctx,
             (0..self.columns)
-                .map(|column| {
-                    self.rows
-                        .iter()
-                        .map(|row| row[column].clone())
-                        .collect()
-                })
+                .map(|column| self.rows.iter().map(|row| row[column].clone()).collect())
                 .collect(),
         )
     }
@@ -210,8 +198,7 @@ impl ExactMatrix {
         let mut rows = self.rows.clone();
         let mut determinant = one();
         for column in 0..n {
-            let Some(pivot) = (column..n)
-                .find(|&row| !rows[row][column].numerator().is_zero())
+            let Some(pivot) = (column..n).find(|&row| !rows[row][column].numerator().is_zero())
             else {
                 return Ok(zero());
             };
@@ -229,9 +216,7 @@ impl ExactMatrix {
                 }
                 let factor = divide(&row[column], &pivot_value);
                 ctx.check_rational(&factor)?;
-                for (entry, pivot_entry) in row[column..]
-                    .iter_mut()
-                    .zip(pivot_row[column..].iter())
+                for (entry, pivot_entry) in row[column..].iter_mut().zip(pivot_row[column..].iter())
                 {
                     *entry = &*entry - &(&factor * pivot_entry);
                     ctx.check_rational(entry)?;
@@ -258,10 +243,7 @@ impl ExactMatrix {
         }
         let inverse = Self::new(
             ctx,
-            augmented
-                .into_iter()
-                .map(|row| row[n..].to_vec())
-                .collect(),
+            augmented.into_iter().map(|row| row[n..].to_vec()).collect(),
         )?;
         if !verify_matrix_inverse(ctx, self, &inverse)? {
             return Ok(None);
@@ -323,8 +305,8 @@ fn eliminate(
     let mut pivots = Vec::new();
     let mut next_row = 0;
     for column in 0..pivot_limit {
-        let Some(pivot) = (next_row..rows.len())
-            .find(|&row| !rows[row][column].numerator().is_zero())
+        let Some(pivot) =
+            (next_row..rows.len()).find(|&row| !rows[row][column].numerator().is_zero())
         else {
             continue;
         };
@@ -368,8 +350,10 @@ pub fn verify_matrix_inverse(
         return Ok(false);
     }
     let identity = ExactMatrix::identity(ctx, matrix.columns)?;
-    Ok(matrix.multiply(candidate, ctx)? == identity
-        && candidate.multiply(matrix, ctx)? == identity)
+    Ok(
+        matrix.multiply(candidate, ctx)? == identity
+            && candidate.multiply(matrix, ctx)? == identity,
+    )
 }
 
 /// Verifies the supplied vector satisfies Ax=b.

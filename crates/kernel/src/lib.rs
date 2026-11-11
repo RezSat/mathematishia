@@ -20,6 +20,7 @@ mod finite_field;
 mod finite_field_factorization;
 mod guarded_rewrite;
 mod hensel_lift;
+mod exact_matrix;
 mod modular_irreducibility;
 mod modular_reconstruction;
 mod poly_convert;
@@ -66,6 +67,8 @@ pub use extended_gcd::{
     EuclideanStep, ExtendedGcdResult, ExtendedGcdVerificationError, verify_extended_gcd,
 };
 pub use extension_minimal::verify_extension_minimal_polynomial;
+pub use exact_matrix::{ExactMatrix, LinearSystemSolution, MatrixError, ReducedMatrix,
+    verify_linear_system_vector, verify_matrix_inverse};
 pub use finite_field::{FiniteFieldError, FiniteFieldPolynomial, is_small_prime};
 pub use finite_field_factorization::{
     FiniteFieldFactor, FiniteFieldFactorization, factor_finite_field,

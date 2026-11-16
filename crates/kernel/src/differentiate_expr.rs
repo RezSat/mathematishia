@@ -8,7 +8,7 @@
 use std::error::Error;
 use std::fmt;
 
-use mathema::{Expr, ExprView, Integer, Symbol};
+use mathema::{Condition, DomainExpression, Expr, ExprView, Integer, ScalarDomain, Symbol, definedness_obligations_in_domain};
 
 use crate::budget::WorkBudget;
 use crate::{EvaluationError, Relation, ResourceLimitKind};
@@ -22,6 +22,11 @@ pub enum DerivativeRuleId {
     Sum,
     Product,
     PositiveIntegerPower,
+    SineChain,
+    CosineChain,
+    TangentChain,
+    ExponentialChain,
+    LogarithmChain,
 }
 
 impl DerivativeRuleId {
@@ -33,6 +38,11 @@ impl DerivativeRuleId {
             Self::Sum => "calculus.sum",
             Self::Product => "calculus.product",
             Self::PositiveIntegerPower => "calculus.positive_integer_power",
+            Self::SineChain => "calculus.sin_chain",
+            Self::CosineChain => "calculus.cos_chain",
+            Self::TangentChain => "calculus.tan_chain",
+            Self::ExponentialChain => "calculus.exp_chain",
+            Self::LogarithmChain => "calculus.log_chain",
         }
     }
 }
@@ -42,6 +52,7 @@ pub enum SymbolicDifferentiationError {
     /// Zero, negative, fractional and symbolic exponents are unsupported.
     UnsupportedPower,
     UnsupportedFunction,
+    MissingDomainCondition,
 }
 
 impl fmt::Display for SymbolicDifferentiationError {
@@ -51,7 +62,10 @@ impl fmt::Display for SymbolicDifferentiationError {
                 f.write_str("symbolic differentiation requires positive integer exponents")
             }
             Self::UnsupportedFunction => {
-                f.write_str("analytic function differentiation is unsupported")
+                f.write_str("analytic function differentiation is unsupported in this domain")
+            }
+            Self::MissingDomainCondition => {
+                f.write_str("missing analytic domain restrictions")
             }
         }
     }
@@ -92,6 +106,8 @@ pub struct SymbolicDerivative {
     variable: Symbol,
     derivative: Expr,
     steps: Vec<DifferentiationStep>,
+    source: Option<DomainExpression>,
+    domain: Option<ScalarDomain>,
 }
 
 impl SymbolicDerivative {
@@ -109,6 +125,15 @@ impl SymbolicDerivative {
 
     pub fn steps(&self) -> &[DifferentiationStep] {
         &self.steps
+    }
+
+    /// Symbolic prerequisites; the engine does not assert they are proven.
+    pub fn conditions(&self) -> &[Condition] {
+        self.source.as_ref().map_or(&[], DomainExpression::conditions)
+    }
+
+    pub const fn domain(&self) -> Option<ScalarDomain> {
+        self.domain
     }
 }
 
@@ -235,6 +260,7 @@ pub enum DerivativeVerificationError {
     IncorrectDerivative,
     UnsupportedPower,
     UnsupportedFunction,
+    MissingDomainCondition,
     DepthLimit,
 }
 
@@ -247,6 +273,7 @@ impl fmt::Display for DerivativeVerificationError {
             Self::IncorrectDerivative => "claimed derivative is not justified",
             Self::UnsupportedPower => "unsupported derivative power in claimed proof",
             Self::UnsupportedFunction => "unsupported analytic function in claimed proof",
+            Self::MissingDomainCondition => "missing or mismatched analytic domain evidence",
             Self::DepthLimit => "derivative verification nesting limit exceeded",
         };
         f.write_str(message)

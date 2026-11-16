@@ -52,11 +52,19 @@ fn exact_sturm_chain_and_variations_for_two_irrational_roots() {
     assert!(result.divisions()[1].remainder().is_zero());
     assert_eq!(
         result.lower_signs(),
-        &[SturmSign::Positive, SturmSign::Negative, SturmSign::Positive]
+        &[
+            SturmSign::Positive,
+            SturmSign::Negative,
+            SturmSign::Positive
+        ]
     );
     assert_eq!(
         result.upper_signs(),
-        &[SturmSign::Positive, SturmSign::Positive, SturmSign::Positive]
+        &[
+            SturmSign::Positive,
+            SturmSign::Positive,
+            SturmSign::Positive
+        ]
     );
     assert_eq!(result.lower_variations(), 2);
     assert_eq!(result.upper_variations(), 0);
@@ -121,7 +129,13 @@ fn near_rational_endpoints_and_multiple_nearby_roots() {
     certified(&ctx, &polynomial, &r(0), &q(1, 100), 2);
     certified(&ctx, &polynomial, &q(1, 10000), &q(1, 1000), 1);
     certified(&ctx, &polynomial, &q(1, 1000), &q(1, 500), 1);
-    certified(&ctx, &p(&[-1, 3]), &q(333332, 1000000), &q(333334, 1000000), 1);
+    certified(
+        &ctx,
+        &p(&[-1, 3]),
+        &q(333332, 1000000),
+        &q(333334, 1000000),
+        1,
+    );
     certified(&ctx, &p(&[-1, 3]), &q(1, 2), &q(2, 3), 0);
 }
 

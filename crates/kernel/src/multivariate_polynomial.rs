@@ -480,7 +480,7 @@ impl MultivariatePolynomial {
             .terms
             .len()
             .checked_mul(other.terms.len())
-            .map_or(true, |count| count > meter.limits.max_input_terms)
+            .is_none_or(|count| count > meter.limits.max_input_terms)
         {
             return Err(MultivariateError::InputTermLimit);
         }

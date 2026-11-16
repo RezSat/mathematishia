@@ -22,7 +22,8 @@ fn poly(terms: &[(i32, i32, i64)]) -> MultivariatePolynomial {
         vec![sym("x"), sym("y")],
         terms.iter().map(|&(x, y, c)| (vec![x, y], rat(c))),
         MultivariateLimits::default(),
-    ).unwrap()
+    )
+    .unwrap()
 }
 
 #[test]
@@ -31,48 +32,94 @@ fn preserves_exact_quotients_recomposition_and_reduced_remainder() {
     let dividend = poly(&[(2, 0, 1), (0, 1, 1)]);
     let divisor = poly(&[(1, 0, 1), (0, 0, 1)]);
     let evidence = divide_multivariate(&dividend, std::slice::from_ref(&divisor), limits).unwrap();
-    let rendered = render_multivariate_division(
-        &dividend, std::slice::from_ref(&divisor), &evidence, limits,
-    ).unwrap();
+    let rendered =
+        render_multivariate_division(&dividend, std::slice::from_ref(&divisor), &evidence, limits)
+            .unwrap();
     assert_eq!(rendered.ordered_divisors, vec![divisor.clone()]);
     assert_eq!(rendered.quotients, evidence.quotients());
     assert_eq!(rendered.remainder, *evidence.remainder());
-    assert_eq!(rendered.monomial_order, DivisionMonomialOrder::Lexicographic);
+    assert_eq!(
+        rendered.monomial_order,
+        DivisionMonomialOrder::Lexicographic
+    );
     assert_eq!(rendered.recomposition.relation, Relation::Equal);
     assert_eq!(rendered.recomposition.ordered_products[0].divisor_index, 0);
-    assert_eq!(rendered.recomposition.ordered_products[0].quotient, rendered.quotients[0]);
+    assert_eq!(
+        rendered.recomposition.ordered_products[0].quotient,
+        rendered.quotients[0]
+    );
     assert_eq!(rendered.recomposition.ordered_products[0].divisor, divisor);
-    assert_eq!(rendered.reduced_remainder.leading_exponents, vec![vec![1, 0]]);
+    assert_eq!(
+        rendered.reduced_remainder.leading_exponents,
+        vec![vec![1, 0]]
+    );
     assert_eq!(rendered.reported_iterations, evidence.steps());
     assert_eq!(rendered.lines.len(), 7);
     assert_eq!(rendered.lines[0].kind, DivisionExplanationKind::Dividend);
-    assert_eq!(rendered.lines[1].kind, DivisionExplanationKind::AmbientRingAndOrder);
-    assert_eq!(rendered.lines[2].kind, DivisionExplanationKind::Divisor { index: 0 });
-    assert_eq!(rendered.lines[3].kind, DivisionExplanationKind::Quotient { index: 0 });
+    assert_eq!(
+        rendered.lines[1].kind,
+        DivisionExplanationKind::AmbientRingAndOrder
+    );
+    assert_eq!(
+        rendered.lines[2].kind,
+        DivisionExplanationKind::Divisor { index: 0 }
+    );
+    assert_eq!(
+        rendered.lines[3].kind,
+        DivisionExplanationKind::Quotient { index: 0 }
+    );
     assert_eq!(rendered.lines[4].kind, DivisionExplanationKind::Remainder);
-    assert_eq!(rendered.lines[5].kind, DivisionExplanationKind::Recomposition);
-    assert_eq!(rendered.lines[6].kind, DivisionExplanationKind::ReducedRemainder);
+    assert_eq!(
+        rendered.lines[5].kind,
+        DivisionExplanationKind::Recomposition
+    );
+    assert_eq!(
+        rendered.lines[6].kind,
+        DivisionExplanationKind::ReducedRemainder
+    );
     assert!(rendered.lines[5].display.contains(" = "));
     assert!(rendered.lines[5].display.contains(" * "));
-    assert!(rendered.lines[6].explanation.contains("no unique normal form"));
+    assert!(
+        rendered.lines[6]
+            .explanation
+            .contains("no unique normal form")
+    );
 
     // Independently recompose using exact polynomial arithmetic.
     let mut sum = rendered.recomposition.remainder.clone();
     for product in &rendered.recomposition.ordered_products {
-        sum = sum.add(&product.quotient.multiply(&product.divisor, limits).unwrap(), limits).unwrap();
+        sum = sum
+            .add(
+                &product.quotient.multiply(&product.divisor, limits).unwrap(),
+                limits,
+            )
+            .unwrap();
     }
     assert_eq!(sum, dividend);
     for powers in rendered.reduced_remainder.remainder.terms().keys() {
-        assert!(rendered.reduced_remainder.leading_exponents.iter().all(
-            |leading| !leading.iter().zip(powers).all(|(a, b)| a <= b)
-        ));
+        assert!(
+            rendered
+                .reduced_remainder
+                .leading_exponents
+                .iter()
+                .all(|leading| !leading.iter().zip(powers).all(|(a, b)| a <= b))
+        );
     }
-    assert_eq!(verify_multivariate_derivation(
-        &dividend, std::slice::from_ref(&divisor), &evidence, &rendered, limits,
-    ), Ok(()));
-    assert_eq!(render_multivariate_division(
-        &dividend, std::slice::from_ref(&divisor), &evidence, limits,
-    ).unwrap(), rendered);
+    assert_eq!(
+        verify_multivariate_derivation(
+            &dividend,
+            std::slice::from_ref(&divisor),
+            &evidence,
+            &rendered,
+            limits,
+        ),
+        Ok(())
+    );
+    assert_eq!(
+        render_multivariate_division(&dividend, std::slice::from_ref(&divisor), &evidence, limits,)
+            .unwrap(),
+        rendered
+    );
 }
 
 #[test]
@@ -94,12 +141,22 @@ fn divisor_priority_changes_exact_quotients_without_claiming_unique_form() {
     assert_eq!(second_out.recomposition.ordered_products[0].divisor, y);
     assert_eq!(first_out.remainder, poly(&[]));
     assert_eq!(second_out.remainder, poly(&[]));
-    assert_eq!(verify_multivariate_derivation(&f, &xy, &first, &first_out, limits), Ok(()));
-    assert_eq!(verify_multivariate_derivation(&f, &yx, &second, &second_out, limits), Ok(()));
-    assert_eq!(render_multivariate_division(&f, &yx, &first, limits),
-        Err(MultivariateDerivationError::InvalidDivisionEvidence));
-    assert_eq!(render_multivariate_division(&f, &xy, &second, limits),
-        Err(MultivariateDerivationError::InvalidDivisionEvidence));
+    assert_eq!(
+        verify_multivariate_derivation(&f, &xy, &first, &first_out, limits),
+        Ok(())
+    );
+    assert_eq!(
+        verify_multivariate_derivation(&f, &yx, &second, &second_out, limits),
+        Ok(())
+    );
+    assert_eq!(
+        render_multivariate_division(&f, &yx, &first, limits),
+        Err(MultivariateDerivationError::InvalidDivisionEvidence)
+    );
+    assert_eq!(
+        render_multivariate_division(&f, &xy, &second, limits),
+        Err(MultivariateDerivationError::InvalidDivisionEvidence)
+    );
 }
 
 #[test]
@@ -109,9 +166,9 @@ fn zero_remainder_and_zero_dividend_keep_the_ambient_ring() {
     let x = poly(&[(1, 0, 1)]);
     for dividend in [zero.clone(), poly(&[(1, 0, 1)])] {
         let evidence = divide_multivariate(&dividend, std::slice::from_ref(&x), limits).unwrap();
-        let output = render_multivariate_division(
-            &dividend, std::slice::from_ref(&x), &evidence, limits,
-        ).unwrap();
+        let output =
+            render_multivariate_division(&dividend, std::slice::from_ref(&x), &evidence, limits)
+                .unwrap();
         assert_eq!(output.remainder, zero);
         assert!(output.lines.last().unwrap().display.contains("vacuously"));
         assert!(output.lines.last().unwrap().display.contains("LM(g[0])"));
@@ -119,9 +176,16 @@ fn zero_remainder_and_zero_dividend_keep_the_ambient_ring() {
             assert_eq!(output.quotients, vec![zero.clone()]);
             assert_eq!(output.reported_iterations, 0);
         }
-        assert_eq!(verify_multivariate_derivation(
-            &dividend, std::slice::from_ref(&x), &evidence, &output, limits,
-        ), Ok(()));
+        assert_eq!(
+            verify_multivariate_derivation(
+                &dividend,
+                std::slice::from_ref(&x),
+                &evidence,
+                &output,
+                limits,
+            ),
+            Ok(())
+        );
     }
 }
 
@@ -131,15 +195,21 @@ fn exact_constant_division_works_in_zero_variable_ring() {
     let f = MultivariatePolynomial::constant(vec![], frac(7, 3), limits).unwrap();
     let g = MultivariatePolynomial::constant(vec![], frac(1, 2), limits).unwrap();
     let evidence = divide_multivariate(&f, std::slice::from_ref(&g), limits).unwrap();
-    let output = render_multivariate_division(&f, std::slice::from_ref(&g), &evidence, limits).unwrap();
-    assert_eq!(output.quotients, vec![
-        MultivariatePolynomial::constant(vec![], frac(14, 3), limits).unwrap()
-    ]);
-    assert_eq!(output.remainder, MultivariatePolynomial::zero(vec![], limits).unwrap());
+    let output =
+        render_multivariate_division(&f, std::slice::from_ref(&g), &evidence, limits).unwrap();
+    assert_eq!(
+        output.quotients,
+        vec![MultivariatePolynomial::constant(vec![], frac(14, 3), limits).unwrap()]
+    );
+    assert_eq!(
+        output.remainder,
+        MultivariatePolynomial::zero(vec![], limits).unwrap()
+    );
     assert!(output.lines[1].display.contains("Q[]"));
-    assert_eq!(verify_multivariate_derivation(
-        &f, std::slice::from_ref(&g), &evidence, &output, limits,
-    ), Ok(()));
+    assert_eq!(
+        verify_multivariate_derivation(&f, std::slice::from_ref(&g), &evidence, &output, limits,),
+        Ok(())
+    );
 }
 
 #[test]
@@ -147,30 +217,35 @@ fn shuffled_ambient_ring_constructor_is_canonical_and_deterministic() {
     let limits = MultivariateLimits::default();
     let dividend = MultivariatePolynomial::try_new(
         vec![sym("y"), sym("x")],
-        [
-            (vec![1, 1], frac(3, 2)),
-            (vec![0, 0], frac(-5, 3)),
-        ],
+        [(vec![1, 1], frac(3, 2)), (vec![0, 0], frac(-5, 3))],
         limits,
-    ).unwrap();
-    let one = MultivariatePolynomial::constant(
-        vec![sym("x"), sym("y")], rat(1), limits
-    ).unwrap();
+    )
+    .unwrap();
+    let one = MultivariatePolynomial::constant(vec![sym("x"), sym("y")], rat(1), limits).unwrap();
     let evidence = divide_multivariate(&dividend, std::slice::from_ref(&one), limits).unwrap();
-    let output = render_multivariate_division(
-        &dividend, std::slice::from_ref(&one), &evidence, limits,
-    ).unwrap();
+    let output =
+        render_multivariate_division(&dividend, std::slice::from_ref(&one), &evidence, limits)
+            .unwrap();
     assert_eq!(dividend.variables(), &[sym("x"), sym("y")]);
     assert_eq!(output.recomposition.ordered_products[0].quotient, dividend);
     assert_eq!(output.remainder, poly(&[]));
     assert!(output.lines[1].display.contains("Q[\"x\", \"y\"]"));
-    assert_eq!(verify_multivariate_derivation(
-        &dividend, std::slice::from_ref(&one), &evidence, &output, limits,
-    ), Ok(()));
+    assert_eq!(
+        verify_multivariate_derivation(
+            &dividend,
+            std::slice::from_ref(&one),
+            &evidence,
+            &output,
+            limits,
+        ),
+        Ok(())
+    );
     for _ in 0..12 {
-        assert_eq!(render_multivariate_division(
-            &dividend, std::slice::from_ref(&one), &evidence, limits,
-        ).unwrap(), output);
+        assert_eq!(
+            render_multivariate_division(&dividend, std::slice::from_ref(&one), &evidence, limits,)
+                .unwrap(),
+            output
+        );
     }
 }
 
@@ -180,20 +255,36 @@ fn fails_closed_on_invalid_divisor_sets_and_mismatched_ring() {
     let f = poly(&[(1, 0, 1)]);
     let g = poly(&[(1, 0, 1)]);
     let evidence = divide_multivariate(&f, std::slice::from_ref(&g), limits).unwrap();
-    assert_eq!(render_multivariate_division(&f, &[], &evidence, limits),
-        Err(MultivariateDerivationError::Division(MultivariateDivisionError::NoDivisors)));
-    assert_eq!(render_multivariate_division(&f, &[poly(&[])], &evidence, limits),
-        Err(MultivariateDerivationError::Division(MultivariateDivisionError::ZeroDivisor)));
-    assert_eq!(render_multivariate_division(&f, &vec![g.clone(); 33], &evidence, limits),
-        Err(MultivariateDerivationError::Division(MultivariateDivisionError::TooManyDivisors)));
+    assert_eq!(
+        render_multivariate_division(&f, &[], &evidence, limits),
+        Err(MultivariateDerivationError::Division(
+            MultivariateDivisionError::NoDivisors
+        ))
+    );
+    assert_eq!(
+        render_multivariate_division(&f, &[poly(&[])], &evidence, limits),
+        Err(MultivariateDerivationError::Division(
+            MultivariateDivisionError::ZeroDivisor
+        ))
+    );
+    assert_eq!(
+        render_multivariate_division(&f, &vec![g.clone(); 33], &evidence, limits),
+        Err(MultivariateDerivationError::Division(
+            MultivariateDivisionError::TooManyDivisors
+        ))
+    );
     let different = MultivariatePolynomial::constant(vec![sym("z")], rat(1), limits).unwrap();
-    assert_eq!(render_multivariate_division(&f, &[different], &evidence, limits),
-        Err(MultivariateDerivationError::Division(MultivariateDivisionError::Polynomial(
-            MultivariateError::VariableMismatch
-        ))));
+    assert_eq!(
+        render_multivariate_division(&f, &[different], &evidence, limits),
+        Err(MultivariateDerivationError::Division(
+            MultivariateDivisionError::Polynomial(MultivariateError::VariableMismatch)
+        ))
+    );
     let other = poly(&[(1, 0, 2)]);
-    assert_eq!(render_multivariate_division(&other, &[g], &evidence, limits),
-        Err(MultivariateDerivationError::InvalidDivisionEvidence));
+    assert_eq!(
+        render_multivariate_division(&other, &[g], &evidence, limits),
+        Err(MultivariateDerivationError::InvalidDivisionEvidence)
+    );
 }
 
 #[test]
@@ -242,9 +333,10 @@ fn detects_fabricated_mathematical_claims_and_display_lines() {
             Err(MultivariateDerivationError::InvalidExplanation)
         );
     }
-    assert_eq!(verify_multivariate_derivation(
-        &dividend, &supplied, &evidence, &original, limits,
-    ), Ok(()));
+    assert_eq!(
+        verify_multivariate_derivation(&dividend, &supplied, &evidence, &original, limits,),
+        Ok(())
+    );
 }
 
 #[test]
@@ -253,19 +345,22 @@ fn rejects_invalid_resource_limits_and_oversized_variable_labels() {
     let f = poly(&[(2, 0, 1), (0, 0, 1)]);
     let g = poly(&[(1, 0, 1), (0, 0, 1)]);
     let evidence = divide_multivariate(&f, std::slice::from_ref(&g), limits).unwrap();
-    let tiny = MultivariateLimits { max_work_units: 0, ..limits };
+    let tiny = MultivariateLimits {
+        max_work_units: 0,
+        ..limits
+    };
     assert!(matches!(
         render_multivariate_division(&f, std::slice::from_ref(&g), &evidence, tiny),
         Err(MultivariateDerivationError::Division(
             MultivariateDivisionError::Polynomial(MultivariateError::WorkLimit)
-            | MultivariateDivisionError::ResourceLimit
+                | MultivariateDivisionError::ResourceLimit
         ))
     ));
 
     let huge_name = sym(&format!("x{}", "q".repeat(257)));
-    let huge = MultivariatePolynomial::try_new(
-        vec![huge_name.clone()], [(vec![1], rat(1))], limits,
-    ).unwrap();
+    let huge =
+        MultivariatePolynomial::try_new(vec![huge_name.clone()], [(vec![1], rat(1))], limits)
+            .unwrap();
     let one = MultivariatePolynomial::constant(vec![huge_name], rat(1), limits).unwrap();
     let evidence = divide_multivariate(&huge, std::slice::from_ref(&one), limits).unwrap();
     assert_eq!(
@@ -277,7 +372,9 @@ fn rejects_invalid_resource_limits_and_oversized_variable_labels() {
 #[test]
 fn bounded_formatter_rejects_oversized_polynomial_text() {
     let limits = MultivariateLimits::default();
-    let variables: Vec<_> = (0..16).map(|i| sym(&format!("v{i}_{}", "q".repeat(235)))).collect();
+    let variables: Vec<_> = (0..16)
+        .map(|i| sym(&format!("v{i}_{}", "q".repeat(235))))
+        .collect();
     let terms = (1..=5).map(|k| {
         let mut powers = vec![1_i32; 16];
         powers[0] = k;

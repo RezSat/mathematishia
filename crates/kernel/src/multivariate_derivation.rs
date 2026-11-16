@@ -182,6 +182,7 @@ fn validate(
         .variables()
         .iter()
         .any(|symbol| symbol.name().len() > MAX_VARIABLE_NAME_BYTES)
+        || evidence.steps() > usize::try_from(limits.max_work_units).unwrap_or(usize::MAX)
     {
         return Err(MultivariateDerivationError::ResourceLimit);
     }

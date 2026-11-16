@@ -528,7 +528,8 @@ pub fn render_symbolic_derivative(
             step.rule().stable_id(),
             explanation,
             match step.before().view() {
-                ExprView::Function { .. } => step.before()
+                ExprView::Function { .. } => step
+                    .before()
                     .function_domain_conditions(result.domain().unwrap_or(ScalarDomain::Real))
                     .unwrap_or_default()
                     .into_iter()

@@ -105,7 +105,7 @@ fn zero_polynomial_remains_in_ambient_ring() {
     let divisor = p(&[(1, 0, 1)]);
     let result = divide_multivariate(&zero, std::slice::from_ref(&divisor), limits).unwrap();
     assert_eq!(result.remainder(), &zero);
-    assert_eq!(result.quotients(), &[zero.clone()]);
+    assert_eq!(result.quotients(), std::slice::from_ref(&zero));
     assert_eq!(result.steps(), 0);
     assert!(verify_multivariate_division(&zero, &[divisor], &result, limits).unwrap());
 }

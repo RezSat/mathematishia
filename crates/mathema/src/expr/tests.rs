@@ -448,7 +448,8 @@ proptest! {
 #[test]
 fn analytic_function_nodes_are_immutable_and_distinct() {
     let x = symbol("x");
-    let constructors: [(&str, fn(Expr) -> Expr); 5] = [
+    type NamedConstructor = (&'static str, fn(Expr) -> Expr);
+    let constructors: [NamedConstructor; 5] = [
         ("sin", Expr::sin),
         ("cos", Expr::cos),
         ("tan", Expr::tan),

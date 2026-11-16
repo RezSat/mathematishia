@@ -2,8 +2,8 @@ use mathema::{
     Condition, DomainExpression, Expr, ExprView, Integer, Rational, ScalarDomain, Symbol,
 };
 use mathematishia_kernel::{
-    MultivariateError as M, MultivariateExprError as E,
-    MultivariateLimits as L, MultivariatePolynomial as P,
+    MultivariateError as M, MultivariateExprError as E, MultivariateLimits as L,
+    MultivariatePolynomial as P,
 };
 
 fn s(name: &str) -> Symbol {

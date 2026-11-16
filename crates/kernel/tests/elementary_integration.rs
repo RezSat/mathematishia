@@ -32,13 +32,21 @@ fn verify(
     variable: &Symbol,
     domain: ScalarDomain,
 ) -> mathematishia_kernel::ElementaryAntiderivative {
-    let primitive = context.integrate_elementary_affine(input, variable, domain).unwrap();
+    let primitive = context
+        .integrate_elementary_affine(input, variable, domain)
+        .unwrap();
     assert_eq!(primitive.source(), input);
     assert_eq!(primitive.domain(), domain);
     assert_eq!(primitive.variable(), variable);
     assert_eq!(primitive.conditions(), input.conditions());
-    assert_eq!(primitive.derivative_evidence().derivative(), input.expression());
-    assert_eq!(primitive.derivative_evidence().conditions(), input.conditions());
+    assert_eq!(
+        primitive.derivative_evidence().derivative(),
+        input.expression()
+    );
+    assert_eq!(
+        primitive.derivative_evidence().conditions(),
+        input.conditions()
+    );
     assert_eq!(primitive.derivative_evidence().domain(), Some(domain));
     verify_symbolic_derivative(primitive.derivative_evidence()).unwrap();
     context
@@ -79,7 +87,10 @@ fn cosine_with_negative_fractional_slope_and_negative_scale() {
     );
     let result = verify(&ctx, &input, &variable, ScalarDomain::Real);
     assert_eq!(result.rule(), Rule::Cosine);
-    assert_eq!(result.rule().stable_id(), "calculus.integrate_affine_cosine");
+    assert_eq!(
+        result.rule().stable_id(),
+        "calculus.integrate_affine_cosine"
+    );
     assert_eq!(result.slope(), &q(-3, 2));
     assert_eq!(result.intercept(), &q(-7, 3));
     assert_eq!(
@@ -99,7 +110,10 @@ fn exponential_with_fractional_slope_and_negative_scale() {
     );
     let result = verify(&ctx, &input, &variable, ScalarDomain::Real);
     assert_eq!(result.rule(), Rule::Exponential);
-    assert_eq!(result.rule().stable_id(), "calculus.integrate_affine_exponential");
+    assert_eq!(
+        result.rule().stable_id(),
+        "calculus.integrate_affine_exponential"
+    );
     assert_eq!(result.slope(), &q(1, 4));
     assert_eq!(
         result.primitive().expression(),
@@ -171,12 +185,8 @@ fn preserves_history_conditions_and_their_order_without_proving_them() {
         Condition::NonZero(symbol.clone()),
         Condition::Positive(Expr::add([symbol.clone(), Expr::from(7)])),
     ];
-    let history = DomainExpression::with_conditions(
-        Expr::from(q(1, 1)),
-        inherited.clone(),
-        256, 32,
-    )
-    .unwrap();
+    let history =
+        DomainExpression::with_conditions(Expr::from(q(1, 1)), inherited.clone(), 256, 32).unwrap();
     let analytic = source(
         Expr::sin(affine(q(2, 3), q(9, 8), &variable)),
         ScalarDomain::Real,
@@ -214,7 +224,9 @@ fn rejects_log_tan_and_unknown_nested_functions() {
     let nested = source(Expr::sin(Expr::exp(symbol)), ScalarDomain::Real);
     assert_eq!(
         ctx.integrate_elementary_affine(&nested, &variable, ScalarDomain::Real),
-        Err(E::UnsupportedArgument(PolynomialConversionError::UnsupportedFunction))
+        Err(E::UnsupportedArgument(
+            PolynomialConversionError::UnsupportedFunction
+        ))
     );
 }
 
@@ -255,7 +267,9 @@ fn refuses_non_affine_and_other_symbol_arguments() {
     let mixed = source(Expr::exp(Expr::add([symbol, y])), ScalarDomain::Complex);
     assert_eq!(
         ctx.integrate_elementary_affine(&mixed, &variable, ScalarDomain::Complex),
-        Err(E::UnsupportedArgument(PolynomialConversionError::OtherSymbol))
+        Err(E::UnsupportedArgument(
+            PolynomialConversionError::OtherSymbol
+        ))
     );
 }
 
@@ -277,13 +291,17 @@ fn zero_slope_and_unsupported_powers_do_not_get_guessed() {
         assert!(!source.conditions().is_empty());
         assert_eq!(
             ctx.integrate_elementary_affine(&source, &variable, ScalarDomain::Real),
-            Err(E::UnsupportedArgument(PolynomialConversionError::UnsupportedPower))
+            Err(E::UnsupportedArgument(
+                PolynomialConversionError::UnsupportedPower
+            ))
         );
     }
     assert_eq!(
         DomainExpression::from_expr_in_domain(
             Expr::sin(Expr::pow(symbol, Expr::from(q(1, 2)))),
-            ScalarDomain::Real, 64, 32,
+            ScalarDomain::Real,
+            64,
+            32,
         ),
         Err(DefinednessError::UnsupportedExponent)
     );
@@ -337,7 +355,9 @@ fn bounded_polynomial_degree_rejects_large_exponents() {
     );
     assert_eq!(
         ctx.integrate_elementary_affine(&input, &variable, ScalarDomain::Real),
-        Err(E::Evaluation(EvaluationError::Limit(ResourceLimitKind::PolynomialDegree)))
+        Err(E::Evaluation(EvaluationError::Limit(
+            ResourceLimitKind::PolynomialDegree
+        )))
     );
     let limits = ResourceLimits {
         max_polynomial_degree: 0,
@@ -347,7 +367,9 @@ fn bounded_polynomial_degree_rejects_large_exponents() {
     let input = source(Expr::sin(Expr::from(variable.clone())), ScalarDomain::Real);
     assert_eq!(
         ctx.integrate_elementary_affine(&input, &variable, ScalarDomain::Real),
-        Err(E::Evaluation(EvaluationError::Limit(ResourceLimitKind::PolynomialDegree)))
+        Err(E::Evaluation(EvaluationError::Limit(
+            ResourceLimitKind::PolynomialDegree
+        )))
     );
 }
 
@@ -362,7 +384,9 @@ fn work_node_depth_condition_and_scalar_limits_are_explicit() {
     });
     assert_eq!(
         work.integrate_elementary_affine(&input, &variable, ScalarDomain::Real),
-        Err(E::Evaluation(EvaluationError::Limit(ResourceLimitKind::WorkUnits)))
+        Err(E::Evaluation(EvaluationError::Limit(
+            ResourceLimitKind::WorkUnits
+        )))
     );
     let nodes = EvaluationContext::new(ResourceLimits {
         max_expression_nodes: 1,
@@ -370,7 +394,9 @@ fn work_node_depth_condition_and_scalar_limits_are_explicit() {
     });
     assert_eq!(
         nodes.integrate_elementary_affine(&input, &variable, ScalarDomain::Real),
-        Err(E::Evaluation(EvaluationError::Limit(ResourceLimitKind::ExpressionNodes)))
+        Err(E::Evaluation(EvaluationError::Limit(
+            ResourceLimitKind::ExpressionNodes
+        )))
     );
     let depth = EvaluationContext::new(ResourceLimits {
         max_expression_depth: 1,
@@ -378,24 +404,33 @@ fn work_node_depth_condition_and_scalar_limits_are_explicit() {
     });
     assert_eq!(
         depth.integrate_elementary_affine(&input, &variable, ScalarDomain::Real),
-        Err(E::Evaluation(EvaluationError::Limit(ResourceLimitKind::ExpressionDepth)))
+        Err(E::Evaluation(EvaluationError::Limit(
+            ResourceLimitKind::ExpressionDepth
+        )))
     );
     let conditional = DomainExpression::multiply(
         [
             DomainExpression::with_conditions(
-                Expr::from(1), [Condition::NonZero(symbol.clone())], 256, 32,
-            ).unwrap(),
+                Expr::from(1),
+                [Condition::NonZero(symbol.clone())],
+                256,
+                32,
+            )
+            .unwrap(),
             input,
         ],
         32,
-    ).unwrap();
+    )
+    .unwrap();
     let conditions = EvaluationContext::new(ResourceLimits {
         max_rational_conditions: 0,
         ..ResourceLimits::default()
     });
     assert_eq!(
         conditions.integrate_elementary_affine(&conditional, &variable, ScalarDomain::Real),
-        Err(E::Evaluation(EvaluationError::Limit(ResourceLimitKind::RationalConditions)))
+        Err(E::Evaluation(EvaluationError::Limit(
+            ResourceLimitKind::RationalConditions
+        )))
     );
     let big = source(
         Expr::sin(affine(q(1024, 1), q(0, 1), &variable)),
@@ -407,7 +442,9 @@ fn work_node_depth_condition_and_scalar_limits_are_explicit() {
     });
     assert_eq!(
         scalar_bits.integrate_elementary_affine(&big, &variable, ScalarDomain::Real),
-        Err(E::Evaluation(EvaluationError::Limit(ResourceLimitKind::ScalarBits)))
+        Err(E::Evaluation(EvaluationError::Limit(
+            ResourceLimitKind::ScalarBits
+        )))
     );
     let intermediate_bits = EvaluationContext::new(ResourceLimits {
         max_intermediate_scalar_bits: 3,
@@ -419,7 +456,9 @@ fn work_node_depth_condition_and_scalar_limits_are_explicit() {
     );
     assert_eq!(
         intermediate_bits.integrate_elementary_affine(&fractional, &variable, ScalarDomain::Real),
-        Err(E::Evaluation(EvaluationError::Limit(ResourceLimitKind::IntermediateScalarBits)))
+        Err(E::Evaluation(EvaluationError::Limit(
+            ResourceLimitKind::IntermediateScalarBits
+        )))
     );
 }
 
@@ -439,14 +478,15 @@ fn verifier_rejects_changed_original_variable_and_domain() {
     );
     assert_eq!(
         ctx.verify_elementary_antiderivative(
-            &input, &Symbol::new("y").unwrap(), ScalarDomain::Real, &result,
+            &input,
+            &Symbol::new("y").unwrap(),
+            ScalarDomain::Real,
+            &result,
         ),
         Err(E::SourceMismatch)
     );
     assert_eq!(
-        ctx.verify_elementary_antiderivative(
-            &input, &variable, ScalarDomain::Complex, &result,
-        ),
+        ctx.verify_elementary_antiderivative(&input, &variable, ScalarDomain::Complex, &result,),
         Err(E::SourceMismatch)
     );
 }

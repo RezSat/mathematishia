@@ -119,7 +119,11 @@ struct Meter {
 }
 
 impl Meter {
-    fn visit(&mut self, depth: usize, limits: AnalyticConstantLimits) -> Result<(), AnalyticConstantError> {
+    fn visit(
+        &mut self,
+        depth: usize,
+        limits: AnalyticConstantLimits,
+    ) -> Result<(), AnalyticConstantError> {
         if depth > limits.max_depth {
             return Err(AnalyticConstantError::Limit(AnalyticConstantLimit::Depth));
         }
@@ -130,7 +134,11 @@ impl Meter {
         self.charge(1, limits)
     }
 
-    fn charge(&mut self, amount: usize, limits: AnalyticConstantLimits) -> Result<(), AnalyticConstantError> {
+    fn charge(
+        &mut self,
+        amount: usize,
+        limits: AnalyticConstantLimits,
+    ) -> Result<(), AnalyticConstantError> {
         self.work = self.work.saturating_add(amount);
         if self.work > limits.max_work {
             return Err(AnalyticConstantError::Limit(AnalyticConstantLimit::Work));
@@ -150,7 +158,9 @@ fn validate_limits(limits: AnalyticConstantLimits) -> Result<(), AnalyticConstan
         || limits.max_scalar_bits > HARD_MAX_SCALAR_BITS
         || limits.max_work > HARD_MAX_WORK
     {
-        return Err(AnalyticConstantError::Limit(AnalyticConstantLimit::Configuration));
+        return Err(AnalyticConstantError::Limit(
+            AnalyticConstantLimit::Configuration,
+        ));
     }
     Ok(())
 }
@@ -160,11 +170,15 @@ fn map_definedness(error: DefinednessError) -> AnalyticConstantError {
         DefinednessError::UnsupportedFunction => AnalyticConstantError::Unsupported(
             AnalyticConstantUnsupported::Function(Symbol::new("unknown").unwrap()),
         ),
-        DefinednessError::UnsupportedExponent => AnalyticConstantError::Unsupported(
-            AnalyticConstantUnsupported::Exponent,
-        ),
-        DefinednessError::NodeLimitExceeded => AnalyticConstantError::Limit(AnalyticConstantLimit::Nodes),
-        DefinednessError::ConditionLimitExceeded => AnalyticConstantError::Limit(AnalyticConstantLimit::Conditions),
+        DefinednessError::UnsupportedExponent => {
+            AnalyticConstantError::Unsupported(AnalyticConstantUnsupported::Exponent)
+        }
+        DefinednessError::NodeLimitExceeded => {
+            AnalyticConstantError::Limit(AnalyticConstantLimit::Nodes)
+        }
+        DefinednessError::ConditionLimitExceeded => {
+            AnalyticConstantError::Limit(AnalyticConstantLimit::Conditions)
+        }
         other => AnalyticConstantError::Definedness(other),
     }
 }
@@ -215,19 +229,25 @@ fn scan(
         match node.view() {
             ExprView::Integer(n) => {
                 if n.bit_len() > limits.max_scalar_bits {
-                    return Err(AnalyticConstantError::Limit(AnalyticConstantLimit::ScalarBits));
+                    return Err(AnalyticConstantError::Limit(
+                        AnalyticConstantLimit::ScalarBits,
+                    ));
                 }
             }
             ExprView::Rational(q) => {
                 if q.numerator().bit_len() > limits.max_scalar_bits
                     || q.denominator().bit_len() > limits.max_scalar_bits
                 {
-                    return Err(AnalyticConstantError::Limit(AnalyticConstantLimit::ScalarBits));
+                    return Err(AnalyticConstantError::Limit(
+                        AnalyticConstantLimit::ScalarBits,
+                    ));
                 }
             }
             ExprView::Symbol(s) => {
                 if s.name().len() > 4_096 {
-                    return Err(AnalyticConstantError::Limit(AnalyticConstantLimit::ScalarBits));
+                    return Err(AnalyticConstantError::Limit(
+                        AnalyticConstantLimit::ScalarBits,
+                    ));
                 }
             }
             ExprView::Function { name, argument } => {
@@ -238,7 +258,10 @@ fn scan(
                 }
                 if first.is_none() {
                     if let Some(rule) = rule_at(node) {
-                        first = Some(Hit { path: path.clone(), rule });
+                        first = Some(Hit {
+                            path: path.clone(),
+                            rule,
+                        });
                     }
                 }
                 let mut child = path;
@@ -279,7 +302,9 @@ fn add_condition(
     meter.charge(conditions.len().saturating_add(1), limits)?;
     if !conditions.contains(&condition) {
         if conditions.len() >= limits.max_conditions {
-            return Err(AnalyticConstantError::Limit(AnalyticConstantLimit::Conditions));
+            return Err(AnalyticConstantError::Limit(
+                AnalyticConstantLimit::Conditions,
+            ));
         }
         conditions.push(condition);
     }
@@ -295,7 +320,9 @@ fn validate_condition(
     // from node/bit/depth/unknown-function admission checks.
     scan(condition.expression(), meter, limits)?;
     if Assumptions::new().assess(condition) == ConditionStatus::Refuted {
-        return Err(AnalyticConstantError::ContradictedCondition(condition.clone()));
+        return Err(AnalyticConstantError::ContradictedCondition(
+            condition.clone(),
+        ));
     }
     Ok(())
 }
@@ -328,9 +355,10 @@ fn replace_at(
         return Ok(replacement.clone());
     };
     match node.view() {
-        ExprView::Function { name, argument } if index == 0 => {
-            Ok(Expr::function(name.clone(), replace_at(argument, rest, replacement)?))
-        }
+        ExprView::Function { name, argument } if index == 0 => Ok(Expr::function(
+            name.clone(),
+            replace_at(argument, rest, replacement)?,
+        )),
         ExprView::Pow { base, exponent } if index < 2 => {
             let (base, exponent) = if index == 0 {
                 (replace_at(base, rest, replacement)?, exponent.clone())
@@ -340,13 +368,17 @@ fn replace_at(
             Ok(Expr::pow(base, exponent))
         }
         ExprView::Add(children) | ExprView::Mul(children) if index < children.len() => {
-            let replaced = children.iter().enumerate().map(|(i, child)| {
-                if i == index {
-                    replace_at(child, rest, replacement)
-                } else {
-                    Ok(child.clone())
-                }
-            }).collect::<Result<Vec<_>, _>>()?;
+            let replaced = children
+                .iter()
+                .enumerate()
+                .map(|(i, child)| {
+                    if i == index {
+                        replace_at(child, rest, replacement)
+                    } else {
+                        Ok(child.clone())
+                    }
+                })
+                .collect::<Result<Vec<_>, _>>()?;
             if matches!(node.view(), ExprView::Add(_)) {
                 Ok(Expr::add(replaced))
             } else {
@@ -364,14 +396,22 @@ fn build_result(
     limits: AnalyticConstantLimits,
 ) -> Result<DomainExpression, AnalyticConstantError> {
     let own = DomainExpression::from_expr_in_domain(
-        after, domain, limits.max_nodes, limits.max_conditions
-    ).map_err(map_definedness)?;
+        after,
+        domain,
+        limits.max_nodes,
+        limits.max_conditions,
+    )
+    .map_err(map_definedness)?;
     // Compose with a zero-valued carrier: Expr::add(0, after) = after.
     // This is the available domain-preserving constructor; it never removes
     // construction-history restrictions even if normalization removes a term.
     let carrier = DomainExpression::with_conditions(
-        Expr::from(0), inherited, limits.max_nodes, limits.max_conditions
-    ).map_err(map_definedness)?;
+        Expr::from(0),
+        inherited,
+        limits.max_nodes,
+        limits.max_conditions,
+    )
+    .map_err(map_definedness)?;
     DomainExpression::add([carrier, own], limits.max_conditions).map_err(map_definedness)
 }
 
@@ -397,7 +437,9 @@ pub fn rewrite_analytic_constant_once(
         Err(error) => return Err(error),
     };
     let Some(hit) = first else {
-        return Ok(AnalyticConstantOutcome::NoRule { retained_conditions: conditions });
+        return Ok(AnalyticConstantOutcome::NoRule {
+            retained_conditions: conditions,
+        });
     };
     let after = replace_at(source.expression(), &hit.path, &rule_value(hit.rule))?;
     let result = build_result(after, conditions, domain, limits)?;
@@ -423,12 +465,16 @@ pub fn verify_analytic_constant_rewrite(
 ) -> Result<bool, AnalyticConstantError> {
     validate_limits(limits)?;
     if expected_source != &certificate.source
-        || !matches!(certificate.domain, ScalarDomain::Real | ScalarDomain::Complex)
+        || !matches!(
+            certificate.domain,
+            ScalarDomain::Real | ScalarDomain::Complex
+        )
     {
         return Ok(false);
     }
     let mut meter = Meter { nodes: 0, work: 0 };
-    let (inherited, first) = conditions_for(expected_source, certificate.domain, &mut meter, limits)?;
+    let (inherited, first) =
+        conditions_for(expected_source, certificate.domain, &mut meter, limits)?;
     let Some(hit) = first else {
         return Ok(false);
     };
@@ -444,7 +490,9 @@ pub fn verify_analytic_constant_rewrite(
             ExprView::Pow { base, .. } if index == 0 => base,
             ExprView::Pow { exponent, .. } if index == 1 => exponent,
             ExprView::Add(children) | ExprView::Mul(children) => {
-                let Some(child) = children.get(index) else { return Ok(false) };
+                let Some(child) = children.get(index) else {
+                    return Ok(false);
+                };
                 child
             }
             _ => return Ok(false),
@@ -454,7 +502,9 @@ pub fn verify_analytic_constant_rewrite(
         return Ok(false);
     }
     let reconstructed = replace_at(
-        expected_source.expression(), &certificate.path, &rule_value(certificate.rule)
+        expected_source.expression(),
+        &certificate.path,
+        &rule_value(certificate.rule),
     )?;
     if &reconstructed != certificate.result.expression() {
         return Ok(false);

@@ -60,6 +60,8 @@ fn preserves_exact_quotients_recomposition_and_reduced_remainder() {
         rendered.lines[1].kind,
         DivisionExplanationKind::AmbientRingAndOrder
     );
+    assert!(rendered.lines[1].display.ends_with("divisor priority: g[0]"));
+    assert!(!rendered.lines[1].display.contains("g[1]"));
     assert_eq!(
         rendered.lines[2].kind,
         DivisionExplanationKind::Divisor { index: 0 }
@@ -139,6 +141,9 @@ fn divisor_priority_changes_exact_quotients_without_claiming_unique_form() {
     assert_ne!(first_out, second_out);
     assert_eq!(first_out.recomposition.ordered_products[0].divisor, x);
     assert_eq!(second_out.recomposition.ordered_products[0].divisor, y);
+    assert!(
+        first_out.lines[1].display.ends_with("divisor priority: g[0] then g[1]")
+    );
     assert_eq!(first_out.remainder, poly(&[]));
     assert_eq!(second_out.remainder, poly(&[]));
     assert_eq!(

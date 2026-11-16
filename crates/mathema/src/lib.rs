@@ -12,7 +12,10 @@ mod number;
 mod symbol;
 
 pub use condition::{Condition, ScalarDomain};
-pub use definedness::{DefinednessError, DomainExpression, definedness_obligations};
+pub use definedness::{
+    DefinednessError, DomainExpression, definedness_obligations,
+    definedness_obligations_in_domain,
+};
 pub use equation::Equation;
 pub use expr::{Expr, ExprView};
 pub use number::{Integer, Rational, ZeroDenominator};

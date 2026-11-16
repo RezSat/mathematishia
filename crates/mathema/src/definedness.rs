@@ -3,7 +3,7 @@
 use std::error::Error;
 use std::fmt;
 
-use crate::{Condition, Expr, ExprView, Integer, Rational};
+use crate::{Condition, Expr, ExprView, Integer, Rational, ScalarDomain, Symbol};
 
 /// Errors are distinct from an unmet or contradicted nonzero condition.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -51,6 +51,43 @@ impl DomainExpression {
             expression,
             conditions,
         })
+    }
+
+    /// Inspects built-in functions and integer powers in an explicitly
+    /// selected scalar domain. Unlike from_expr, function calls are admitted.
+    pub fn from_expr_in_domain(
+        expression: Expr,
+        domain: ScalarDomain,
+        max_nodes: usize,
+        max_conditions: usize,
+    ) -> Result<Self, DefinednessError> {
+        let conditions = definedness_obligations_in_domain(&expression, max_nodes, domain)?;
+        if conditions.len() > max_conditions {
+            return Err(DefinednessError::ConditionLimitExceeded);
+        }
+        Ok(Self { expression, conditions })
+    }
+
+    /// Applies a supported unary function while preserving all restrictions
+    /// inherited from its argument, even if later simplification removes it.
+    pub fn function(
+        name: Symbol,
+        argument: Self,
+        domain: ScalarDomain,
+        max_conditions: usize,
+    ) -> Result<Self, DefinednessError> {
+        let expression = Expr::function(name, argument.expression);
+        let direct = expression
+            .function_domain_conditions(domain)
+            .ok_or(DefinednessError::UnsupportedFunction)?;
+        let mut conditions = argument.conditions;
+        if conditions.len() > max_conditions {
+            return Err(DefinednessError::ConditionLimitExceeded);
+        }
+        for condition in direct {
+            append_unique(&mut conditions, condition, max_conditions)?;
+        }
+        Ok(Self { expression, conditions })
     }
 
     /// Constructs an expression with additional restrictions from an earlier
@@ -227,6 +264,25 @@ pub fn definedness_obligations(
     expression: &Expr,
     max_nodes: usize,
 ) -> Result<Vec<Condition>, DefinednessError> {
+    collect_obligations(expression, max_nodes, None)
+}
+
+/// Collects supported built-in function and integer-power restrictions in the
+/// requested real or complex domain, including nested function arguments.
+/// This returns symbolic obligations, not proof that they hold.
+pub fn definedness_obligations_in_domain(
+    expression: &Expr,
+    max_nodes: usize,
+    domain: ScalarDomain,
+) -> Result<Vec<Condition>, DefinednessError> {
+    collect_obligations(expression, max_nodes, Some(domain))
+}
+
+fn collect_obligations(
+    expression: &Expr,
+    max_nodes: usize,
+    domain: Option<ScalarDomain>,
+) -> Result<Vec<Condition>, DefinednessError> {
     let mut pending = vec![expression];
     let mut conditions = Vec::new();
     let mut visited = 0usize;
@@ -241,7 +297,20 @@ pub fn definedness_obligations(
             ExprView::Add(children) | ExprView::Mul(children) => {
                 pending.extend(children.iter().rev());
             }
-            ExprView::Function { .. } => return Err(DefinednessError::UnsupportedFunction),
+            ExprView::Function { argument, .. } => {
+                let Some(domain) = domain else {
+                    return Err(DefinednessError::UnsupportedFunction);
+                };
+                let direct = expr
+                    .function_domain_conditions(domain)
+                    .ok_or(DefinednessError::UnsupportedFunction)?;
+                for condition in direct {
+                    if !conditions.contains(&condition) {
+                        conditions.push(condition);
+                    }
+                }
+                pending.push(argument);
+            }
             ExprView::Pow { base, exponent } => {
                 let ExprView::Integer(n) = exponent.view() else {
                     return Err(DefinednessError::UnsupportedExponent);

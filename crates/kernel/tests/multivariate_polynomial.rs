@@ -1,5 +1,7 @@
 use mathema::{Integer, Rational, Symbol};
-use mathematishia_kernel::{MultivariateError as E, MultivariateLimits as L, MultivariatePolynomial as P};
+use mathematishia_kernel::{
+    MultivariateError as E, MultivariateLimits as L, MultivariatePolynomial as P,
+};
 
 fn s(value: &str) -> Symbol {
     Symbol::new(value).unwrap()
@@ -13,7 +15,9 @@ fn fraction(n: i64, d: i64) -> Rational {
 fn p(variables: &[&str], terms: &[(Vec<i32>, i64)]) -> P {
     P::try_new(
         variables.iter().map(|name| s(name)).collect(),
-        terms.iter().map(|(powers, value)| (powers.clone(), q(*value))),
+        terms
+            .iter()
+            .map(|(powers, value)| (powers.clone(), q(*value))),
         L::default(),
     )
     .unwrap()
@@ -35,10 +39,7 @@ fn canonical_zero_collection_cancellation_and_input_permutations() {
     assert_eq!(zero.to_string(), "0");
     let mut reverse = input;
     reverse.reverse();
-    assert_eq!(
-        P::try_new(variables, reverse, L::default()).unwrap(),
-        zero
-    );
+    assert_eq!(P::try_new(variables, reverse, L::default()).unwrap(), zero);
     assert_eq!(zero, P::zero(vec![s("x"), s("y")], L::default()).unwrap());
     assert_ne!(zero, P::zero(vec![], L::default()).unwrap());
 }
@@ -126,10 +127,7 @@ fn resource_limits_reject_inputs_and_intermediates() {
         max_scalar_bits: 8,
         max_work_units: 100,
     };
-    assert_eq!(
-        P::zero(vec![s("x"), s("y")], tight),
-        Err(E::VariableLimit)
-    );
+    assert_eq!(P::zero(vec![s("x"), s("y")], tight), Err(E::VariableLimit));
     assert_eq!(
         P::try_new(vec![s("x")], [(vec![3], q(1))], tight),
         Err(E::TotalDegreeLimit)
@@ -147,23 +145,33 @@ fn resource_limits_reject_inputs_and_intermediates() {
         Err(E::TermLimit)
     );
     assert_eq!(
-        P::try_new(
-            vec![s("x")],
-            (0..4).map(|_| (vec![0], q(1))),
-            tight
-        ),
+        P::try_new(vec![s("x")], (0..4).map(|_| (vec![0], q(1))), tight),
         Err(E::InputTermLimit)
     );
     let x = p(&["x"], &[(vec![1], 1)]);
-    assert_eq!(x.multiply(&x.multiply(&x, L::default()).unwrap(), tight),
-        Err(E::TotalDegreeLimit));
+    assert_eq!(
+        x.multiply(&x.multiply(&x, L::default()).unwrap(), tight),
+        Err(E::TotalDegreeLimit)
+    );
     let one = p(&["x"], &[(vec![0], 1)]);
     assert_eq!(
-        one.add(&one, L { max_work_units: 0, ..tight }),
+        one.add(
+            &one,
+            L {
+                max_work_units: 0,
+                ..tight
+            }
+        ),
         Err(E::WorkLimit)
     );
     assert_eq!(
-        one.add(&one, L { max_scalar_bits: 1, ..tight }),
+        one.add(
+            &one,
+            L {
+                max_scalar_bits: 1,
+                ..tight
+            }
+        ),
         Err(E::ScalarBitLimit)
     );
 }
@@ -188,7 +196,9 @@ fn deterministic_grid_distributivity_and_permutation_invariance() {
         let a = sample(&mut seed);
         let b = sample(&mut seed);
         let c = sample(&mut seed);
-        let left = a.multiply(&b.add(&c, L::default()).unwrap(), L::default()).unwrap();
+        let left = a
+            .multiply(&b.add(&c, L::default()).unwrap(), L::default())
+            .unwrap();
         let right = a
             .multiply(&b, L::default())
             .unwrap()
@@ -205,13 +215,12 @@ fn deterministic_grid_distributivity_and_permutation_invariance() {
                 assert_eq!(left.evaluate(&point, L::default()).unwrap(), independent);
             }
         }
-        let reversed_terms = a
-            .terms()
-            .iter()
-            .rev()
-            .map(|(exponents, value)| {
-                (exponents.iter().map(|power| *power as i32).collect(), value.clone())
-            });
+        let reversed_terms = a.terms().iter().rev().map(|(exponents, value)| {
+            (
+                exponents.iter().map(|power| *power as i32).collect(),
+                value.clone(),
+            )
+        });
         assert_eq!(
             P::try_new(a.variables().to_vec(), reversed_terms, L::default()).unwrap(),
             a

@@ -8,8 +8,8 @@ use std::error::Error;
 use std::fmt;
 
 use mathema::{
-    Condition, DefinednessError, DomainExpression, Expr, ExprView, Integer, Rational,
-    ScalarDomain, Symbol, definedness_obligations_in_domain,
+    Condition, DefinednessError, DomainExpression, Expr, ExprView, Integer, Rational, ScalarDomain,
+    Symbol, definedness_obligations_in_domain,
 };
 
 use crate::budget::WorkBudget;
@@ -84,21 +84,43 @@ impl fmt::Display for ElementaryIntegrationError {
             Self::Evaluation(error) => write!(f, "{error}"),
             Self::Definedness(error) => write!(f, "{error}"),
             Self::DerivativeVerification(error) => write!(f, "{error}"),
-            Self::UnsupportedScalarDomain => f.write_str("integration requires a real or complex scalar domain"),
-            Self::UnsupportedForm => f.write_str("integrand is not a single rational multiple of one supported function"),
+            Self::UnsupportedScalarDomain => {
+                f.write_str("integration requires a real or complex scalar domain")
+            }
+            Self::UnsupportedForm => {
+                f.write_str("integrand is not a single rational multiple of one supported function")
+            }
             Self::UnsupportedFunction => f.write_str("only sin, cos and exp are supported"),
-            Self::UnsupportedArgument(reason) => write!(f, "unsupported analytic argument: {reason}"),
-            Self::NonAffineArgument => f.write_str("analytic argument is not affine in the selected variable"),
+            Self::UnsupportedArgument(reason) => {
+                write!(f, "unsupported analytic argument: {reason}")
+            }
+            Self::NonAffineArgument => {
+                f.write_str("analytic argument is not affine in the selected variable")
+            }
             Self::ZeroSlope => f.write_str("affine argument has zero slope"),
             Self::MissingDomainCondition => f.write_str("source lacks a required domain condition"),
-            Self::UnsupportedNormalization => f.write_str("exact derivative cannot be normalized to the integrand"),
-            Self::SourceMismatch => f.write_str("primitive claim does not match its supplied source, variable or domain"),
+            Self::UnsupportedNormalization => {
+                f.write_str("exact derivative cannot be normalized to the integrand")
+            }
+            Self::SourceMismatch => f.write_str(
+                "primitive claim does not match its supplied source, variable or domain",
+            ),
             Self::IncorrectRule => f.write_str("primitive rule does not match the integrand"),
-            Self::IncorrectAffineEvidence => f.write_str("recorded rational affine data are incorrect"),
-            Self::IncorrectPrimitive => f.write_str("primitive differs from the zero-constant rule candidate"),
-            Self::IncorrectConditions => f.write_str("primitive did not retain the source conditions"),
-            Self::IncorrectDerivative => f.write_str("verified derivative differs from the integrand"),
-            Self::IncorrectDerivativeEvidence => f.write_str("derivative evidence does not belong to this primitive"),
+            Self::IncorrectAffineEvidence => {
+                f.write_str("recorded rational affine data are incorrect")
+            }
+            Self::IncorrectPrimitive => {
+                f.write_str("primitive differs from the zero-constant rule candidate")
+            }
+            Self::IncorrectConditions => {
+                f.write_str("primitive did not retain the source conditions")
+            }
+            Self::IncorrectDerivative => {
+                f.write_str("verified derivative differs from the integrand")
+            }
+            Self::IncorrectDerivativeEvidence => {
+                f.write_str("derivative evidence does not belong to this primitive")
+            }
         }
     }
 }
@@ -174,11 +196,14 @@ fn scalar_atom(expr: &Expr) -> Option<Rational> {
 
 /// Only one canonical multiplicative term; no sum, product of functions,
 /// general constant expression or implicit identity rewrite is admitted.
-fn classify(expr: &Expr) -> Result<(ElementaryPrimitiveRule, Rational, &Expr), ElementaryIntegrationError> {
+fn classify(
+    expr: &Expr,
+) -> Result<(ElementaryPrimitiveRule, Rational, &Expr), ElementaryIntegrationError> {
     let (scale, function) = match expr.view() {
         ExprView::Function { .. } => (Rational::from(Integer::one()), expr),
         ExprView::Mul(factors) if factors.len() == 2 => {
-            let scale = scalar_atom(&factors[0]).ok_or(ElementaryIntegrationError::UnsupportedForm)?;
+            let scale =
+                scalar_atom(&factors[0]).ok_or(ElementaryIntegrationError::UnsupportedForm)?;
             (scale, &factors[1])
         }
         _ => return Err(ElementaryIntegrationError::UnsupportedForm),
@@ -202,7 +227,9 @@ fn map_conversion(error: EvaluationError) -> ElementaryIntegrationError {
                 ResourceLimitKind::PolynomialDegree,
             ))
         }
-        EvaluationError::Polynomial(error) => ElementaryIntegrationError::UnsupportedArgument(error),
+        EvaluationError::Polynomial(error) => {
+            ElementaryIntegrationError::UnsupportedArgument(error)
+        }
         other => ElementaryIntegrationError::Evaluation(other),
     }
 }
@@ -250,7 +277,11 @@ fn affine_coefficients(
         return Err(ElementaryIntegrationError::NonAffineArgument);
     }
     let zero = Rational::from(Integer::zero());
-    let offset = polynomial.coefficients().first().cloned().unwrap_or_else(|| zero.clone());
+    let offset = polynomial
+        .coefficients()
+        .first()
+        .cloned()
+        .unwrap_or_else(|| zero.clone());
     let slope = polynomial.coefficients().get(1).cloned().unwrap_or(zero);
     if slope.numerator().is_zero() {
         return Err(ElementaryIntegrationError::ZeroSlope);
@@ -293,10 +324,8 @@ fn rule_candidate(
         limits.max_expression_nodes,
         limits.max_rational_conditions,
     )?;
-    let candidate = DomainExpression::multiply(
-        [coefficient, function],
-        limits.max_rational_conditions,
-    )?;
+    let candidate =
+        DomainExpression::multiply([coefficient, function], limits.max_rational_conditions)?;
     context.check_expression(candidate.expression())?;
     if candidate.conditions() != source.conditions() {
         return Err(ElementaryIntegrationError::IncorrectConditions);
@@ -329,8 +358,8 @@ fn validate_claim(
         context, source, domain, rule, &scale, &slope, argument, &mut meter,
     )?;
     context.check_expression(claim.primitive.expression())?;
-    if claim.primitive.conditions() != source.conditions() ||
-        claim.primitive.conditions() != expected.conditions()
+    if claim.primitive.conditions() != source.conditions()
+        || claim.primitive.conditions() != expected.conditions()
     {
         return Err(ElementaryIntegrationError::IncorrectConditions);
     }
@@ -423,7 +452,12 @@ mod adversarial_tests {
         Rational::from(Integer::from(n))
     }
 
-    fn sample() -> (EvaluationContext, DomainExpression, Symbol, ElementaryAntiderivative) {
+    fn sample() -> (
+        EvaluationContext,
+        DomainExpression,
+        Symbol,
+        ElementaryAntiderivative,
+    ) {
         let context = EvaluationContext::default();
         let x = Symbol::new("x").unwrap();
         let original = DomainExpression::from_expr_in_domain(
@@ -484,13 +518,19 @@ mod adversarial_tests {
     fn rejects_forged_proof_and_condition_erasure() {
         let (ctx, source, variable, result) = sample();
         let mut forged = result.clone();
-        forged.derivative_evidence = ctx.differentiate_domain_expression(
-            &DomainExpression::from_expr_in_domain(
-                Expr::cos(Expr::from(variable.clone())),
-                ScalarDomain::Real, 128, 32,
-            ).unwrap(),
-            &variable, ScalarDomain::Real,
-        ).unwrap();
+        forged.derivative_evidence = ctx
+            .differentiate_domain_expression(
+                &DomainExpression::from_expr_in_domain(
+                    Expr::cos(Expr::from(variable.clone())),
+                    ScalarDomain::Real,
+                    128,
+                    32,
+                )
+                .unwrap(),
+                &variable,
+                ScalarDomain::Real,
+            )
+            .unwrap();
         assert_eq!(
             ctx.verify_elementary_antiderivative(&source, &variable, ScalarDomain::Real, &forged),
             Err(ElementaryIntegrationError::IncorrectDerivativeEvidence)
@@ -501,21 +541,39 @@ mod adversarial_tests {
             [Condition::NonZero(Expr::from(variable.clone()))],
             128,
             32,
-        ).unwrap();
+        )
+        .unwrap();
         let conditional_source = DomainExpression::multiply(
-            [historical,
-            DomainExpression::from_expr_in_domain(source.expression().clone(), ScalarDomain::Real, 128, 32).unwrap()],
+            [
+                historical,
+                DomainExpression::from_expr_in_domain(
+                    source.expression().clone(),
+                    ScalarDomain::Real,
+                    128,
+                    32,
+                )
+                .unwrap(),
+            ],
             32,
-        ).unwrap();
-        let mut certified = ctx.integrate_elementary_affine(
-            &conditional_source, &variable, ScalarDomain::Real
-        ).unwrap();
+        )
+        .unwrap();
+        let mut certified = ctx
+            .integrate_elementary_affine(&conditional_source, &variable, ScalarDomain::Real)
+            .unwrap();
         certified.primitive = DomainExpression::from_expr_in_domain(
             certified.primitive.expression().clone(),
-            ScalarDomain::Real, 128, 32
-        ).unwrap();
+            ScalarDomain::Real,
+            128,
+            32,
+        )
+        .unwrap();
         assert_eq!(
-            ctx.verify_elementary_antiderivative(&conditional_source, &variable, ScalarDomain::Real, &certified),
+            ctx.verify_elementary_antiderivative(
+                &conditional_source,
+                &variable,
+                ScalarDomain::Real,
+                &certified
+            ),
             Err(ElementaryIntegrationError::IncorrectConditions)
         );
     }
@@ -524,6 +582,9 @@ mod adversarial_tests {
     fn classification_refuses_unknown_function_names() {
         let x = Expr::from(Symbol::new("x").unwrap());
         let arbitrary = Expr::function(Symbol::new("unknown").unwrap(), x);
-        assert_eq!(classify(&arbitrary), Err(ElementaryIntegrationError::UnsupportedFunction));
+        assert_eq!(
+            classify(&arbitrary),
+            Err(ElementaryIntegrationError::UnsupportedFunction)
+        );
     }
 }

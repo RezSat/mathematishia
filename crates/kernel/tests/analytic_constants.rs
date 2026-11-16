@@ -329,25 +329,45 @@ fn forged_rule_target_path_source_and_conditions_are_rejected() {
 
     forged.rule = AnalyticConstantRule::LogarithmOne;
     assert_eq!(
-        verify_analytic_constant_rewrite(&input, ScalarDomain::Real, &forged, AnalyticConstantLimits::default()),
+        verify_analytic_constant_rewrite(
+            &input,
+            ScalarDomain::Real,
+            &forged,
+            AnalyticConstantLimits::default()
+        ),
         Ok(false)
     );
     forged = genuine.clone();
     forged.path = vec![0];
     assert_eq!(
-        verify_analytic_constant_rewrite(&input, ScalarDomain::Real, &forged, AnalyticConstantLimits::default()),
+        verify_analytic_constant_rewrite(
+            &input,
+            ScalarDomain::Real,
+            &forged,
+            AnalyticConstantLimits::default()
+        ),
         Ok(false)
     );
     forged = genuine.clone();
     forged.result = source(Expr::from(1), ScalarDomain::Real);
     assert_eq!(
-        verify_analytic_constant_rewrite(&input, ScalarDomain::Real, &forged, AnalyticConstantLimits::default()),
+        verify_analytic_constant_rewrite(
+            &input,
+            ScalarDomain::Real,
+            &forged,
+            AnalyticConstantLimits::default()
+        ),
         Ok(false)
     );
     forged = genuine.clone();
     forged.result = source(Expr::from(0), ScalarDomain::Real); // dropped cos(0) exclusion
     assert_eq!(
-        verify_analytic_constant_rewrite(&input, ScalarDomain::Real, &forged, AnalyticConstantLimits::default()),
+        verify_analytic_constant_rewrite(
+            &input,
+            ScalarDomain::Real,
+            &forged,
+            AnalyticConstantLimits::default()
+        ),
         Ok(false)
     );
     forged = genuine.clone();
@@ -362,19 +382,34 @@ fn forged_rule_target_path_source_and_conditions_are_rejected() {
     )
     .unwrap(); // extraneous narrowing condition
     assert_eq!(
-        verify_analytic_constant_rewrite(&input, ScalarDomain::Real, &forged, AnalyticConstantLimits::default()),
+        verify_analytic_constant_rewrite(
+            &input,
+            ScalarDomain::Real,
+            &forged,
+            AnalyticConstantLimits::default()
+        ),
         Ok(false)
     );
     forged = genuine.clone();
     forged.source = source(Expr::cos(0.into()), ScalarDomain::Real);
     assert_eq!(
-        verify_analytic_constant_rewrite(&input, ScalarDomain::Real, &forged, AnalyticConstantLimits::default()),
+        verify_analytic_constant_rewrite(
+            &input,
+            ScalarDomain::Real,
+            &forged,
+            AnalyticConstantLimits::default()
+        ),
         Ok(false)
     );
     forged = genuine.clone();
     forged.domain = ScalarDomain::Complex;
     assert_eq!(
-        verify_analytic_constant_rewrite(&input, ScalarDomain::Real, &forged, AnalyticConstantLimits::default()),
+        verify_analytic_constant_rewrite(
+            &input,
+            ScalarDomain::Real,
+            &forged,
+            AnalyticConstantLimits::default()
+        ),
         Ok(false)
     );
 }

@@ -542,3 +542,119 @@ pub fn parse_expression(input: &str) -> Result<Expr, ParseError> {
         Statement::Equation(_) => Err(ParseError::at(0, ParseErrorKind::ExpectedExpression)),
     }
 }
+
+#[cfg(test)]
+mod analytic_tests {
+    use super::*;
+
+    fn parsed(input: &str) -> Expr {
+        parse_expression(input).unwrap()
+    }
+
+    #[test]
+    fn functions_parse_nested_and_preserve_identity() {
+        let x = Expr::from(Symbol::new("x").unwrap());
+        let cases = [
+            ("sin(x)", Expr::sin(x.clone())),
+            ("cos(x)", Expr::cos(x.clone())),
+            ("tan(x)", Expr::tan(x.clone())),
+            ("exp(x)", Expr::exp(x.clone())),
+            ("log(x)", Expr::log(x.clone())),
+            ("sin(log(x))", Expr::sin(Expr::log(x.clone()))),
+            ("log(tan(1 + x))", Expr::log(Expr::tan(Expr::add([1.into(), x.clone()])))),
+            ("sin(x)^2", Expr::pow(Expr::sin(x.clone()), 2.into())),
+            ("2*sin(x)", Expr::mul([2.into(), Expr::sin(x.clone())])),
+            ("-sin(x)", Expr::mul([(-1).into(), Expr::sin(x.clone())])),
+        ];
+        for (source, expected) in cases {
+            assert_eq!(parsed(source), expected, "{source}");
+            assert_eq!(parsed(&expected.to_string()), expected, "{source}");
+        }
+        assert_eq!(
+            parse_statement("exp(x)=log(x)").unwrap(),
+            Statement::Equation(Equation::new(Expr::exp(x.clone()), Expr::log(x)))
+        );
+    }
+
+    #[test]
+    fn old_names_and_explicit_product_grammar_are_unchanged() {
+        for name in ["sin", "cos", "tan", "exp", "log", "arcsin", "sin_x", "α"] {
+            assert_eq!(parsed(name), Expr::from(Symbol::new(name).unwrap()));
+        }
+        assert_eq!(
+            parsed("sin*(x + 1)"),
+            Expr::mul([
+                Expr::from(Symbol::new("sin").unwrap()),
+                Expr::add([1.into(), Expr::from(Symbol::new("x").unwrap())])
+            ])
+        );
+        assert_eq!(parsed("2^3^2"), Expr::pow(2.into(), Expr::pow(3.into(), 2.into())));
+        assert_eq!(parsed("-x^2"), Expr::mul([
+            (-1).into(),
+            Expr::pow(Expr::from(Symbol::new("x").unwrap()), 2.into())
+        ]));
+        assert_eq!(parsed("3/2 + x"), Expr::add([
+            Expr::from(Rational::new(3.into(), 2.into()).unwrap()),
+            Expr::from(Symbol::new("x").unwrap())
+        ]));
+    }
+
+    #[test]
+    fn invalid_calls_are_explicit_errors() {
+        for (source, name) in [
+            ("foo(x)", "foo"),
+            ("Sin(x)", "Sin"),
+            ("arcsin(x)", "arcsin"),
+            ("sin_1(x)", "sin_1"),
+        ] {
+            assert_eq!(
+                parse_expression(source).unwrap_err().kind(),
+                &ParseErrorKind::UnknownFunction(name.to_owned())
+            );
+        }
+        for source in ["sin()", "sin(", "log(,)", "tan(x, y)", "cos(x", "sin(x))", "sin(x)y", "2sin(x)"] {
+            assert!(parse_expression(source).is_err(), "{source}");
+        }
+        assert_eq!(
+            parse_expression("log(x)=0").unwrap_err().kind(),
+            &ParseErrorKind::ExpectedExpression
+        );
+    }
+
+    #[test]
+    fn domain_parser_does_not_discard_function_obligations() {
+        for source in ["log(x)", "tan(x)", "sin(x)", "sin(log(x))", "0 * log(x)"] {
+            assert_eq!(
+                parse_domain_expression(source).unwrap_err(),
+                DomainParseError::Syntax(ParseError::at(
+                    0,
+                    ParseErrorKind::UnsupportedFunctionDomain
+                )),
+                "{source}"
+            );
+        }
+        assert_eq!(
+            parse_domain_expression("1/x").unwrap().conditions().len(),
+            1
+        );
+    }
+
+    #[test]
+    fn function_parsing_honors_existing_resource_limits() {
+        let depth = format!("{}x{}", "sin(".repeat(300), ")".repeat(300));
+        assert_eq!(
+            parse_expression(&depth).unwrap_err().kind(),
+            &ParseErrorKind::NestingLimitExceeded
+        );
+        let input = "x".repeat(MAX_INPUT_BYTES + 1);
+        assert_eq!(
+            parse_expression(&input).unwrap_err().kind(),
+            &ParseErrorKind::InputLimitExceeded
+        );
+        let input = format!("sin({})", "x+".repeat(MAX_TOKENS));
+        assert_eq!(
+            parse_expression(&input).unwrap_err().kind(),
+            &ParseErrorKind::TokenLimitExceeded
+        );
+    }
+}

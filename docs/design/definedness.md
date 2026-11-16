@@ -10,13 +10,28 @@ The `algebra.cancel_composite_inverse` rule removes a matching `f * f^-1` pair w
 
 The ordinary `Expr` constructors still perform unconditional structural normalization. When they fold a product containing an undefined subexpression, they may discard domain restrictions before a later inspection can observe them. Clients that need preservation through construction must use `DomainExpression`. The domain-aware frontend uses this representation; legacy raw expression APIs do not preserve eliminated restrictions.
 
+## Analytic functions
+
+`definedness_obligations_in_domain` inspects built-in sine, cosine, tangent,
+exponential and logarithm calls with explicit `ScalarDomain::Real` or
+`ScalarDomain::Complex`. Tangent requires a nonzero cosine. Real logarithm
+requires a positive argument; complex logarithm requires a nonzero argument.
+Children are traversed for nested obligations. Unknown function names are
+rejected rather than silently treated as total functions.
+
+`DomainExpression::function` preserves restrictions supplied by the argument
+during construction. `DomainExpression::from_expr_in_domain` can inspect an
+existing expression but cannot recover restrictions removed by an earlier raw
+constructor. Conditions are symbolic obligations, not assertions that they hold.
+
 ## Frontend lowering
 
 `parse_domain_expression` and `parse_domain_statement` lower syntax through
-`DomainExpression` constructors before scalar folding. Both expression and
-equation operands retain their original nonzero conditions. General symbolic
-powers still use `parse_expression` and `parse_statement`; the domain-aware
-entrypoints reject unsupported exponents rather than treating them as defined.
+`DomainExpression` constructors before scalar folding. They preserve restrictions
+of integer powers and nested supported analytic functions, using complex-domain
+conditions by default. `parse_domain_expression_in_domain` and
+`parse_domain_statement_in_domain` accept explicit real or complex domains.
+Symbolic and noninteger powers remain unsupported in the domain-aware parser.
 
 The legacy parser returns plain `Expr` and can lose domain restrictions when
 a constructor eliminates an undefined subexpression.

@@ -5,10 +5,12 @@ This file tracks implemented areas and the next domain extensions. See [CAPABILI
 ## Implemented
 
 - Exact arbitrary-precision integers and rationals; immutable symbolic expressions with structural canonicalization.
-- Unevaluated sine, cosine, tangent, exponential and logarithm nodes; explicit call parsing and direct domain-condition queries.
+- Unevaluated sine, cosine, tangent, exponential and logarithm nodes; nested real/complex domain-aware parsing and condition propagation.
+- Verified analytic chain rules for sine, cosine, exponential, tangent and real logarithm, with explicit prerequisites.
 - Bounded expression/equation parser and Rust CLI.
 - Univariate rational-polynomial arithmetic, long division, GCD, differentiation and verified square-free decomposition.
 - Canonical bounded sparse multivariate polynomial arithmetic, partial differentiation, substitution and evaluation.
+- Ordered exact multivariate division with independently verified quotient/remainder; no Gröbner normal-form claim.
 - Exact polynomial antiderivatives and definite integrals at rational endpoints, with independent verification.
 - Extended Euclidean algorithm with verified polynomial Bézout certificates and modular inverses in Q[x].
 - Canonical quotient-ring arithmetic in Q[x]/(m), including nonunits and signed powers.
@@ -30,10 +32,10 @@ This file tracks implemented areas and the next domain extensions. See [CAPABILI
 
 ## In progress / next
 
-1. Extend multivariate polynomials with division, reduction and Expr conversion; connect them to a general algebra simplifier.
-2. Add verified analytic differentiation rules and retain nested function-domain conditions through parsing and rewriting.
+1. Connect multivariate polynomials to the expression IR and general algebra simplification; implement Buchberger reduction and Gröbner bases with verification.
+2. Extend analytic domain contracts to safe symbolic rewriting, additional derivatives and explicit complex branch handling.
 3. Extend nonlinear equation and inequality solving, polynomial roots and non-affine systems.
-4. Extend verified derivation rendering to more algebra and calculus rules and stable frontend-oriented serialization.
+4. Extend verified derivation rendering to additional algebra/calculus rules and stable frontend-oriented structured serialization.
 5. Extend polynomial integration to elementary functions; implement limits and series with explicit supported domains and unresolved results.
 6. Expand rational factorization beyond the bounded reconstruction path; improve algebraic embeddings and general arithmetic.
 7. Add exact linear-algebra extensions, comprehensive real-root isolation and targeted symbolic matrix operations.

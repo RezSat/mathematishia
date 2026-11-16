@@ -16,7 +16,7 @@ These relations are not interchangeable. In particular, a derivative is not an e
 
 `EquationStep` carries exact equivalence evidence for rational-linear solving, including the nonzero divisor used to isolate a variable.
 
-`DifferentiationStep` records formal derivative rules for constants, symbols, sums, products and positive integer powers. The derivative verifier reconstructs each claimed result.
+`DifferentiationStep` records rules for constants, symbols, sums, products, positive integer powers and supported analytic chain rules. The verifier reconstructs the claimed expression in postorder and checks restricted source-domain obligations. The real logarithm and tangent rules require an explicitly conditioned source.
 
 Quadratic-root evidence records the normalized polynomial, exact discriminant and classification. These are typed facts rather than invented expression-equality steps.
 
@@ -38,4 +38,4 @@ Quadratic-root evidence records the normalized polynomial, exact discriminant an
 
 An established condition is marked `Proven` for an exact rational fact or `Assumed` when it follows from the supplied premises. Unknown conditions cannot justify a graph edge. The graph has a configurable node limit (128 by default).
 
-The current graph covers expression equality using the distributive rule and two cancellation rules. Equation proofs, condition discharge inside the graph, general composition, and student-facing rendering require further work.
+The current graph covers expression equality using the distributive rule and two cancellation rules. Equation-proof composition and condition discharge remain outside the graph. `render_proof_graph`, `render_linear_solution` and `render_symbolic_derivative` convert verified evidence into structured steps and display strings. Assumptions remain distinct from proved conditions.

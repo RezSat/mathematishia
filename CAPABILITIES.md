@@ -3,9 +3,10 @@
 | Area | Source |
 | --- | --- |
 | Exact scalars, expressions and conditions | `crates/mathema/src/` |
-| Unevaluated analytic function nodes and call parsing | `crates/mathema/src/expr.rs`, `crates/frontend/src/lib.rs` |
+| Analytic function nodes, real/complex domain-aware parsing | `crates/mathema/src/expr.rs`, `definedness.rs`, `crates/frontend/src/lib.rs` |
 | Polynomial arithmetic, division and GCD | `crates/kernel/src/polynomial.rs`, `poly_division.rs` |
 | Canonical bounded multivariate polynomials over Q | `crates/kernel/src/multivariate_polynomial.rs` |
+| Exact ordered multivariate polynomial division and checked remainder | `crates/kernel/src/multivariate_division.rs` |
 | Exact polynomial primitives and directed definite integrals | `crates/kernel/src/integration.rs` |
 | Extended polynomial GCD, Bézout verification, modular inverses | `crates/kernel/src/extended_gcd.rs` |
 | Polynomial quotient rings and canonical residue arithmetic | `crates/kernel/src/polynomial_residue.rs` |
@@ -25,7 +26,7 @@
 | Embedded quadratic fields, arithmetic, trace, norm and minimal-polynomial checks | `crates/kernel/src/quadratic_field.rs` |
 | Certified abstract extensions (degree 2–8) | `crates/kernel/src/algebraic_extension.rs` |
 | Exact minimal polynomials of extension elements | `crates/kernel/src/extension_minimal.rs` |
-| Symbolic differentiation | `crates/kernel/src/differentiate_expr.rs` |
+| Verified symbolic differentiation, including analytic chain rules | `crates/kernel/src/differentiate_expr.rs`, `context.rs` |
 | Assumptions and guarded rewrites | `crates/kernel/src/assumptions.rs`, `guarded_rewrite.rs`, `conditional_rewrite.rs` |
 | Definedness and domain-preserving expression composition | `crates/mathema/src/definedness.rs` |
 | Proof graph and dependency verification | `crates/kernel/src/proof_graph.rs` |
@@ -39,9 +40,9 @@
 
 ## Current boundaries
 
-Analytic call nodes cover `sin`, `cos`, `tan`, `exp` and natural `log` as unevaluated expressions. The expression parser accepts built-in calls; unsupported names are rejected. The function-domain API reports direct real/complex conditions only. Domain-aware parsing rejects function calls until nested conditions can be retained. The existing polynomial converter and differentiation engine reject unsupported function inputs.
+Analytic calls support `sin`, `cos`, `tan`, `exp` and natural `log` as unevaluated expressions. The domain-aware parser preserves restrictions through nested calls and structural normalization, with real or complex domain selection. The derivative verifier supports chain rules for sine, cosine and exponential. Tangent requires `cos(argument) != 0`; real logarithm requires a positive argument. Complex principal-log derivatives are not admitted because the current domain model does not encode its branch cut. Conditions remain unproved prerequisites, not claims of validity. CLI `diffreal` and Python `differentiate_expression_real` expose the checked real-domain result. The existing polynomial converter rejects function calls.
 
-Sparse multivariate polynomials use exact rational coefficients with explicit ring variables; addition, multiplication, differentiation, evaluation and substitution are supported within fixed resource limits. Division, Gröbner bases and conversion from general expressions remain outside this type.
+Sparse multivariate polynomials store exact rational coefficients in a fixed, explicitly named ambient ring. Arithmetic, partial differentiation, evaluation and substitution have bounded input and work limits. Ordered lexicographic division returns a quotient for each divisor and a remainder, checked against the original polynomial by exact recomposition and leading-term nondivisibility. Divisor order affects results. No unique normal form is claimed for arbitrary divisors; Gröbner bases and general `Expr` conversion remain unimplemented.
 
 Exact polynomial integration returns zero-constant primitives or definite rational values at rational bounds. Primitives and integral values are independently checked. Multivariable affine equation solving classifies empty, unique and affine-family solution sets, restricted to 16 equations and 16 variables.
 
@@ -49,7 +50,7 @@ Exact rational root-bracket refinement certifies a rational root or existence wi
 
 The rational-expression converter supports exact scalars, one variable, sums, products, and bounded integer powers. It preserves source-domain restrictions and feeds the existing quotient-rule and degree-two rational solver; see `docs/design/rational-expressions.md`.
 
-The proof graph records exact expression inputs, condition nodes, rule evidence and typed parent references, including composite cancellation with multiple conditions. Its verifier rejects invalid steps, unsupported conditions, forward dependencies and disconnected nodes. It does not yet compose equation proofs, establish new symbolic assumptions or cover fractional/analytic definedness. `parse_domain_expression` and `parse_domain_statement` retain construction-time restrictions for integer powers. The legacy `parse_expression` and `parse_statement` interfaces still return ordinary `Expr` values; consumers must opt into the domain-aware path.
+The proof graph records expression inputs, typed condition nodes and rule evidence. Its verifier rejects invalid steps, unsupported conditions, forward dependencies and disconnected nodes. The derivation renderer emits checked steps for the supported expression, linear-equation and derivative evidence, including analytic derivative prerequisites. It does not establish new assumptions or prove general equations. `parse_domain_expression` and `parse_domain_statement` preserve the construction history of integer powers and supported analytic functions over the complex scalars; the `_in_domain` entrypoints select real or complex obligations. Legacy `parse_expression` and `parse_statement` return plain `Expr` values without restrictions discarded during normalization.
 
 Rational factorization first removes repeated factors. It uses the rational root theorem, exact quadratic discriminants, exhaustive bounded monic quartic splitting, and finite-field irreducibility certificates. Supported monic integral polynomials through degree eight can also be split by square-free modular factorization, coprime Hensel lifts and exact division. None of these bounds imply complete factorization for arbitrary inputs. When no factor or irreducibility proof is found, the remainder is unresolved.
 
@@ -57,7 +58,7 @@ Small-prime polynomial arithmetic admits primes through 251 and input degrees th
 
 Exact rational matrices permit up to 16 rows and 16 columns. Inverse candidates are checked against both multiplication identities. Solvers distinguish unique, inconsistent and infinite families. This is exact linear algebra over Q; eigenvalues, eigenvectors, symbolic matrices and floating-point matrix algorithms remain outside the implemented scope.
 
-The quotient-ring type does not assume irreducibility. Embedded quadratic fields use explicit root branches. Abstract algebraic fields accept irreducibility-certified defining polynomials of degree two through eight but do not have selected complex embeddings. General factorization, arithmetic across distinct field presentations, analytic evaluation and differentiation, complete real-root isolation and general proof rendering remain unimplemented.
+The quotient-ring type does not assume irreducibility. Embedded quadratic fields use explicit root branches. Abstract algebraic fields accept irreducibility-certified defining polynomials of degree two through eight but do not have selected complex embeddings. General factorization, arithmetic across distinct field presentations, analytic numerical evaluation, general analytic integration, comprehensive real-root isolation and general theorem proving remain unimplemented.
 
 ## Checks
 

@@ -349,13 +349,10 @@ fn rejects_invalid_resource_limits_and_oversized_variable_labels() {
         max_work_units: 0,
         ..limits
     };
-    assert!(matches!(
+    assert_eq!(
         render_multivariate_division(&f, std::slice::from_ref(&g), &evidence, tiny),
-        Err(MultivariateDerivationError::Division(
-            MultivariateDivisionError::Polynomial(MultivariateError::WorkLimit)
-                | MultivariateDivisionError::ResourceLimit
-        ))
-    ));
+        Err(MultivariateDerivationError::ResourceLimit)
+    );
 
     let huge_name = sym(&format!("x{}", "q".repeat(257)));
     let huge =

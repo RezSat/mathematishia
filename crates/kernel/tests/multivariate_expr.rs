@@ -390,3 +390,47 @@ fn embedded_positive_powers_do_not_claim_general_simplification() {
         Ok(p)
     );
 }
+
+#[test]
+fn hard_boundary_variables_degree_and_scalar_bit_lengths() {
+    let sixteen: Vec<Symbol> = (0..16).map(|i| s(&format!("v{i:02}"))).collect();
+    let seventeen: Vec<Symbol> = (0..17).map(|i| s(&format!("v{i:02}"))).collect();
+    let one = Expr::from(1);
+    assert_eq!(
+        P::try_from_expr(&one, &sixteen, L::default())
+            .unwrap()
+            .variables(),
+        sixteen
+    );
+    assert_eq!(
+        P::try_from_expr(&one, &seventeen, L::default()),
+        Err(E::Polynomial(M::VariableLimit))
+    );
+
+    let max_power = Expr::pow(x(), Expr::from(128));
+    let maximum = P::try_from_expr(&max_power, &[s("x")], L::default()).unwrap();
+    assert_eq!(maximum.total_degree(), Some(128));
+    assert_eq!(
+        P::try_from_expr(
+            &maximum.to_expr(L::default()).unwrap(),
+            &[s("x")],
+            L::default()
+        ),
+        Ok(maximum)
+    );
+
+    let mut largest = Integer::one();
+    let two = Integer::from(2);
+    for _ in 0..4095 {
+        largest = &largest * &two;
+    }
+    assert_eq!(largest.bit_len(), 4096);
+    let admitted = P::try_from_expr(&Expr::from(largest.clone()), &[], L::default()).unwrap();
+    assert_eq!(admitted.coefficient(&[]), Ok(Rational::from(largest.clone())));
+    let too_large = &largest * &two;
+    assert_eq!(too_large.bit_len(), 4097);
+    assert_eq!(
+        P::try_from_expr(&Expr::from(too_large), &[], L::default()),
+        Err(E::Polynomial(M::ScalarBitLimit))
+    );
+}

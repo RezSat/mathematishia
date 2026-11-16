@@ -10,10 +10,9 @@ use mathema::{Integer, Rational};
 
 use crate::budget::WorkBudget;
 use crate::{
-    AlgebraicRootResult, AlgebraicRootSet, EvaluationContext, EvaluationError,
-    ExactQuadraticRoot, FactorizationVerificationError,
-    RationalFactorization, RationalFactorizationError, RationalPolynomial,
-    verify_algebraic_roots, verify_rational_factorization,
+    AlgebraicRootResult, AlgebraicRootSet, EvaluationContext, EvaluationError, ExactQuadraticRoot,
+    FactorizationVerificationError, RationalFactorization, RationalFactorizationError,
+    RationalPolynomial, verify_algebraic_roots, verify_rational_factorization,
 };
 
 fn one() -> RationalPolynomial {
@@ -154,7 +153,9 @@ impl fmt::Display for PartialPolynomialRootError {
             Self::Evaluation(error) => write!(f, "{error}"),
             Self::Factorization(error) => write!(f, "{error}"),
             Self::InvalidFactorization(error) => write!(f, "{error}"),
-            Self::IncorrectCertificate => f.write_str("partial polynomial root certificate is invalid"),
+            Self::IncorrectCertificate => {
+                f.write_str("partial polynomial root certificate is invalid")
+            }
         }
     }
 }
@@ -188,9 +189,17 @@ fn unresolved_product(
     let mut product = one();
     let mut has_unresolved = false;
     let mut work = WorkBudget::new(context.limits());
-    for factor in factorization.factors().iter().filter(|factor| {
-        factor.polynomial().degree().is_some_and(|degree| degree > 2)
-    }).chain(factorization.unresolved()) {
+    for factor in factorization
+        .factors()
+        .iter()
+        .filter(|factor| {
+            factor
+                .polynomial()
+                .degree()
+                .is_some_and(|degree| degree > 2)
+        })
+        .chain(factorization.unresolved())
+    {
         has_unresolved = true;
         for _ in 0..factor.multiplicity() {
             product = work.multiply(&product, factor.polynomial())?;
@@ -318,11 +327,12 @@ pub fn verify_partial_polynomial_roots(
     if original.degree() == Some(0) {
         return Ok(proposed.factorization.is_none()
             && proposed.root_evidence.is_empty()
-            && proposed.zero_set == PolynomialZeroSet::Finite {
-                roots: Vec::new(),
-                unresolved_cofactor: None,
-                complete: true,
-            });
+            && proposed.zero_set
+                == PolynomialZeroSet::Finite {
+                    roots: Vec::new(),
+                    unresolved_cofactor: None,
+                    complete: true,
+                });
     }
 
     let factorization = context.factor_rational_polynomial(original)?;
@@ -333,9 +343,16 @@ pub fn verify_partial_polynomial_roots(
     // factorization generator, including each multiplicity and scalar unit.
     verify_rational_factorization(original, &factorization)?;
 
-    let expected_evidence_count = factorization.factors().iter().filter(|factor| {
-        factor.polynomial().degree().is_some_and(|degree| degree <= 2)
-    }).count();
+    let expected_evidence_count = factorization
+        .factors()
+        .iter()
+        .filter(|factor| {
+            factor
+                .polynomial()
+                .degree()
+                .is_some_and(|degree| degree <= 2)
+        })
+        .count();
     if proposed.root_evidence.len() != expected_evidence_count {
         return Ok(false);
     }
@@ -367,11 +384,12 @@ pub fn verify_partial_polynomial_roots(
         }
     }
     let unresolved_cofactor = unresolved_product(context, &factorization)?;
-    Ok(proposed.zero_set == PolynomialZeroSet::Finite {
-        roots,
-        complete: unresolved_cofactor.is_none(),
-        unresolved_cofactor,
-    })
+    Ok(proposed.zero_set
+        == PolynomialZeroSet::Finite {
+            roots,
+            complete: unresolved_cofactor.is_none(),
+            unresolved_cofactor,
+        })
 }
 
 /// All roots are over C. No real-only completeness claim is made.

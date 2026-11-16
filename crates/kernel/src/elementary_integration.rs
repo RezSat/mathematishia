@@ -296,12 +296,11 @@ fn rule_candidate(
     source: &DomainExpression,
     domain: ScalarDomain,
     rule: ElementaryPrimitiveRule,
-    scale: &Rational,
-    slope: &Rational,
+    ratio: (&Rational, &Rational),
     argument: &Expr,
     meter: &mut WorkBudget,
 ) -> Result<DomainExpression, ElementaryIntegrationError> {
-    let mut factor = meter.quotient(scale, slope)?;
+    let mut factor = meter.quotient(ratio.0, ratio.1)?;
     if rule == ElementaryPrimitiveRule::Sine {
         factor = -factor;
     }
@@ -355,7 +354,7 @@ fn validate_claim(
         return Err(ElementaryIntegrationError::IncorrectAffineEvidence);
     }
     let expected = rule_candidate(
-        context, source, domain, rule, &scale, &slope, argument, &mut meter,
+        context, source, domain, rule, (&scale, &slope), argument, &mut meter,
     )?;
     context.check_expression(claim.primitive.expression())?;
     if claim.primitive.conditions() != source.conditions()
@@ -409,7 +408,7 @@ impl EvaluationContext {
         self.check_rational(&scale)?;
         let (slope, intercept) = affine_coefficients(self, argument, variable, &mut meter)?;
         let primitive = rule_candidate(
-            self, source, domain, rule, &scale, &slope, argument, &mut meter,
+            self, source, domain, rule, (&scale, &slope), argument, &mut meter,
         )?;
         let derivative_evidence =
             self.differentiate_domain_expression(&primitive, variable, domain)?;

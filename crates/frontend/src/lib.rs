@@ -7,7 +7,8 @@ use std::error::Error;
 use std::fmt;
 
 use mathema::{
-    DefinednessError, DomainExpression, Equation, Expr, ExprView, Integer, Rational, Symbol,
+    DefinednessError, DomainExpression, Equation, Expr, ExprView, Integer, Rational, ScalarDomain,
+    Symbol,
 };
 
 const MAX_INPUT_BYTES: usize = 32_768;
@@ -445,46 +446,53 @@ fn parse_syntax(input: &str) -> Result<SyntaxStatement<'_>, ParseError> {
     Ok(statement)
 }
 
-fn lower_domain(node: Syntax<'_>) -> Result<DomainExpression, DomainParseError> {
+fn lower_domain(
+    node: Syntax<'_>,
+    domain: ScalarDomain,
+) -> Result<DomainExpression, DomainParseError> {
     const MAX_CONDITIONS: usize = 256;
     match node {
-        Syntax::Function(..) => {
-            Err(ParseError::at(0, ParseErrorKind::UnsupportedFunctionDomain).into())
-        }
+        Syntax::Function(name, argument) => Ok(DomainExpression::function(
+            Symbol::new(name).expect("parser accepts nonempty built-in names"),
+            lower_domain(*argument, domain)?,
+            domain,
+            MAX_CONDITIONS,
+        )?),
         leaf @ (Syntax::Integer(..) | Syntax::Name(..)) => {
             Ok(DomainExpression::from_expr(lower(leaf)?, MAX_TOKENS)?)
         }
         Syntax::Sum(left, right) => Ok(DomainExpression::add(
-            [lower_domain(*left)?, lower_domain(*right)?],
+            [lower_domain(*left, domain)?, lower_domain(*right, domain)?],
             MAX_CONDITIONS,
         )?),
         Syntax::Difference(left, right) => {
             let negative_right = DomainExpression::multiply(
                 [
                     DomainExpression::from_expr(Expr::from(-1), MAX_TOKENS)?,
-                    lower_domain(*right)?,
+                    lower_domain(*right, domain)?,
                 ],
                 MAX_CONDITIONS,
             )?;
             Ok(DomainExpression::add(
-                [lower_domain(*left)?, negative_right],
+                [lower_domain(*left, domain)?, negative_right],
                 MAX_CONDITIONS,
             )?)
         }
         Syntax::Product(left, right) => Ok(DomainExpression::multiply(
-            [lower_domain(*left)?, lower_domain(*right)?],
+            [lower_domain(*left, domain)?, lower_domain(*right, domain)?],
             MAX_CONDITIONS,
         )?),
         Syntax::Quotient(left, right, _) => {
-            Ok(lower_domain(*left)?.divide(lower_domain(*right)?, MAX_CONDITIONS)?)
+            Ok(lower_domain(*left, domain)?
+                .divide(lower_domain(*right, domain)?, MAX_CONDITIONS)?)
         }
         Syntax::Power(left, right) => {
-            Ok(lower_domain(*left)?.pow(lower_domain(*right)?, MAX_CONDITIONS)?)
+            Ok(lower_domain(*left, domain)?.pow(lower_domain(*right, domain)?, MAX_CONDITIONS)?)
         }
         Syntax::Negate(node) => Ok(DomainExpression::multiply(
             [
                 DomainExpression::from_expr(Expr::from(-1), MAX_TOKENS)?,
-                lower_domain(*node)?,
+                lower_domain(*node, domain)?,
             ],
             MAX_CONDITIONS,
         )?),
@@ -497,17 +505,35 @@ fn lower_domain(node: Syntax<'_>) -> Result<DomainExpression, DomainParseError> 
 /// scalars. Symbolic and noninteger exponents return a domain error. Division
 /// preserves numerator and denominator restrictions.
 pub fn parse_domain_statement(input: &str) -> Result<DomainStatement, DomainParseError> {
+    parse_domain_statement_in_domain(input, ScalarDomain::Complex)
+}
+
+/// Domain-preserving parser for either real or complex scalar expressions.
+/// Conditions are symbolic and are not presumed to hold.
+pub fn parse_domain_statement_in_domain(
+    input: &str,
+    domain: ScalarDomain,
+) -> Result<DomainStatement, DomainParseError> {
     match parse_syntax(input)? {
-        SyntaxStatement::Expression(node) => Ok(DomainStatement::Expression(lower_domain(node)?)),
+        SyntaxStatement::Expression(node) => {
+            Ok(DomainStatement::Expression(lower_domain(node, domain)?))
+        }
         SyntaxStatement::Equation(left, right) => Ok(DomainStatement::Equation {
-            left: lower_domain(left)?,
-            right: lower_domain(right)?,
+            left: lower_domain(left, domain)?,
+            right: lower_domain(right, domain)?,
         }),
     }
 }
 
 pub fn parse_domain_expression(input: &str) -> Result<DomainExpression, DomainParseError> {
-    match parse_domain_statement(input)? {
+    parse_domain_expression_in_domain(input, ScalarDomain::Complex)
+}
+
+pub fn parse_domain_expression_in_domain(
+    input: &str,
+    domain: ScalarDomain,
+) -> Result<DomainExpression, DomainParseError> {
+    match parse_domain_statement_in_domain(input, domain)? {
         DomainStatement::Expression(expr) => Ok(expr),
         DomainStatement::Equation { .. } => {
             Err(ParseError::at(0, ParseErrorKind::ExpectedExpression).into())
@@ -644,16 +670,30 @@ mod analytic_tests {
 
     #[test]
     fn domain_parser_does_not_discard_function_obligations() {
-        for source in ["log(x)", "tan(x)", "sin(x)", "sin(log(x))", "0 * log(x)"] {
-            assert_eq!(
-                parse_domain_expression(source).unwrap_err(),
-                DomainParseError::Syntax(ParseError::at(
-                    0,
-                    ParseErrorKind::UnsupportedFunctionDomain
-                )),
-                "{source}"
-            );
-        }
+        let x = Expr::from(Symbol::new("x").unwrap());
+        let complex = parse_domain_expression("sin(log(x))").unwrap();
+        assert_eq!(
+            complex.conditions(),
+            &[mathema::Condition::NonZero(x.clone())]
+        );
+
+        let real =
+            parse_domain_expression_in_domain("0 * tan(log(x))", ScalarDomain::Real).unwrap();
+        assert_eq!(real.expression(), &Expr::from(0));
+        assert_eq!(
+            real.conditions(),
+            &[
+                mathema::Condition::Positive(x.clone()),
+                mathema::Condition::NonZero(Expr::cos(Expr::log(x.clone()))),
+            ]
+        );
+        let tan = parse_domain_expression("tan(x)").unwrap();
+        assert_eq!(
+            tan.conditions(),
+            &[mathema::Condition::NonZero(Expr::cos(x.clone()))],
+        );
+        let no_conditions = parse_domain_expression("sin(exp(x))").unwrap();
+        assert!(no_conditions.conditions().is_empty());
         assert_eq!(
             parse_domain_expression("1/x").unwrap().conditions().len(),
             1

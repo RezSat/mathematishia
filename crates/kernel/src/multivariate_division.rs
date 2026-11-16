@@ -225,7 +225,7 @@ pub fn verify_multivariate_division(
     {
         return Ok(false);
     }
-    for (powers, _) in claimed.remainder.terms() {
+    for powers in claimed.remainder.terms().keys() {
         if divisors.iter().any(|g| {
             divides(
                 g.terms().last_key_value().expect("nonzero divisor").0,
@@ -267,14 +267,14 @@ mod tests {
         let limits = MultivariateLimits::default();
         let dividend = p(&[(2, 0, 1), (0, 1, 1)]);
         let divisor = p(&[(1, 0, 1), (0, 0, 1)]);
-        let result = divide_multivariate(&dividend, &[divisor.clone()], limits).unwrap();
+        let result = divide_multivariate(&dividend, std::slice::from_ref(&divisor), limits).unwrap();
         assert!(
-            verify_multivariate_division(&dividend, &[divisor.clone()], &result, limits).unwrap()
+            verify_multivariate_division(&dividend, std::slice::from_ref(&divisor), &result, limits).unwrap()
         );
         let mut forged = result.clone();
         forged.quotients[0] = p(&[(1, 0, 5)]);
         assert!(
-            !verify_multivariate_division(&dividend, &[divisor.clone()], &forged, limits).unwrap()
+            !verify_multivariate_division(&dividend, std::slice::from_ref(&divisor), &forged, limits).unwrap()
         );
         let mut forged = result.clone();
         forged.remainder = p(&[(1, 0, 1)]);

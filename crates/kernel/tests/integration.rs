@@ -9,12 +9,7 @@ fn q(numerator: i64, denominator: i64) -> Rational {
 }
 
 fn p(coefficients: &[(i64, i64)]) -> RationalPolynomial {
-    RationalPolynomial::new(
-        coefficients
-            .iter()
-            .map(|&(n, d)| q(n, d))
-            .collect(),
-    )
+    RationalPolynomial::new(coefficients.iter().map(|&(n, d)| q(n, d)).collect())
 }
 
 fn x() -> (Expr, Symbol) {
@@ -25,7 +20,9 @@ fn x() -> (Expr, Symbol) {
 #[test]
 fn canonical_zero_and_constant_primitives() {
     let context = EvaluationContext::default();
-    let zero = context.integrate_polynomial(&RationalPolynomial::zero()).unwrap();
+    let zero = context
+        .integrate_polynomial(&RationalPolynomial::zero())
+        .unwrap();
     assert_eq!(zero.primitive(), &RationalPolynomial::zero());
     assert_eq!(zero.primitive().differentiate(), *zero.integrand());
     context.verify_polynomial_primitive(&zero).unwrap();
@@ -60,7 +57,9 @@ fn definite_integral_uses_exact_fundamental_theorem_substitution() {
     assert_eq!(result.lower(), &q(-2, 1));
     assert_eq!(result.upper(), &q(3, 2));
     assert_eq!(result.primitive().integrand(), &integrand);
-    context.verify_definite_polynomial_integral(&result).unwrap();
+    context
+        .verify_definite_polynomial_integral(&result)
+        .unwrap();
 }
 
 #[test]
@@ -85,14 +84,12 @@ fn reversed_equal_and_negative_bounds_preserve_orientation() {
 fn zero_integrates_to_zero_on_any_rational_interval() {
     let context = EvaluationContext::default();
     let result = context
-        .integrate_polynomial_between(
-            &RationalPolynomial::zero(),
-            &q(-71, 13),
-            &q(5, 9),
-        )
+        .integrate_polynomial_between(&RationalPolynomial::zero(), &q(-71, 13), &q(5, 9))
         .unwrap();
     assert_eq!(result.value(), &q(0, 1));
-    context.verify_definite_polynomial_integral(&result).unwrap();
+    context
+        .verify_definite_polynomial_integral(&result)
+        .unwrap();
 }
 
 #[test]
@@ -107,9 +104,15 @@ fn integration_is_additive_with_canonical_constants() {
     assert_eq!(fsum.primitive(), &fa.primitive().add(fb.primitive()));
     let lower = q(-3, 2);
     let upper = q(7, 3);
-    let ia = context.integrate_polynomial_between(&a, &lower, &upper).unwrap();
-    let ib = context.integrate_polynomial_between(&b, &lower, &upper).unwrap();
-    let isum = context.integrate_polynomial_between(&sum, &lower, &upper).unwrap();
+    let ia = context
+        .integrate_polynomial_between(&a, &lower, &upper)
+        .unwrap();
+    let ib = context
+        .integrate_polynomial_between(&b, &lower, &upper)
+        .unwrap();
+    let isum = context
+        .integrate_polynomial_between(&sum, &lower, &upper)
+        .unwrap();
     assert_eq!(isum.value(), &(ia.value() + ib.value()));
 }
 
@@ -220,7 +223,9 @@ fn accepts_polynomial_expression_with_explicit_full_domain() {
         Expr::from(-5),
     ]);
     let domain = DomainExpression::from_expr(expression, 32).unwrap();
-    let result = context.integrate_domain_expression(&domain, &variable).unwrap();
+    let result = context
+        .integrate_domain_expression(&domain, &variable)
+        .unwrap();
     assert_eq!(
         result.primitive(),
         &p(&[(0, 1), (-5, 1), (1, 1), (0, 1), (1, 4)])
@@ -229,7 +234,9 @@ fn accepts_polynomial_expression_with_explicit_full_domain() {
         .integrate_domain_expression_between(&domain, &variable, &q(-1, 1), &q(2, 1))
         .unwrap();
     assert_eq!(definite.value(), &q(-33, 4));
-    context.verify_definite_polynomial_integral(&definite).unwrap();
+    context
+        .verify_definite_polynomial_integral(&definite)
+        .unwrap();
 }
 
 #[test]
@@ -265,11 +272,7 @@ fn rejects_negative_zero_and_noninteger_powers_without_guessing() {
 fn preserves_source_exclusions_even_after_zero_product_normalization() {
     let context = EvaluationContext::default();
     let (symbol, variable) = x();
-    let inverse = DomainExpression::from_expr(
-        Expr::pow(symbol, Expr::from(-1)),
-        20,
-    )
-    .unwrap();
+    let inverse = DomainExpression::from_expr(Expr::pow(symbol, Expr::from(-1)), 20).unwrap();
     let zero = DomainExpression::from_expr(Expr::from(0), 20).unwrap();
     let product = DomainExpression::multiply([zero, inverse], 20).unwrap();
     assert_eq!(product.expression(), &Expr::from(0));
@@ -279,12 +282,7 @@ fn preserves_source_exclusions_even_after_zero_product_normalization() {
         Err(IntegrationError::RestrictedDomain)
     );
     assert_eq!(
-        context.integrate_domain_expression_between(
-            &product,
-            &variable,
-            &q(1, 1),
-            &q(2, 1)
-        ),
+        context.integrate_domain_expression_between(&product, &variable, &q(1, 1), &q(2, 1)),
         Err(IntegrationError::RestrictedDomain)
     );
 }
@@ -306,7 +304,9 @@ fn result_and_verification_are_deterministic_and_operands_unchanged() {
     assert_eq!(definite_a, definite_b);
     assert_eq!(input, copy);
     context.verify_polynomial_primitive(&a).unwrap();
-    context.verify_definite_polynomial_integral(&definite_a).unwrap();
+    context
+        .verify_definite_polynomial_integral(&definite_a)
+        .unwrap();
 }
 
 #[test]
@@ -315,6 +315,9 @@ fn large_exact_integer_coefficients_are_not_narrowed() {
     let huge = Rational::from(Integer::from(u128::MAX));
     let input = RationalPolynomial::new(vec![huge.clone(), huge]);
     let primitive = context.integrate_polynomial(&input).unwrap();
-    assert_eq!(primitive.primitive().coefficients()[2], q(1, 2) * Rational::from(Integer::from(u128::MAX)));
+    assert_eq!(
+        primitive.primitive().coefficients()[2],
+        q(1, 2) * Rational::from(Integer::from(u128::MAX))
+    );
     assert_eq!(primitive.primitive().differentiate(), input);
 }

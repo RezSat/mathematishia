@@ -329,6 +329,7 @@ fn verify_node<'a>(
     variable: &Symbol,
     steps: &mut impl Iterator<Item = &'a DifferentiationStep>,
     depth: usize,
+    domain: Option<ScalarDomain>,
 ) -> Result<Expr, DerivativeVerificationError> {
     use DerivativeVerificationError as E;
 
@@ -341,18 +342,52 @@ fn verify_node<'a>(
             (DerivativeRuleId::SelectedSymbol, Expr::from(1))
         }
         ExprView::Symbol(_) => (DerivativeRuleId::OtherSymbol, Expr::from(0)),
-        ExprView::Function { .. } => return Err(E::UnsupportedFunction),
+        ExprView::Function { name, argument } => {
+            match name.name() {
+                "sin" | "cos" | "exp" => {}
+                "tan" if matches!(domain, Some(ScalarDomain::Real | ScalarDomain::Complex)) => {}
+                "log" if domain == Some(ScalarDomain::Real) => {}
+                _ => return Err(E::UnsupportedFunction),
+            }
+            let inner = verify_node(argument, variable, steps, depth + 1, domain)?;
+            match name.name() {
+                "sin" => (
+                    DerivativeRuleId::SineChain,
+                    Expr::mul([Expr::cos(argument.clone()), inner]),
+                ),
+                "cos" => (
+                    DerivativeRuleId::CosineChain,
+                    Expr::mul([Expr::from(-1), Expr::sin(argument.clone()), inner]),
+                ),
+                "tan" => (
+                    DerivativeRuleId::TangentChain,
+                    Expr::mul([
+                        Expr::pow(Expr::cos(argument.clone()), Expr::from(-2)),
+                        inner,
+                    ]),
+                ),
+                "exp" => (
+                    DerivativeRuleId::ExponentialChain,
+                    Expr::mul([Expr::exp(argument.clone()), inner]),
+                ),
+                "log" => (
+                    DerivativeRuleId::LogarithmChain,
+                    Expr::mul([Expr::pow(argument.clone(), Expr::from(-1)), inner]),
+                ),
+                _ => return Err(E::UnsupportedFunction),
+            }
+        }
         ExprView::Add(terms) => {
             let mut expected_terms = Vec::with_capacity(terms.len());
             for term in terms {
-                expected_terms.push(verify_node(term, variable, steps, depth + 1)?);
+                expected_terms.push(verify_node(term, variable, steps, depth + 1, domain)?);
             }
             (DerivativeRuleId::Sum, Expr::add(expected_terms))
         }
         ExprView::Mul(factors) => {
             let mut gradients = Vec::with_capacity(factors.len());
             for factor in factors {
-                gradients.push(verify_node(factor, variable, steps, depth + 1)?);
+                gradients.push(verify_node(factor, variable, steps, depth + 1, domain)?);
             }
             let mut sum = Vec::with_capacity(factors.len());
             for i in 0..factors.len() {
@@ -370,7 +405,7 @@ fn verify_node<'a>(
         }
         ExprView::Pow { base, exponent } => {
             let exponent = positive_power(exponent).map_err(|_| E::UnsupportedPower)?;
-            let derivative = verify_node(base, variable, steps, depth + 1)?;
+            let derivative = verify_node(base, variable, steps, depth + 1, domain)?;
             let power = if exponent == 1 {
                 Expr::from(1)
             } else {
@@ -404,8 +439,23 @@ pub fn verify_symbolic_derivative(
     if result.steps.len() > 100_000 {
         return Err(E::UnexpectedStep);
     }
+    match (&result.source, result.domain) {
+        (None, None) => {}
+        (Some(source), Some(domain)) => {
+            if source.expression() != &result.original {
+                return Err(E::MissingDomainCondition);
+            }
+            let required = definedness_obligations_in_domain(
+                &result.original, 100_000, domain,
+            ).map_err(|_| E::MissingDomainCondition)?;
+            if required.iter().any(|condition| !source.conditions().contains(condition)) {
+                return Err(E::MissingDomainCondition);
+            }
+        }
+        _ => return Err(E::MissingDomainCondition),
+    }
     let mut steps = result.steps.iter();
-    let verified = verify_node(&result.original, &result.variable, &mut steps, 1)?;
+    let verified = verify_node(&result.original, &result.variable, &mut steps, 1, result.domain)?;
     if steps.next().is_some() {
         return Err(E::UnexpectedStep);
     }

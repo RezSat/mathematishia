@@ -3,6 +3,7 @@
 | Area | Source |
 | --- | --- |
 | Exact scalars, expressions and conditions | `crates/mathema/src/` |
+| Unevaluated analytic function nodes and call parsing | `crates/mathema/src/expr.rs`, `crates/frontend/src/lib.rs` |
 | Polynomial arithmetic, division and GCD | `crates/kernel/src/polynomial.rs`, `poly_division.rs` |
 | Extended polynomial GCD, Bézout verification, modular inverses | `crates/kernel/src/extended_gcd.rs` |
 | Polynomial quotient rings and canonical residue arithmetic | `crates/kernel/src/polynomial_residue.rs` |
@@ -33,6 +34,8 @@
 
 ## Current boundaries
 
+Analytic call nodes cover `sin`, `cos`, `tan`, `exp` and natural `log` as unevaluated expressions. The expression parser accepts built-in calls; unsupported names are rejected. The function-domain API reports direct real/complex conditions only. Domain-aware parsing rejects function calls until nested conditions can be retained. The existing polynomial converter and differentiation engine reject unsupported function inputs.
+
 The rational-expression converter supports exact scalars, one variable, sums, products, and bounded integer powers. It preserves source-domain restrictions and feeds the existing quotient-rule and degree-two rational solver; see `docs/design/rational-expressions.md`.
 
 The proof graph records exact expression inputs, condition nodes, rule evidence and typed parent references, including composite cancellation with multiple conditions. Its verifier rejects invalid steps, unsupported conditions, forward dependencies and disconnected nodes. It does not yet compose equation proofs, establish new symbolic assumptions or cover fractional/analytic definedness. `parse_domain_expression` and `parse_domain_statement` retain construction-time restrictions for integer powers. The legacy `parse_expression` and `parse_statement` interfaces still return ordinary `Expr` values; consumers must opt into the domain-aware path.
@@ -43,7 +46,7 @@ Small-prime polynomial arithmetic admits primes through 251 and input degrees th
 
 Exact rational matrices permit up to 16 rows and 16 columns. Inverse candidates are checked against both multiplication identities. Solvers distinguish unique, inconsistent and infinite families. This is exact linear algebra over Q; eigenvalues, eigenvectors, symbolic matrices and floating-point matrix algorithms remain outside the implemented scope.
 
-The quotient-ring type does not assume irreducibility. Embedded quadratic fields use explicit root branches. Abstract algebraic fields accept irreducibility-certified defining polynomials of degree two through eight but do not have selected complex embeddings. General factorization, arithmetic across distinct field presentations, analytic functions, certified numerics and broader proof rendering remain unimplemented.
+The quotient-ring type does not assume irreducibility. Embedded quadratic fields use explicit root branches. Abstract algebraic fields accept irreducibility-certified defining polynomials of degree two through eight but do not have selected complex embeddings. General factorization, arithmetic across distinct field presentations, analytic evaluation and differentiation, certified numerics and broader proof rendering remain unimplemented.
 
 ## Checks
 

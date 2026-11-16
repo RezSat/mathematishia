@@ -161,6 +161,12 @@ fn inspect_expr(expr: &Expr, remaining: &mut usize) -> Result<(), DerivationRend
                 pending.push((base, depth + 1));
                 pending.push((exponent, depth + 1));
             }
+            ExprView::Function { name, argument } => {
+                if name.name().len() > MAX_TEXT_BYTES {
+                    return Err(DerivationRenderError::ResourceLimitExceeded);
+                }
+                pending.push((argument, depth + 1));
+            }
             ExprView::Symbol(symbol) if symbol.name().len() > MAX_TEXT_BYTES => {
                 return Err(DerivationRenderError::ResourceLimitExceeded);
             }

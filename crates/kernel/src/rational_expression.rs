@@ -15,6 +15,7 @@ pub enum RationalExpressionError {
     RationalFunction(RationalFunctionError),
     OtherSymbol,
     UnsupportedExponent,
+    UnsupportedFunction,
     ExponentLimitExceeded,
     UnsupportedCondition,
 }
@@ -26,6 +27,7 @@ impl fmt::Display for RationalExpressionError {
             Self::RationalFunction(error) => write!(f, "{error}"),
             Self::OtherSymbol => f.write_str("rational expression contains another symbol"),
             Self::UnsupportedExponent => f.write_str("rational expression requires integer powers"),
+            Self::UnsupportedFunction => f.write_str("functions are not rational expressions"),
             Self::ExponentLimitExceeded => {
                 f.write_str("rational exponent exceeds the configured degree limit")
             }
@@ -77,6 +79,7 @@ fn interpret(
             ]))
         }
         ExprView::Symbol(_) => return Err(RationalExpressionError::OtherSymbol),
+        ExprView::Function { .. } => return Err(RationalExpressionError::UnsupportedFunction),
         ExprView::Add(terms) => {
             let mut value = zero();
             for term in terms {

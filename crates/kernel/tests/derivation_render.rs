@@ -307,3 +307,16 @@ fn rejects_oversized_graphs_and_symbol_display() {
         Err(DerivationRenderError::ResourceLimitExceeded)
     );
 }
+
+#[test]
+fn nested_analytic_functions_are_counted_by_the_render_budget() {
+    let mut expr = variable("x");
+    for _ in 0..130 {
+        expr = Expr::sin(expr);
+    }
+    let graph = ProofGraph::new(expr.clone());
+    assert_eq!(
+        render_proof_graph(&expr, &Assumptions::new(), &graph),
+        Err(DerivationRenderError::ResourceLimitExceeded)
+    );
+}

@@ -233,6 +233,7 @@ fn occurrence(expr: &Expr, symbol: &Symbol, max_nodes: usize) -> Result<bool, De
                 pending.push(base);
                 pending.push(exponent);
             }
+            ExprView::Function { argument, .. } => pending.push(argument),
             _ => {}
         }
     }

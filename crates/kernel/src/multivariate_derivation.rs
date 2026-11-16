@@ -257,7 +257,14 @@ pub fn render_multivariate_division(
                 }
                 write!(w, "{:?}", symbol.name())?;
             }
-            w.write_str("]; lexicographic, ordered divisors g[0], g[1], ...")
+            w.write_str("]; lexicographic; divisor priority: ")?;
+            for i in 0..divisors.len() {
+                if i != 0 {
+                    w.write_str(" then ")?;
+                }
+                write!(w, "g[{i}]")?;
+            }
+            Ok(())
         },
     )?;
     for (i, divisor) in divisors.iter().enumerate() {

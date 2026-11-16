@@ -44,6 +44,7 @@ pub enum AnalyticConstantLimit {
     Depth,
     Conditions,
     ScalarBits,
+    NameBytes,
     Work,
     Configuration,
 }
@@ -167,9 +168,7 @@ fn validate_limits(limits: AnalyticConstantLimits) -> Result<(), AnalyticConstan
 
 fn map_definedness(error: DefinednessError) -> AnalyticConstantError {
     match error {
-        DefinednessError::UnsupportedFunction => AnalyticConstantError::Unsupported(
-            AnalyticConstantUnsupported::Function(Symbol::new("unknown").unwrap()),
-        ),
+        DefinednessError::UnsupportedFunction => AnalyticConstantError::Definedness(error),
         DefinednessError::UnsupportedExponent => {
             AnalyticConstantError::Unsupported(AnalyticConstantUnsupported::Exponent)
         }
@@ -246,7 +245,7 @@ fn scan(
             ExprView::Symbol(s) => {
                 if s.name().len() > 4_096 {
                     return Err(AnalyticConstantError::Limit(
-                        AnalyticConstantLimit::ScalarBits,
+                        AnalyticConstantLimit::NameBytes,
                     ));
                 }
             }
@@ -256,13 +255,11 @@ fn scan(
                         AnalyticConstantUnsupported::Function(name.clone()),
                     ));
                 }
-                if first.is_none() {
-                    if let Some(rule) = rule_at(node) {
-                        first = Some(Hit {
-                            path: path.clone(),
-                            rule,
-                        });
-                    }
+                if first.is_none() && let Some(rule) = rule_at(node) {
+                    first = Some(Hit {
+                        path: path.clone(),
+                        rule,
+                    });
                 }
                 let mut child = path;
                 child.push(0);
@@ -282,6 +279,9 @@ fn scan(
                 stack.push((base, left, depth + 1));
             }
             ExprView::Add(children) | ExprView::Mul(children) => {
+                if children.len() > limits.max_nodes {
+                    return Err(AnalyticConstantError::Limit(AnalyticConstantLimit::Nodes));
+                }
                 for (index, child) in children.iter().enumerate().rev() {
                     let mut next = path.clone();
                     next.push(index);
@@ -318,7 +318,7 @@ fn validate_condition(
 ) -> Result<(), AnalyticConstantError> {
     // Conditions are also user-controlled expression trees; do not exempt them
     // from node/bit/depth/unknown-function admission checks.
-    scan(condition.expression(), meter, limits)?;
+    let _ = scan(condition.expression(), meter, limits)?;
     if Assumptions::new().assess(condition) == ConditionStatus::Refuted {
         return Err(AnalyticConstantError::ContradictedCondition(
             condition.clone(),
@@ -464,12 +464,24 @@ pub fn verify_analytic_constant_rewrite(
     limits: AnalyticConstantLimits,
 ) -> Result<bool, AnalyticConstantError> {
     validate_limits(limits)?;
-    if expected_source != &certificate.source
-        || !matches!(
-            certificate.domain,
-            ScalarDomain::Real | ScalarDomain::Complex
-        )
+    if !matches!(
+        certificate.domain,
+        ScalarDomain::Real | ScalarDomain::Complex
+    ) || certificate.path.len() > limits.max_depth
     {
+        return Ok(false);
+    }
+    // The certificate is untrusted input: admit both stored expression trees
+    // and condition vectors before any potentially deep structural equality.
+    let mut certificate_source_meter = Meter { nodes: 0, work: 0 };
+    let _ = conditions_for(
+        &certificate.source, certificate.domain, &mut certificate_source_meter, limits
+    )?;
+    let mut certificate_result_meter = Meter { nodes: 0, work: 0 };
+    let _ = conditions_for(
+        &certificate.result, certificate.domain, &mut certificate_result_meter, limits
+    )?;
+    if expected_source != &certificate.source {
         return Ok(false);
     }
     let mut meter = Meter { nodes: 0, work: 0 };

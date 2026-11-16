@@ -358,7 +358,6 @@ fn replace_at(
 }
 
 fn build_result(
-    source: &DomainExpression,
     after: Expr,
     inherited: Vec<Condition>,
     domain: ScalarDomain,
@@ -401,7 +400,7 @@ pub fn rewrite_analytic_constant_once(
         return Ok(AnalyticConstantOutcome::NoRule { retained_conditions: conditions });
     };
     let after = replace_at(source.expression(), &hit.path, &rule_value(hit.rule))?;
-    let result = build_result(source, after, conditions, domain, limits)?;
+    let result = build_result(after, conditions, domain, limits)?;
     // Revalidate the result and its newly introduced obligations. This rejects
     // a rewrite whose parent becomes exactly undefined (e.g. log(sin(0))).
     let mut final_meter = Meter { nodes: 0, work: 0 };
@@ -460,7 +459,7 @@ pub fn verify_analytic_constant_rewrite(
     if &reconstructed != certificate.result.expression() {
         return Ok(false);
     }
-    let expected = build_result(expected_source, reconstructed, inherited, certificate.domain, limits)?;
+    let expected = build_result(reconstructed, inherited, certificate.domain, limits)?;
     let mut final_meter = Meter { nodes: 0, work: 0 };
     conditions_for(&expected, certificate.domain, &mut final_meter, limits)?;
     Ok(expected == certificate.result)

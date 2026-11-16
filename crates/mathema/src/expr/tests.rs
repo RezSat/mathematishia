@@ -488,6 +488,9 @@ fn analytic_nodes_preserve_nesting_and_structure() {
     assert_invariants(&a);
     let custom = Expr::function(Symbol::new("f").unwrap(), Expr::cos(x));
     assert_eq!(custom.to_string(), "f(cos(x))");
+    let quoted = Expr::function(Symbol::new("f(x)").unwrap(), custom.clone());
+    assert_eq!(quoted.to_string(), "\"f(x)\"(f(cos(x)))");
+    assert_ne!(quoted, custom);
     assert_eq!(custom.function_domain_conditions(ScalarDomain::Real), None);
 }
 

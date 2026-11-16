@@ -426,7 +426,10 @@ fn hard_boundary_variables_degree_and_scalar_bit_lengths() {
     }
     assert_eq!(largest.bit_len(), 4096);
     let admitted = P::try_from_expr(&Expr::from(largest.clone()), &[], L::default()).unwrap();
-    assert_eq!(admitted.coefficient(&[]), Ok(Rational::from(largest.clone())));
+    assert_eq!(
+        admitted.coefficient(&[]),
+        Ok(Rational::from(largest.clone()))
+    );
     let too_large = &largest * &two;
     assert_eq!(too_large.bit_len(), 4097);
     assert_eq!(

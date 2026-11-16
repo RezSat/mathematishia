@@ -1,10 +1,8 @@
-use mathema::{
-    Condition, DomainExpression, Expr, Integer, Rational, ScalarDomain, Symbol,
-};
+use mathema::{Condition, DomainExpression, Expr, Integer, Rational, ScalarDomain, Symbol};
 use mathematishia_kernel::{
-    AnalyticConstantError, AnalyticConstantLimit, AnalyticConstantLimits,
-    AnalyticConstantOutcome, AnalyticConstantRule, AnalyticConstantUnsupported,
-    rewrite_analytic_constant_once, verify_analytic_constant_rewrite,
+    AnalyticConstantError, AnalyticConstantLimit, AnalyticConstantLimits, AnalyticConstantOutcome,
+    AnalyticConstantRule, AnalyticConstantUnsupported, rewrite_analytic_constant_once,
+    verify_analytic_constant_rewrite,
 };
 
 fn symbol(name: &str) -> Expr {
@@ -34,11 +32,36 @@ fn rewrite(
 #[test]
 fn all_five_rules_are_exact_and_stable() {
     let cases = [
-        (Expr::sin(0.into()), Expr::from(0), AnalyticConstantRule::SineZero, "analytic.sin_zero"),
-        (Expr::cos(0.into()), Expr::from(1), AnalyticConstantRule::CosineZero, "analytic.cos_zero"),
-        (Expr::tan(0.into()), Expr::from(0), AnalyticConstantRule::TangentZero, "analytic.tan_zero"),
-        (Expr::exp(0.into()), Expr::from(1), AnalyticConstantRule::ExponentialZero, "analytic.exp_zero"),
-        (Expr::log(1.into()), Expr::from(0), AnalyticConstantRule::LogarithmOne, "analytic.log_one"),
+        (
+            Expr::sin(0.into()),
+            Expr::from(0),
+            AnalyticConstantRule::SineZero,
+            "analytic.sin_zero",
+        ),
+        (
+            Expr::cos(0.into()),
+            Expr::from(1),
+            AnalyticConstantRule::CosineZero,
+            "analytic.cos_zero",
+        ),
+        (
+            Expr::tan(0.into()),
+            Expr::from(0),
+            AnalyticConstantRule::TangentZero,
+            "analytic.tan_zero",
+        ),
+        (
+            Expr::exp(0.into()),
+            Expr::from(1),
+            AnalyticConstantRule::ExponentialZero,
+            "analytic.exp_zero",
+        ),
+        (
+            Expr::log(1.into()),
+            Expr::from(0),
+            AnalyticConstantRule::LogarithmOne,
+            "analytic.log_one",
+        ),
     ];
     for domain in [ScalarDomain::Real, ScalarDomain::Complex] {
         for (from, expected, rule, stable_id) in &cases {
@@ -50,7 +73,12 @@ fn all_five_rules_are_exact_and_stable() {
             assert_eq!(step.rule.stable_id(), *stable_id);
             assert_eq!(step.path, Vec::<usize>::new());
             // No conditions are removed even when a rational fact is provable.
-            assert!(input.conditions().iter().all(|c| step.result.conditions().contains(c)));
+            assert!(
+                input
+                    .conditions()
+                    .iter()
+                    .all(|c| step.result.conditions().contains(c))
+            );
             let same = rewrite(&input, domain);
             assert_eq!(same, step);
         }
@@ -59,15 +87,28 @@ fn all_five_rules_are_exact_and_stable() {
 
 #[test]
 fn domain_obligations_are_retained_without_unproved_discharges() {
-    let real_log = rewrite(&source(Expr::log(1.into()), ScalarDomain::Real), ScalarDomain::Real);
-    assert_eq!(real_log.result.conditions(), &[Condition::Positive(Expr::from(1))]);
+    let real_log = rewrite(
+        &source(Expr::log(1.into()), ScalarDomain::Real),
+        ScalarDomain::Real,
+    );
+    assert_eq!(
+        real_log.result.conditions(),
+        &[Condition::Positive(Expr::from(1))]
+    );
 
     let complex_log = rewrite(
-        &source(Expr::log(1.into()), ScalarDomain::Complex), ScalarDomain::Complex
+        &source(Expr::log(1.into()), ScalarDomain::Complex),
+        ScalarDomain::Complex,
     );
-    assert_eq!(complex_log.result.conditions(), &[Condition::NonZero(Expr::from(1))]);
+    assert_eq!(
+        complex_log.result.conditions(),
+        &[Condition::NonZero(Expr::from(1))]
+    );
 
-    let tangent = rewrite(&source(Expr::tan(0.into()), ScalarDomain::Real), ScalarDomain::Real);
+    let tangent = rewrite(
+        &source(Expr::tan(0.into()), ScalarDomain::Real),
+        ScalarDomain::Real,
+    );
     assert_eq!(
         tangent.result.conditions(),
         &[Condition::NonZero(Expr::cos(Expr::from(0)))]
@@ -81,7 +122,10 @@ fn nested_rewriting_is_one_step_and_preorder() {
     assert_eq!(first.rule, AnalyticConstantRule::LogarithmOne);
     assert_eq!(first.path, vec![0]);
     assert_eq!(first.result.expression(), &Expr::sin(0.into()));
-    assert_eq!(first.result.conditions(), &[Condition::Positive(Expr::from(1))]);
+    assert_eq!(
+        first.result.conditions(),
+        &[Condition::Positive(Expr::from(1))]
+    );
 
     let second = rewrite(&first.result, ScalarDomain::Real);
     assert_eq!(second.rule, AnalyticConstantRule::SineZero);
@@ -90,7 +134,9 @@ fn nested_rewriting_is_one_step_and_preorder() {
     assert_eq!(second.result.conditions(), first.result.conditions());
     assert_eq!(
         rewrite_analytic_constant_once(
-            &second.result, ScalarDomain::Real, AnalyticConstantLimits::default()
+            &second.result,
+            ScalarDomain::Real,
+            AnalyticConstantLimits::default()
         ),
         Ok(AnalyticConstantOutcome::NoRule {
             retained_conditions: vec![Condition::Positive(Expr::from(1))]
@@ -117,9 +163,14 @@ fn output_retains_both_history_and_new_obligations() {
     let y = symbol("y");
     let historical = DomainExpression::with_conditions(
         0.into(),
-        [Condition::NonZero(x.clone()), Condition::Positive(y.clone())],
-        128, 16
-    ).unwrap();
+        [
+            Condition::NonZero(x.clone()),
+            Condition::Positive(y.clone()),
+        ],
+        128,
+        16,
+    )
+    .unwrap();
     let call = source(Expr::sin(0.into()), ScalarDomain::Real);
     let input = DomainExpression::add([historical, call], 16).unwrap();
     assert_eq!(input.expression(), &Expr::sin(0.into()));
@@ -156,7 +207,9 @@ fn no_rule_does_not_invent_analytic_approximations() {
         let input = source(expr, ScalarDomain::Complex);
         assert_eq!(
             rewrite_analytic_constant_once(
-                &input, ScalarDomain::Complex, AnalyticConstantLimits::default()
+                &input,
+                ScalarDomain::Complex,
+                AnalyticConstantLimits::default()
             ),
             Ok(AnalyticConstantOutcome::NoRule {
                 retained_conditions: input.conditions().to_vec()
@@ -167,7 +220,9 @@ fn no_rule_does_not_invent_analytic_approximations() {
     let input = source(Expr::log(Expr::exp(x)), ScalarDomain::Complex);
     assert!(matches!(
         rewrite_analytic_constant_once(
-            &input, ScalarDomain::Complex, AnalyticConstantLimits::default()
+            &input,
+            ScalarDomain::Complex,
+            AnalyticConstantLimits::default()
         ),
         Ok(AnalyticConstantOutcome::NoRule { .. })
     ));
@@ -176,10 +231,26 @@ fn no_rule_does_not_invent_analytic_approximations() {
 #[test]
 fn excluded_exact_domain_points_are_refused() {
     for (expr, domain, condition) in [
-        (Expr::log(0.into()), ScalarDomain::Real, Condition::Positive(0.into())),
-        (Expr::log((-1).into()), ScalarDomain::Real, Condition::Positive((-1).into())),
-        (Expr::log(0.into()), ScalarDomain::Complex, Condition::NonZero(0.into())),
-        (Expr::pow(0.into(), 0.into()), ScalarDomain::Real, Condition::NonZero(0.into())),
+        (
+            Expr::log(0.into()),
+            ScalarDomain::Real,
+            Condition::Positive(0.into()),
+        ),
+        (
+            Expr::log((-1).into()),
+            ScalarDomain::Real,
+            Condition::Positive((-1).into()),
+        ),
+        (
+            Expr::log(0.into()),
+            ScalarDomain::Complex,
+            Condition::NonZero(0.into()),
+        ),
+        (
+            Expr::pow(0.into(), 0.into()),
+            ScalarDomain::Real,
+            Condition::NonZero(0.into()),
+        ),
     ] {
         let input = source(expr, domain);
         assert_eq!(
@@ -191,14 +262,20 @@ fn excluded_exact_domain_points_are_refused() {
     let invalid_after = source(Expr::log(Expr::sin(0.into())), ScalarDomain::Real);
     assert_eq!(
         rewrite_analytic_constant_once(
-            &invalid_after, ScalarDomain::Real, AnalyticConstantLimits::default()
+            &invalid_after,
+            ScalarDomain::Real,
+            AnalyticConstantLimits::default()
         ),
-        Err(AnalyticConstantError::ContradictedCondition(Condition::Positive(Expr::from(0))))
+        Err(AnalyticConstantError::ContradictedCondition(
+            Condition::Positive(Expr::from(0))
+        ))
     );
     let complex_negative = source(Expr::log((-1).into()), ScalarDomain::Complex);
     assert!(matches!(
         rewrite_analytic_constant_once(
-            &complex_negative, ScalarDomain::Complex, AnalyticConstantLimits::default()
+            &complex_negative,
+            ScalarDomain::Complex,
+            AnalyticConstantLimits::default()
         ),
         Ok(AnalyticConstantOutcome::NoRule { .. })
     ));
@@ -216,24 +293,27 @@ fn unsupported_domains_functions_and_powers_fail_closed() {
         );
     }
     let custom = Expr::function(Symbol::new("f").unwrap(), symbol("x"));
-    let with_custom_history = DomainExpression::with_conditions(
-        0.into(), [Condition::NonZero(custom)], 100, 4
-    ).unwrap();
+    let with_custom_history =
+        DomainExpression::with_conditions(0.into(), [Condition::NonZero(custom)], 100, 4).unwrap();
     assert_eq!(
         rewrite_analytic_constant_once(
-            &with_custom_history, ScalarDomain::Real, AnalyticConstantLimits::default()
+            &with_custom_history,
+            ScalarDomain::Real,
+            AnalyticConstantLimits::default()
         ),
         Ok(AnalyticConstantOutcome::Unsupported(
             AnalyticConstantUnsupported::Function(Symbol::new("f").unwrap())
         ))
     );
     let symbolic_power = Expr::pow(symbol("x"), symbol("n"));
-    let input = DomainExpression::with_conditions(
-        0.into(), [Condition::NonZero(symbolic_power)], 100, 4
-    ).unwrap();
+    let input =
+        DomainExpression::with_conditions(0.into(), [Condition::NonZero(symbolic_power)], 100, 4)
+            .unwrap();
     assert_eq!(
         rewrite_analytic_constant_once(
-            &input, ScalarDomain::Real, AnalyticConstantLimits::default()
+            &input,
+            ScalarDomain::Real,
+            AnalyticConstantLimits::default()
         ),
         Ok(AnalyticConstantOutcome::Unsupported(
             AnalyticConstantUnsupported::Exponent
@@ -272,11 +352,15 @@ fn forged_rule_target_path_source_and_conditions_are_rejected() {
     );
     forged = genuine.clone();
     forged.result = DomainExpression::with_conditions(
-        Expr::from(0), [
+        Expr::from(0),
+        [
             Condition::NonZero(Expr::cos(0.into())),
-            Condition::Positive(symbol("x"))
-        ], 128, 4
-    ).unwrap(); // extraneous narrowing condition
+            Condition::Positive(symbol("x")),
+        ],
+        128,
+        4,
+    )
+    .unwrap(); // extraneous narrowing condition
     assert_eq!(
         verify_analytic_constant_rewrite(&input, &forged, AnalyticConstantLimits::default()),
         Ok(false)
@@ -299,14 +383,23 @@ fn forged_rule_target_path_source_and_conditions_are_rejected() {
 fn deterministic_resource_limits_cover_source_and_historical_conditions() {
     let x = symbol("x");
     let input = source(Expr::sin(0.into()), ScalarDomain::Real);
-    let limits = AnalyticConstantLimits { max_nodes: 1, ..Default::default() };
+    let limits = AnalyticConstantLimits {
+        max_nodes: 1,
+        ..Default::default()
+    };
     assert_eq!(
         rewrite_analytic_constant_once(&input, ScalarDomain::Real, limits),
         Err(AnalyticConstantError::Limit(AnalyticConstantLimit::Nodes))
     );
 
-    let deep = source(Expr::sin(Expr::sin(Expr::sin(x.clone()))), ScalarDomain::Real);
-    let limits = AnalyticConstantLimits { max_depth: 1, ..Default::default() };
+    let deep = source(
+        Expr::sin(Expr::sin(Expr::sin(x.clone()))),
+        ScalarDomain::Real,
+    );
+    let limits = AnalyticConstantLimits {
+        max_depth: 1,
+        ..Default::default()
+    };
     assert_eq!(
         rewrite_analytic_constant_once(&deep, ScalarDomain::Real, limits),
         Err(AnalyticConstantError::Limit(AnalyticConstantLimit::Depth))
@@ -314,33 +407,59 @@ fn deterministic_resource_limits_cover_source_and_historical_conditions() {
     let huge = "1".to_owned() + &"0".repeat(100);
     let huge: Integer = huge.parse().unwrap();
     let input = source(Expr::sin(Expr::from(huge)), ScalarDomain::Real);
-    let limits = AnalyticConstantLimits { max_scalar_bits: 8, ..Default::default() };
+    let limits = AnalyticConstantLimits {
+        max_scalar_bits: 8,
+        ..Default::default()
+    };
     assert_eq!(
         rewrite_analytic_constant_once(&input, ScalarDomain::Real, limits),
-        Err(AnalyticConstantError::Limit(AnalyticConstantLimit::ScalarBits))
+        Err(AnalyticConstantError::Limit(
+            AnalyticConstantLimit::ScalarBits
+        ))
     );
 
     let historical = DomainExpression::with_conditions(
-        0.into(), [
+        0.into(),
+        [
             Condition::NonZero(x.clone()),
             Condition::Positive(symbol("y")),
-        ], 100, 8
-    ).unwrap();
-    let input = DomainExpression::add([historical, source(Expr::sin(0.into()), ScalarDomain::Real)], 8).unwrap();
-    let limits = AnalyticConstantLimits { max_conditions: 1, ..Default::default() };
+        ],
+        100,
+        8,
+    )
+    .unwrap();
+    let input = DomainExpression::add(
+        [historical, source(Expr::sin(0.into()), ScalarDomain::Real)],
+        8,
+    )
+    .unwrap();
+    let limits = AnalyticConstantLimits {
+        max_conditions: 1,
+        ..Default::default()
+    };
     assert_eq!(
         rewrite_analytic_constant_once(&input, ScalarDomain::Real, limits),
-        Err(AnalyticConstantError::Limit(AnalyticConstantLimit::Conditions))
+        Err(AnalyticConstantError::Limit(
+            AnalyticConstantLimit::Conditions
+        ))
     );
-    let limits = AnalyticConstantLimits { max_work: 1, ..Default::default() };
+    let limits = AnalyticConstantLimits {
+        max_work: 1,
+        ..Default::default()
+    };
     assert_eq!(
         rewrite_analytic_constant_once(&input, ScalarDomain::Real, limits),
         Err(AnalyticConstantError::Limit(AnalyticConstantLimit::Work))
     );
-    let limits = AnalyticConstantLimits { max_nodes: 4_097, ..Default::default() };
+    let limits = AnalyticConstantLimits {
+        max_nodes: 4_097,
+        ..Default::default()
+    };
     assert_eq!(
         rewrite_analytic_constant_once(&input, ScalarDomain::Real, limits),
-        Err(AnalyticConstantError::Limit(AnalyticConstantLimit::Configuration))
+        Err(AnalyticConstantError::Limit(
+            AnalyticConstantLimit::Configuration
+        ))
     );
 }
 
@@ -350,7 +469,9 @@ fn bounded_rational_inputs_do_not_trigger_decimal_approximation() {
     let input = source(Expr::sin(Expr::from(r)), ScalarDomain::Real);
     assert!(matches!(
         rewrite_analytic_constant_once(
-            &input, ScalarDomain::Real, AnalyticConstantLimits::default()
+            &input,
+            ScalarDomain::Real,
+            AnalyticConstantLimits::default()
         ),
         Ok(AnalyticConstantOutcome::NoRule { .. })
     ));

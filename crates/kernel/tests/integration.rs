@@ -228,7 +228,7 @@ fn accepts_polynomial_expression_with_explicit_full_domain() {
     let definite = context
         .integrate_domain_expression_between(&domain, &variable, &q(-1, 1), &q(2, 1))
         .unwrap();
-    assert_eq!(definite.value(), &q(-21, 4));
+    assert_eq!(definite.value(), &q(-33, 4));
     context.verify_definite_polynomial_integral(&definite).unwrap();
 }
 

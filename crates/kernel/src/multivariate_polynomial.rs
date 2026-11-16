@@ -134,9 +134,7 @@ impl Meter {
     }
 
     fn bits(&self, numerator: u64, denominator: u64) -> Result<(), MultivariateError> {
-        if numerator > self.limits.max_scalar_bits
-            || denominator > self.limits.max_scalar_bits
-        {
+        if numerator > self.limits.max_scalar_bits || denominator > self.limits.max_scalar_bits {
             Err(MultivariateError::ScalarBitLimit)
         } else {
             Ok(())
@@ -158,7 +156,8 @@ impl Meter {
                 .bit_len()
                 .saturating_add(right.denominator().bit_len())
                 .max(
-                    right.numerator()
+                    right
+                        .numerator()
                         .bit_len()
                         .saturating_add(left.denominator().bit_len()),
                 )
@@ -198,7 +197,11 @@ impl Meter {
         Ok(result)
     }
 
-    fn power(&mut self, value: &Rational, mut exponent: u32) -> Result<Rational, MultivariateError> {
+    fn power(
+        &mut self,
+        value: &Rational,
+        mut exponent: u32,
+    ) -> Result<Rational, MultivariateError> {
         self.scalar(value)?;
         let mut result = Rational::from(Integer::one());
         let mut base = value.clone();
@@ -240,10 +243,7 @@ impl MultivariatePolynomial {
         Ok(variables)
     }
 
-    fn total_exponent_degree(
-        exponents: &[u32],
-        meter: &Meter,
-    ) -> Result<u32, MultivariateError> {
+    fn total_exponent_degree(exponents: &[u32], meter: &Meter) -> Result<u32, MultivariateError> {
         let degree = exponents.iter().try_fold(0_u32, |sum, exponent| {
             sum.checked_add(*exponent)
                 .ok_or(MultivariateError::TotalDegreeLimit)
@@ -425,11 +425,7 @@ impl MultivariatePolynomial {
         }
     }
 
-    pub fn add(
-        &self,
-        other: &Self,
-        limits: MultivariateLimits,
-    ) -> Result<Self, MultivariateError> {
+    pub fn add(&self, other: &Self, limits: MultivariateLimits) -> Result<Self, MultivariateError> {
         self.same_ring(other)?;
         let mut meter = Meter::new(limits);
         self.admit(&meter)?;
@@ -455,12 +451,15 @@ impl MultivariatePolynomial {
         other.admit(&meter)?;
         Self::from_terms(
             self.variables.clone(),
-            self.terms.iter().map(|(powers, value)| (powers.clone(), value.clone())).chain(
-                other
-                    .terms
-                    .iter()
-                    .map(|(powers, value)| (powers.clone(), -value)),
-            ),
+            self.terms
+                .iter()
+                .map(|(powers, value)| (powers.clone(), value.clone()))
+                .chain(
+                    other
+                        .terms
+                        .iter()
+                        .map(|(powers, value)| (powers.clone(), -value)),
+                ),
             &mut meter,
         )
     }
@@ -492,10 +491,7 @@ impl MultivariatePolynomial {
                 let powers = left_powers
                     .iter()
                     .zip(right_powers)
-                    .map(|(a, b)| {
-                        a.checked_add(*b)
-                            .ok_or(MultivariateError::TotalDegreeLimit)
-                    })
+                    .map(|(a, b)| a.checked_add(*b).ok_or(MultivariateError::TotalDegreeLimit))
                     .collect::<Result<Vec<_>, _>>()?;
                 Self::total_exponent_degree(&powers, &meter)?;
                 products.push((powers, meter.mul(left_value, right_value)?));

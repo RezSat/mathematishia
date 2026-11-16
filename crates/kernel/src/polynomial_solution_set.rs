@@ -11,7 +11,7 @@ use mathema::{Integer, Rational};
 use crate::budget::WorkBudget;
 use crate::{
     AlgebraicRootResult, AlgebraicRootSet, EvaluationContext, EvaluationError,
-    ExactQuadraticRoot, FactorizationVerificationError, RationalFactor,
+    ExactQuadraticRoot, FactorizationVerificationError,
     RationalFactorization, RationalFactorizationError, RationalPolynomial,
     verify_algebraic_roots, verify_rational_factorization,
 };

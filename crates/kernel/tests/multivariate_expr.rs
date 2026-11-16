@@ -2,7 +2,7 @@ use mathema::{
     Condition, DomainExpression, Expr, ExprView, Integer, Rational, ScalarDomain, Symbol,
 };
 use mathematishia_kernel::{
-    DomainMultivariatePolynomial, MultivariateError as M, MultivariateExprError as E,
+    MultivariateError as M, MultivariateExprError as E,
     MultivariateLimits as L, MultivariatePolynomial as P,
 };
 
@@ -226,7 +226,7 @@ fn conservative_limits_prevent_intermediate_overflow() {
     // Dense intermediate exceeds the bounded sparse representation; do not
     // silently return an incomplete expanded result.
     let eight = Expr::add((0..8).map(|i| Expr::from(s(&format!("v{i}")))));
-    let expanded = Expr::pow(eight, Expr::from(5));
+    let expanded = Expr::pow(eight, Expr::from(6));
     let variables: Vec<_> = (0..8).map(|i| s(&format!("v{i}"))).collect();
     let refusal = P::try_from_expr(&expanded, &variables, L::default()).unwrap_err();
     assert!(matches!(

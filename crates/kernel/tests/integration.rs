@@ -144,8 +144,10 @@ fn rejects_input_whose_primitive_would_exceed_degree_limit() {
 
 #[test]
 fn degree_zero_budget_still_admits_zero_but_not_nonzero_constants() {
-    let mut limits = ResourceLimits::default();
-    limits.max_polynomial_degree = 0;
+    let limits = ResourceLimits {
+        max_polynomial_degree: 0,
+        ..ResourceLimits::default()
+    };
     let context = EvaluationContext::new(limits);
     assert_eq!(
         context
@@ -165,8 +167,10 @@ fn degree_zero_budget_still_admits_zero_but_not_nonzero_constants() {
 #[test]
 fn rejects_work_scalar_and_intermediate_bit_limits() {
     let input = p(&[(1, 1), (1, 1)]);
-    let mut limits = ResourceLimits::default();
-    limits.max_work_units = 1;
+    let limits = ResourceLimits {
+        max_work_units: 1,
+        ..ResourceLimits::default()
+    };
     assert_eq!(
         EvaluationContext::new(limits).integrate_polynomial(&input),
         Err(IntegrationError::Evaluation(EvaluationError::Limit(
@@ -174,8 +178,10 @@ fn rejects_work_scalar_and_intermediate_bit_limits() {
         )))
     );
 
-    let mut limits = ResourceLimits::default();
-    limits.max_scalar_bits = 16;
+    let limits = ResourceLimits {
+        max_scalar_bits: 16,
+        ..ResourceLimits::default()
+    };
     let too_large = RationalPolynomial::new(vec![Rational::from(Integer::from(u128::MAX))]);
     assert_eq!(
         EvaluationContext::new(limits).integrate_polynomial(&too_large),
@@ -184,8 +190,10 @@ fn rejects_work_scalar_and_intermediate_bit_limits() {
         )))
     );
 
-    let mut limits = ResourceLimits::default();
-    limits.max_intermediate_scalar_bits = 8;
+    let limits = ResourceLimits {
+        max_intermediate_scalar_bits: 8,
+        ..ResourceLimits::default()
+    };
     let result = EvaluationContext::new(limits).integrate_polynomial_between(
         &p(&[(0, 1), (0, 1), (0, 1), (0, 1), (0, 1), (1, 1)]),
         &q(0, 1),
@@ -201,8 +209,10 @@ fn rejects_work_scalar_and_intermediate_bit_limits() {
 
 #[test]
 fn rejects_oversized_bounds_before_evaluation() {
-    let mut limits = ResourceLimits::default();
-    limits.max_scalar_bits = 4;
+    let limits = ResourceLimits {
+        max_scalar_bits: 4,
+        ..ResourceLimits::default()
+    };
     let context = EvaluationContext::new(limits);
     let polynomial = p(&[(1, 1)]);
     assert_eq!(

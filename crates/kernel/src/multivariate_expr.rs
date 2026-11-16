@@ -300,9 +300,17 @@ fn convert(
             _ => MultivariateExprError::UnsupportedUserFunction,
         }),
         ExprView::Add(children) => {
-            let mut parts = Vec::with_capacity(children.len().min(MAX_EXPRESSION_NODES));
+            let mut parts = Vec::new();
+            let mut raw_terms = 0usize;
             for child in children {
-                parts.push(convert(child, variables, meter, depth + 1)?);
+                let part = convert(child, variables, meter, depth + 1)?;
+                raw_terms = raw_terms
+                    .checked_add(part.terms().len())
+                    .ok_or(MultivariateError::InputTermLimit)?;
+                if raw_terms > limits.max_input_terms {
+                    return Err(MultivariateError::InputTermLimit.into());
+                }
+                parts.push(part);
             }
             meter.sum(variables, &parts)
         }

@@ -8,6 +8,7 @@ use mathema::{Expr, ExprView, Symbol};
 
 mod algebraic;
 mod algebraic_extension;
+mod analytic_constants;
 mod assumptions;
 mod budget;
 mod conditional_rewrite;
@@ -53,6 +54,11 @@ pub use algebraic::{
 pub use algebraic_extension::{
     AlgebraicExtensionElement, AlgebraicExtensionError, CertifiedAlgebraicField,
     verify_certified_algebraic_field,
+};
+pub use analytic_constants::{
+    AnalyticConstantError, AnalyticConstantLimit, AnalyticConstantLimits, AnalyticConstantOutcome,
+    AnalyticConstantRewrite, AnalyticConstantRule, AnalyticConstantUnsupported,
+    rewrite_analytic_constant_once, verify_analytic_constant_rewrite,
 };
 pub use assumptions::{AssumptionError, Assumptions, ConditionStatus};
 pub use conditional_rewrite::{

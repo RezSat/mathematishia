@@ -15,6 +15,7 @@ mod context;
 mod derivation_render;
 mod differentiate_expr;
 mod domain_operations;
+mod elementary_integration;
 mod exact_matrix;
 mod extended_gcd;
 mod extension_minimal;
@@ -73,6 +74,9 @@ pub use differentiate_expr::{
 pub use domain_operations::{
     DomainOperationError, DomainRewrite, DomainRewriteOutcome, rewrite_domain_once,
     substitute_domain,
+};
+pub use elementary_integration::{
+    ElementaryAntiderivative, ElementaryIntegrationError, ElementaryPrimitiveRule,
 };
 pub use exact_matrix::{
     ExactMatrix, LinearSystemSolution, MatrixError, ReducedMatrix, verify_linear_system_vector,

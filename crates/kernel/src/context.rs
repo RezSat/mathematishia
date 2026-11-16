@@ -465,14 +465,20 @@ impl EvaluationContext {
     ) -> Result<SymbolicDerivative, EvaluationError> {
         self.check_expression(source.expression())?;
         if source.conditions().len() > self.limits.max_rational_conditions {
-            return Err(EvaluationError::Limit(ResourceLimitKind::RationalConditions));
+            return Err(EvaluationError::Limit(
+                ResourceLimitKind::RationalConditions,
+            ));
         }
         let required = definedness_obligations_in_domain(
             source.expression(),
             self.limits.max_expression_nodes,
             domain,
-        ).map_err(|_| SymbolicDifferentiationError::MissingDomainCondition)?;
-        if required.iter().any(|condition| !source.conditions().contains(condition)) {
+        )
+        .map_err(|_| SymbolicDifferentiationError::MissingDomainCondition)?;
+        if required
+            .iter()
+            .any(|condition| !source.conditions().contains(condition))
+        {
             return Err(SymbolicDifferentiationError::MissingDomainCondition.into());
         }
         let mut meter = WorkBudget::new(self.limits);

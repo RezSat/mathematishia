@@ -8,7 +8,10 @@
 use std::error::Error;
 use std::fmt;
 
-use mathema::{Condition, DomainExpression, Expr, ExprView, Integer, ScalarDomain, Symbol, definedness_obligations_in_domain};
+use mathema::{
+    Condition, DomainExpression, Expr, ExprView, Integer, ScalarDomain, Symbol,
+    definedness_obligations_in_domain,
+};
 
 use crate::budget::WorkBudget;
 use crate::{EvaluationError, Relation, ResourceLimitKind};
@@ -64,9 +67,7 @@ impl fmt::Display for SymbolicDifferentiationError {
             Self::UnsupportedFunction => {
                 f.write_str("analytic function differentiation is unsupported in this domain")
             }
-            Self::MissingDomainCondition => {
-                f.write_str("missing analytic domain restrictions")
-            }
+            Self::MissingDomainCondition => f.write_str("missing analytic domain restrictions"),
         }
     }
 }
@@ -129,7 +130,9 @@ impl SymbolicDerivative {
 
     /// Symbolic prerequisites; the engine does not assert they are proven.
     pub fn conditions(&self) -> &[Condition] {
-        self.source.as_ref().map_or(&[], DomainExpression::conditions)
+        self.source
+            .as_ref()
+            .map_or(&[], DomainExpression::conditions)
     }
 
     pub const fn domain(&self) -> Option<ScalarDomain> {
@@ -205,7 +208,15 @@ fn produce(
         ExprView::Add(terms) => {
             let mut derivatives = Vec::with_capacity(terms.len());
             for term in terms {
-                derivatives.push(produce(term, selected, power_limit, domain, meter, steps, check)?);
+                derivatives.push(produce(
+                    term,
+                    selected,
+                    power_limit,
+                    domain,
+                    meter,
+                    steps,
+                    check,
+                )?);
             }
             meter.charge(terms.len() as u64)?;
             (DerivativeRuleId::Sum, Expr::add(derivatives))
@@ -216,7 +227,15 @@ fn produce(
             meter.charge(n.saturating_mul(n))?;
             let mut derivatives = Vec::with_capacity(factors.len());
             for factor in factors {
-                derivatives.push(produce(factor, selected, power_limit, domain, meter, steps, check)?);
+                derivatives.push(produce(
+                    factor,
+                    selected,
+                    power_limit,
+                    domain,
+                    meter,
+                    steps,
+                    check,
+                )?);
             }
             let terms = factors.iter().enumerate().map(|(index, _)| {
                 Expr::mul(factors.iter().enumerate().map(|(other, factor)| {
@@ -445,17 +464,25 @@ pub fn verify_symbolic_derivative(
             if source.expression() != &result.original {
                 return Err(E::MissingDomainCondition);
             }
-            let required = definedness_obligations_in_domain(
-                &result.original, 100_000, domain,
-            ).map_err(|_| E::MissingDomainCondition)?;
-            if required.iter().any(|condition| !source.conditions().contains(condition)) {
+            let required = definedness_obligations_in_domain(&result.original, 100_000, domain)
+                .map_err(|_| E::MissingDomainCondition)?;
+            if required
+                .iter()
+                .any(|condition| !source.conditions().contains(condition))
+            {
                 return Err(E::MissingDomainCondition);
             }
         }
         _ => return Err(E::MissingDomainCondition),
     }
     let mut steps = result.steps.iter();
-    let verified = verify_node(&result.original, &result.variable, &mut steps, 1, result.domain)?;
+    let verified = verify_node(
+        &result.original,
+        &result.variable,
+        &mut steps,
+        1,
+        result.domain,
+    )?;
     if steps.next().is_some() {
         return Err(E::UnexpectedStep);
     }
@@ -537,9 +564,9 @@ mod analytic_adversarial {
     fn forged_domain_and_function_rule_do_not_verify() {
         let symbol = Symbol::new("x").unwrap();
         let original = Expr::log(Expr::from(symbol.clone()));
-        let real_source = DomainExpression::from_expr_in_domain(
-            original.clone(), ScalarDomain::Real, 64, 8,
-        ).unwrap();
+        let real_source =
+            DomainExpression::from_expr_in_domain(original.clone(), ScalarDomain::Real, 64, 8)
+                .unwrap();
         let valid = EvaluationContext::default()
             .differentiate_domain_expression(&real_source, &symbol, ScalarDomain::Real)
             .unwrap();
@@ -561,9 +588,7 @@ mod analytic_adversarial {
 
         let mut changed = valid.clone();
         changed.source = Some(
-            DomainExpression::from_expr_in_domain(
-                original, ScalarDomain::Complex, 64, 8,
-            ).unwrap(),
+            DomainExpression::from_expr_in_domain(original, ScalarDomain::Complex, 64, 8).unwrap(),
         );
         assert_eq!(
             verify_symbolic_derivative(&changed),

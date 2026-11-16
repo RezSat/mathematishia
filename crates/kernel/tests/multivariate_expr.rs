@@ -42,16 +42,29 @@ fn explicit_ambient_ring_zero_and_constants() {
                 sorted.sort();
                 sorted
             });
-            assert_eq!(result.total_degree(), if scalar.numerator().is_zero() { None } else { Some(0) });
+            assert_eq!(
+                result.total_degree(),
+                if scalar.numerator().is_zero() {
+                    None
+                } else {
+                    Some(0)
+                }
+            );
             assert_eq!(
                 result,
-                P::try_from_expr(&result.to_expr(L::default()).unwrap(), &ambient, L::default())
-                    .unwrap()
+                P::try_from_expr(
+                    &result.to_expr(L::default()).unwrap(),
+                    &ambient,
+                    L::default()
+                )
+                .unwrap()
             );
         }
     }
     assert_eq!(
-        P::try_from_expr(&Expr::from(7), &[], L::default()).unwrap().coefficient(&[]),
+        P::try_from_expr(&Expr::from(7), &[], L::default())
+            .unwrap()
+            .coefficient(&[]),
         Ok(q(7))
     );
     assert_eq!(
@@ -66,10 +79,7 @@ fn explicit_ambient_ring_zero_and_constants() {
 
 #[test]
 fn canonical_variable_orders_and_nested_expansion() {
-    let lhs = Expr::mul([
-        Expr::add([x(), y()]),
-        Expr::add([x(), Expr::from(-2)]),
-    ]);
+    let lhs = Expr::mul([Expr::add([x(), y()]), Expr::add([x(), Expr::from(-2)])]);
     let result = convert(&lhs);
     let same = P::try_from_expr(&lhs, &[s("x"), s("y")], L::default()).unwrap();
     assert_eq!(result, same);
@@ -106,7 +116,10 @@ fn cancellation_and_exact_mixed_rationals() {
 
     let cancelled = Expr::add([x(), Expr::mul([Expr::from(-1), x()])]);
     assert!(convert(&cancelled).is_zero());
-    assert_eq!(convert(&cancelled).to_expr(L::default()).unwrap(), Expr::from(0));
+    assert_eq!(
+        convert(&cancelled).to_expr(L::default()).unwrap(),
+        Expr::from(0)
+    );
 }
 
 #[test]
@@ -115,7 +128,10 @@ fn rejects_unsupported_powers_and_functions_without_approximation() {
         (Expr::pow(x(), Expr::from(0)), E::ZeroExponent),
         (Expr::pow(Expr::from(0), Expr::from(0)), E::ZeroExponent),
         (Expr::pow(x(), Expr::from(-1)), E::NegativeExponent),
-        (Expr::pow(x(), Expr::from(frac(1, 2))), E::NonIntegerExponent),
+        (
+            Expr::pow(x(), Expr::from(frac(1, 2))),
+            E::NonIntegerExponent,
+        ),
         (Expr::pow(x(), y()), E::SymbolicExponent),
         (Expr::pow(x(), Expr::from(129)), E::ExponentLimit),
         (Expr::sin(x()), E::UnsupportedAnalyticFunction),
@@ -127,7 +143,10 @@ fn rejects_unsupported_powers_and_functions_without_approximation() {
             Expr::function(s("custom"), Expr::from(0)),
             E::UnsupportedUserFunction,
         ),
-        (Expr::add([x(), Expr::sin(Expr::from(0))]), E::UnsupportedAnalyticFunction),
+        (
+            Expr::add([x(), Expr::sin(Expr::from(0))]),
+            E::UnsupportedAnalyticFunction,
+        ),
     ] {
         assert_eq!(P::try_from_expr(&expr, &vars(), L::default()), Err(failure));
     }
@@ -171,7 +190,11 @@ fn conservative_limits_prevent_intermediate_overflow() {
         Err(E::ExponentLimit)
     );
     assert_eq!(
-        P::try_from_expr(&Expr::mul([Expr::pow(x(), Expr::from(2)), y()]), &vars(), limits),
+        P::try_from_expr(
+            &Expr::mul([Expr::pow(x(), Expr::from(2)), y()]),
+            &vars(),
+            limits
+        ),
         Err(E::Polynomial(M::TotalDegreeLimit))
     );
     limits = L::default();
@@ -232,23 +255,17 @@ fn domain_entrypoint_keeps_history_that_bare_expr_cannot_recover() {
 
 #[test]
 fn domain_real_and_complex_conditions_and_exhaustion() {
-    let real_log = DomainExpression::from_expr_in_domain(
-        Expr::log(x()),
-        ScalarDomain::Real,
-        100,
-        10,
-    )
-    .unwrap();
-    let complex_log = DomainExpression::from_expr_in_domain(
-        Expr::log(x()),
-        ScalarDomain::Complex,
-        100,
-        10,
-    )
-    .unwrap();
+    let real_log =
+        DomainExpression::from_expr_in_domain(Expr::log(x()), ScalarDomain::Real, 100, 10).unwrap();
+    let complex_log =
+        DomainExpression::from_expr_in_domain(Expr::log(x()), ScalarDomain::Complex, 100, 10)
+            .unwrap();
     let make_zero = |domain_call| {
         DomainExpression::multiply(
-            [DomainExpression::from_expr(Expr::from(0), 10).unwrap(), domain_call],
+            [
+                DomainExpression::from_expr(Expr::from(0), 10).unwrap(),
+                domain_call,
+            ],
             10,
         )
         .unwrap()
@@ -262,9 +279,8 @@ fn domain_real_and_complex_conditions_and_exhaustion() {
     assert_ne!(saved_real.conditions(), saved_complex.conditions());
     assert_eq!(
         P::try_from_domain_expression(
-            &DomainExpression::from_expr_in_domain(
-                Expr::log(x()), ScalarDomain::Real, 100, 10
-            ).unwrap(),
+            &DomainExpression::from_expr_in_domain(Expr::log(x()), ScalarDomain::Real, 100, 10)
+                .unwrap(),
             &vars(),
             L::default(),
         ),
@@ -291,8 +307,12 @@ fn eval_expr(expr: &Expr, x_val: &Rational, y_val: &Rational) -> Rational {
         ExprView::Symbol(s) if s.name() == "x" => x_val.clone(),
         ExprView::Symbol(s) if s.name() == "y" => y_val.clone(),
         ExprView::Symbol(_) => panic!("unexpected variable"),
-        ExprView::Add(xs) => xs.iter().fold(q(0), |acc, x| &acc + &eval_expr(x, x_val, y_val)),
-        ExprView::Mul(xs) => xs.iter().fold(q(1), |acc, x| &acc * &eval_expr(x, x_val, y_val)),
+        ExprView::Add(xs) => xs
+            .iter()
+            .fold(q(0), |acc, x| &acc + &eval_expr(x, x_val, y_val)),
+        ExprView::Mul(xs) => xs
+            .iter()
+            .fold(q(1), |acc, x| &acc * &eval_expr(x, x_val, y_val)),
         ExprView::Pow { base, exponent } => {
             let ExprView::Integer(n) = exponent.view() else {
                 panic!("test generator uses only positive integer powers");
@@ -305,7 +325,9 @@ fn eval_expr(expr: &Expr, x_val: &Rational, y_val: &Rational) -> Rational {
     }
 }
 fn next(seed: &mut u64) -> u64 {
-    *seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+    *seed = seed
+        .wrapping_mul(6364136223846793005)
+        .wrapping_add(1442695040888963407);
     *seed
 }
 
@@ -324,7 +346,10 @@ fn seeded_independent_exact_evaluations_and_full_coefficient_roundtrips() {
             .collect();
         let polynomial = poly(terms);
         let expr = polynomial.to_expr(L::default()).unwrap();
-        assert_eq!(P::try_from_expr(&expr, &vars(), L::default()), Ok(polynomial.clone()));
+        assert_eq!(
+            P::try_from_expr(&expr, &vars(), L::default()),
+            Ok(polynomial.clone())
+        );
         for a in -2..=2 {
             for b in -2..=2 {
                 let independent = eval_expr(&expr, &q(a), &q(b));
@@ -343,5 +368,9 @@ fn embedded_positive_powers_do_not_claim_general_simplification() {
     assert_eq!(p.coefficient(&[7, 0]), Ok(q(8)));
     assert_eq!(p.coefficient(&[6, 0]), Ok(q(28)));
     assert_eq!(p.coefficient(&[0, 0]), Ok(q(1)));
-    assert_eq!(p.to_expr(L::default()).and_then(|expr| P::try_from_expr(&expr, &vars(), L::default())), Ok(p));
+    assert_eq!(
+        p.to_expr(L::default())
+            .and_then(|expr| P::try_from_expr(&expr, &vars(), L::default())),
+        Ok(p)
+    );
 }

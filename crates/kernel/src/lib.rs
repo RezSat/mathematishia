@@ -12,8 +12,8 @@ mod assumptions;
 mod budget;
 mod conditional_rewrite;
 mod context;
-mod differentiate_expr;
 mod derivation_render;
+mod differentiate_expr;
 mod domain_operations;
 mod exact_matrix;
 mod extended_gcd;
@@ -56,14 +56,14 @@ pub use conditional_rewrite::{
     verify_composite_inverse_step,
 };
 pub use context::{EvaluationContext, EvaluationError, ResourceLimitKind, ResourceLimits};
+pub use derivation_render::{
+    DerivationRenderError, RenderedClaim, RenderedConclusion, RenderedCondition,
+    RenderedDerivation, RenderedLine, RenderedStatement, RenderedStep, render_linear_solution,
+    render_proof_graph, render_symbolic_derivative,
+};
 pub use differentiate_expr::{
     DerivativeRuleId, DerivativeVerificationError, DifferentiationStep, SymbolicDerivative,
     SymbolicDifferentiationError, verify_symbolic_derivative,
-};
-pub use derivation_render::{
-    DerivationRenderError, RenderedClaim, RenderedConclusion, RenderedCondition, RenderedDerivation,
-    RenderedLine, RenderedStatement, RenderedStep, render_linear_solution, render_proof_graph,
-    render_symbolic_derivative,
 };
 pub use domain_operations::{
     DomainOperationError, DomainRewrite, DomainRewriteOutcome, rewrite_domain_once,

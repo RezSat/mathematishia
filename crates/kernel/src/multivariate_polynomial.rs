@@ -318,24 +318,23 @@ impl MultivariatePolynomial {
                     .expect("each sorted variable came from the input")
             })
             .collect();
-        let converted = terms
-            .into_iter()
-            .map(|(powers, coefficient)| {
-                if powers.len() != variables.len() {
-                    return Err(MultivariateError::ExponentArity);
-                }
-                let ordered = positions
-                    .iter()
-                    .map(|position| {
-                        u32::try_from(powers[*position])
-                            .map_err(|_| MultivariateError::NegativeExponent)
-                    })
-                    .collect::<Result<Vec<_>, _>>()?;
-                Ok((ordered, coefficient))
-            })
-            .collect::<Result<Vec<_>, _>>()?;
-        // Enforce the raw input bound before collecting a caller-controlled
-        // stream into a large Vec: the iterator above is bounded below instead.
+        let mut converted = Vec::new();
+        for (powers, coefficient) in terms {
+            if converted.len() >= meter.limits.max_input_terms {
+                return Err(MultivariateError::InputTermLimit);
+            }
+            if powers.len() != variables.len() {
+                return Err(MultivariateError::ExponentArity);
+            }
+            let ordered = positions
+                .iter()
+                .map(|position| {
+                    u32::try_from(powers[*position])
+                        .map_err(|_| MultivariateError::NegativeExponent)
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+            converted.push((ordered, coefficient));
+        }
         Self::from_terms(sorted, converted, &mut meter)
     }
 
@@ -548,7 +547,8 @@ impl MultivariatePolynomial {
             let mut term = coefficient.clone();
             for (power, value) in powers.iter().zip(values) {
                 if *power != 0 {
-                    term = meter.mul(&term, &meter.power(value, *power)?)?;
+                    let value_power = meter.power(value, *power)?;
+                    term = meter.mul(&term, &value_power)?;
                 }
             }
             total = meter.add(&total, &term)?;
@@ -573,7 +573,8 @@ impl MultivariatePolynomial {
         let mut result = Vec::new();
         for (powers, coefficient) in &self.terms {
             meter.charge(1)?;
-            let new_coefficient = meter.mul(coefficient, &meter.power(at, powers[position])?)?;
+            let value_power = meter.power(at, powers[position])?;
+            let new_coefficient = meter.mul(coefficient, &value_power)?;
             let mut new_powers = powers.clone();
             new_powers.remove(position);
             result.push((new_powers, new_coefficient));

@@ -238,7 +238,9 @@ fn root_order(left: &ExactQuadraticRoot, right: &ExactQuadraticRoot) -> Ordering
     match (left, right) {
         (ExactQuadraticRoot::Rational(a), ExactQuadraticRoot::Rational(b)) => a.cmp(b),
         (ExactQuadraticRoot::Rational(_), ExactQuadraticRoot::Algebraic { .. }) => Ordering::Less,
-        (ExactQuadraticRoot::Algebraic { .. }, ExactQuadraticRoot::Rational(_)) => Ordering::Greater,
+        (ExactQuadraticRoot::Algebraic { .. }, ExactQuadraticRoot::Rational(_)) => {
+            Ordering::Greater
+        }
         (
             ExactQuadraticRoot::Algebraic {
                 minimal_polynomial: a,

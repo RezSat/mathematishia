@@ -171,20 +171,26 @@ fn rejects_unsupported_powers_and_functions_without_approximation() {
 
 #[test]
 fn conservative_limits_prevent_intermediate_overflow() {
-    let mut limits = L::default();
-    limits.max_variables = 1;
+    let limits = L {
+        max_variables: 1,
+        ..L::default()
+    };
     assert_eq!(
         P::try_from_expr(&Expr::from(0), &vars(), limits),
         Err(E::Polynomial(M::VariableLimit))
     );
-    limits = L::default();
-    limits.max_scalar_bits = 1;
+    let limits = L {
+        max_scalar_bits: 1,
+        ..L::default()
+    };
     assert_eq!(
         P::try_from_expr(&Expr::from(3), &[s("x")], limits),
         Err(E::Polynomial(M::ScalarBitLimit))
     );
-    limits = L::default();
-    limits.max_total_degree = 2;
+    let limits = L {
+        max_total_degree: 2,
+        ..L::default()
+    };
     assert_eq!(
         P::try_from_expr(&Expr::pow(x(), Expr::from(3)), &[s("x")], limits),
         Err(E::ExponentLimit)
@@ -197,30 +203,40 @@ fn conservative_limits_prevent_intermediate_overflow() {
         ),
         Err(E::Polynomial(M::TotalDegreeLimit))
     );
-    limits = L::default();
-    limits.max_terms = 1;
+    let limits = L {
+        max_terms: 1,
+        ..L::default()
+    };
     assert_eq!(
         P::try_from_expr(&Expr::add([x(), y()]), &vars(), limits),
         Err(E::Polynomial(M::TermLimit))
     );
-    limits = L::default();
-    limits.max_input_terms = 1;
+    let limits = L {
+        max_input_terms: 1,
+        ..L::default()
+    };
     assert_eq!(
         P::try_from_expr(&Expr::add([x(), y()]), &vars(), limits),
         Err(E::Polynomial(M::InputTermLimit))
     );
-    limits = L::default();
-    limits.max_work_units = 1;
+    let limits = L {
+        max_work_units: 1,
+        ..L::default()
+    };
     assert_eq!(
         P::try_from_expr(&x(), &vars(), limits),
         Err(E::Polynomial(M::WorkLimit))
     );
     let p = poly(vec![(vec![1, 1], q(3))]);
-    limits = L::default();
-    limits.max_scalar_bits = 1;
+    let limits = L {
+        max_scalar_bits: 1,
+        ..L::default()
+    };
     assert_eq!(p.to_expr(limits), Err(E::Polynomial(M::ScalarBitLimit)));
-    limits = L::default();
-    limits.max_work_units = 1;
+    let limits = L {
+        max_work_units: 1,
+        ..L::default()
+    };
     assert_eq!(p.to_expr(limits), Err(E::Polynomial(M::WorkLimit)));
 
     // Dense intermediate exceeds the bounded sparse representation; do not

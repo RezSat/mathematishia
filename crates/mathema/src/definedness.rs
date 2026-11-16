@@ -9,6 +9,7 @@ use crate::{Condition, Expr, ExprView, Integer, Rational};
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum DefinednessError {
     UnsupportedExponent,
+    UnsupportedFunction,
     ZeroDenominator,
     NodeLimitExceeded,
     ConditionLimitExceeded,
@@ -20,6 +21,7 @@ impl fmt::Display for DefinednessError {
             Self::UnsupportedExponent => {
                 f.write_str("definedness is unsupported for this exponent")
             }
+            Self::UnsupportedFunction => f.write_str("function definedness is unsupported"),
             Self::ZeroDenominator => f.write_str("division by zero"),
             Self::NodeLimitExceeded => {
                 f.write_str("definedness inspection exceeded the node limit")
@@ -239,6 +241,7 @@ pub fn definedness_obligations(
             ExprView::Add(children) | ExprView::Mul(children) => {
                 pending.extend(children.iter().rev());
             }
+            ExprView::Function { .. } => return Err(DefinednessError::UnsupportedFunction),
             ExprView::Pow { base, exponent } => {
                 let ExprView::Integer(n) = exponent.view() else {
                     return Err(DefinednessError::UnsupportedExponent);

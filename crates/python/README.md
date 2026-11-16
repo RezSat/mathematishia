@@ -26,14 +26,15 @@ for root in roots.roots:
 
 - `solve`, `solve_quadratic` and `rational_solve_quadratic`: selected exact equation domains. The quadratic rational solver retains excluded denominator zeros.
 - `evaluate`, `differentiate`, `square_free`, `extended_gcd`, `modular_inverse`: exact rational-polynomial operations and independently checked Bézout coefficients.
-- `differentiate_expression`: formal differentiation of sums, products and positive integer powers, with verified derivation steps.
+- `differentiate_expression`: formal differentiation of sums, products, positive integer powers and entire analytic sine, cosine and exponential calls, with checked rule steps.
+- `differentiate_expression_real`: checked real-domain derivatives, including tangent and logarithm, with explicit symbolic prerequisites in `result.conditions`.
 - `rational_function`, `rational_evaluate`, `rational_differentiate`, `rational_operation`: partial rational functions with recorded domain restrictions.
 - `rational_simplify`, `rational_derivative`, `rational_value`, `rational_solve`: full univariate rational expressions and equations over Q, preserving source-domain exclusions.
 - `algebraic_roots`: exact quadratic roots, represented as rationals or as a monic minimal polynomial with a branch selector.
 - `factor_polynomial`: certified rational linear, quadratic and bounded cubic factors, plus unresolved cofactors.
 - `extension_value`, `extension_operation`, `extension_power`, `extension_minimal_polynomial`: arithmetic and minimal polynomials in supported certified abstract algebraic fields.
 
-The parser covers a bounded grammar. General function calculus, cross-field arithmetic, higher-degree factorization and a stable Python compatibility contract have not yet been implemented. See [the syntax specification](../../docs/design/mathema-surface.md).
+The parser covers a bounded grammar. Analytic numerical evaluation, general integration, cross-field arithmetic, complete polynomial factorization and a stable Python compatibility contract are not implemented. See [the syntax specification](../../docs/design/mathema-surface.md).
 
 ## Domain-aware expressions
 
@@ -185,3 +186,18 @@ assert len(affine.nullspace_basis) == 2
 Other operations: `matrix_rref` returns the row-reduced matrix, pivot
 columns and rank; `matrix_multiply` multiplies two matrices. The exact
 kernel currently accepts dimensions up to 16.
+
+## Domain-checked real differentiation
+
+```python
+import mathematishia as m
+
+result = m.differentiate_expression_real("tan(log(x))", "x")
+assert result.steps[-1].rule == "calculus.tan_chain"
+assert "x > 0" in result.conditions
+```
+
+Each condition is a required hypothesis, not a theorem proved by differentiation.
+The unrestricted `differentiate_expression` supports sine, cosine and
+exponential chain rules. Tangent and logarithm require the domain-aware interface.
+Complex principal-log differentiation is not included.

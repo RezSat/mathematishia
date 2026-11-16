@@ -43,6 +43,7 @@ cargo run -p mathematishia-cli -- factor '(x^3+x+1)*(x^3+x^2+1)' x
 cargo run -p mathematishia-cli -- fieldmin 'x^3-2' 'x^2' x
 cargo run -p mathematishia-cli -- fieldpow 'x^3-2' x -1 x
 cargo run -p mathematishia-cli -- diffexpr 'x*y+(x+1)^3' x
+cargo run -p mathematishia-cli -- diffreal 'tan(log(x))' x
 ```
 
 The CLI also exposes polynomial evaluation and GCD, rational-function operations, and rational equation solving. Run `cargo run -p mathematishia-cli -- --help` for the command reference.
@@ -90,9 +91,10 @@ rational expressions over Q, preserving excluded denominator zeros after
 cancellation. Solving currently returns admissible rational roots when the
 residual numerator has degree at most two.
 
-Domain-aware parsing retains restrictions removed by structural normalization;
-`domain`, `subdomain`, and `rewrite` expose them. Some older expression
-operations do not preserve this provenance.
+Domain-aware parsing retains restrictions removed by structural normalization,
+including nested logarithms and tangent calls. The `diffreal` command reports
+required real-domain conditions alongside its verified derivative steps.
+Legacy normalized-expression operations do not preserve this provenance.
 
 `factor` returns certified irreducible factors and, where necessary, unresolved
 cofactors. In addition to rational roots and quadratics, it handles bounded
@@ -103,8 +105,8 @@ factorizer over Q.
 `fieldmin`, `fieldpow`, and `fieldop` operate in abstract extensions with
 certified irreducible defining polynomials of degree two through eight.
 They do not select real or complex embeddings. The `qvalue` interface handles
-embedded quadratic arithmetic separately. Cross-field arithmetic and analytic
-functions are not implemented.
+embedded quadratic arithmetic separately. Cross-field arithmetic and analytic numerical evaluation are not implemented.
+Checked derivatives cover selected analytic functions with domain conditions.
 
 Resource limits bound selected algebraic operations; they are not process
 memory or execution-time limits.

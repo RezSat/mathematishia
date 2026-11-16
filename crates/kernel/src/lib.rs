@@ -12,6 +12,7 @@ mod assumptions;
 mod budget;
 mod conditional_rewrite;
 mod context;
+mod derivation_render;
 mod differentiate_expr;
 mod domain_operations;
 mod exact_matrix;
@@ -21,9 +22,11 @@ mod finite_field;
 mod finite_field_factorization;
 mod guarded_rewrite;
 mod hensel_lift;
+mod integration;
 mod linear_system_expr;
 mod modular_irreducibility;
 mod modular_reconstruction;
+mod multivariate_polynomial;
 mod poly_convert;
 mod poly_division;
 mod polynomial;
@@ -37,6 +40,7 @@ mod rational_expression;
 mod rational_factorization;
 mod rational_function;
 mod rational_quadratic;
+mod root_isolation;
 mod solve_linear;
 mod square_free;
 mod verification;
@@ -56,6 +60,11 @@ pub use conditional_rewrite::{
     verify_composite_inverse_step,
 };
 pub use context::{EvaluationContext, EvaluationError, ResourceLimitKind, ResourceLimits};
+pub use derivation_render::{
+    DerivationRenderError, RenderedClaim, RenderedConclusion, RenderedCondition,
+    RenderedDerivation, RenderedLine, RenderedStatement, RenderedStep, render_linear_solution,
+    render_proof_graph, render_symbolic_derivative,
+};
 pub use differentiate_expr::{
     DerivativeRuleId, DerivativeVerificationError, DifferentiationStep, SymbolicDerivative,
     SymbolicDifferentiationError, verify_symbolic_derivative,
@@ -84,6 +93,7 @@ pub use guarded_rewrite::{
 pub use hensel_lift::{
     HenselError, HenselPair, IntegerPolynomial, hensel_lift_pair, verify_hensel_pair,
 };
+pub use integration::{DefinitePolynomialIntegral, IntegrationError, PolynomialPrimitive};
 pub use linear_system_expr::{
     ExpressionLinearSystemSet, ExpressionLinearSystemSolution, LinearSystemExprError,
     solve_linear_system_expr, verify_linear_system_expr,
@@ -92,6 +102,7 @@ pub use mathema::{DefinednessError, DomainExpression, definedness_obligations};
 pub use modular_irreducibility::{
     ModularIrreducibilityCertificate, modular_irreducibility_witness, verify_modular_irreducibility,
 };
+pub use multivariate_polynomial::{MultivariateError, MultivariateLimits, MultivariatePolynomial};
 pub use poly_convert::PolynomialConversionError;
 pub use poly_division::ZeroPolynomialDivisor;
 pub use polynomial::RationalPolynomial;
@@ -119,6 +130,10 @@ pub use rational_factorization::{
 pub use rational_function::{RationalFunction, RationalFunctionError};
 pub use rational_quadratic::{
     RationalQuadraticResult, RationalQuadraticRoots, verify_rational_quadratic_equation,
+};
+pub use root_isolation::{
+    RootIntervalOutcome, RootRefinement, RootRefinementError, RootRefinementVerificationError,
+    verify_root_refinement,
 };
 pub use solve_linear::{
     EquationRuleId, EquationStep, LinearSolution, LinearSolveError, LinearSolveResult,
@@ -335,7 +350,8 @@ fn has_distributive_work(expr: &Expr) -> bool {
         ExprView::Integer(_)
         | ExprView::Rational(_)
         | ExprView::Symbol(_)
-        | ExprView::Pow { .. } => false,
+        | ExprView::Pow { .. }
+        | ExprView::Function { .. } => false,
     }
 }
 
@@ -398,6 +414,10 @@ pub fn substitute_symbol(expr: &Expr, symbol: &Symbol, replacement: &Expr) -> Ex
         ExprView::Pow { base, exponent } => Expr::pow(
             substitute_symbol(base, symbol, replacement),
             substitute_symbol(exponent, symbol, replacement),
+        ),
+        ExprView::Function { name, argument } => Expr::function(
+            name.clone(),
+            substitute_symbol(argument, symbol, replacement),
         ),
     }
 }

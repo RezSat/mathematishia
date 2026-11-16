@@ -33,6 +33,7 @@ pub enum LinearSystemExprError {
     UnlistedSymbol,
     NonAffine,
     UnsupportedPower,
+    UnsupportedFunction,
     Evaluation(EvaluationError),
     Matrix(MatrixError),
     VerificationFailed,
@@ -49,6 +50,9 @@ impl fmt::Display for LinearSystemExprError {
             Self::NonAffine => f.write_str("expression is not affine in the declared variables"),
             Self::UnsupportedPower => {
                 f.write_str("power is unsupported in a rational affine system")
+            }
+            Self::UnsupportedFunction => {
+                f.write_str("analytic functions are unsupported in a rational affine system")
             }
             Self::Evaluation(error) => write!(f, "{error}"),
             Self::Matrix(error) => write!(f, "{error}"),
@@ -182,6 +186,8 @@ fn extract(
             }
             Ok(result)
         }
+        ExprView::Function { .. } => Err(LinearSystemExprError::UnsupportedFunction),
+        ExprView::Function { .. } => Err(LinearSystemExprError::UnsupportedFunction),
         ExprView::Pow { base, exponent } => {
             let ExprView::Integer(n) = exponent.view() else {
                 return Err(LinearSystemExprError::UnsupportedPower);

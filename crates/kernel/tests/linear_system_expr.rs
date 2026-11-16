@@ -124,6 +124,16 @@ fn invalid_inputs_and_unsupported_expressions() {
             .unwrap_err(),
         Error::NonAffine
     );
+    for function in [
+        Expr::sin(v("x")),
+        Expr::log(v("x")),
+        Expr::function(s("custom"), v("x")),
+    ] {
+        assert_eq!(
+            solve_linear_system_expr(&ctx, &[eq(function, 0.into())], &vars).unwrap_err(),
+            Error::UnsupportedFunction
+        );
+    }
     for bad in [
         Expr::pow(v("x"), 0.into()),
         Expr::pow(v("x"), 2.into()),

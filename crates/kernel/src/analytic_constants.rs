@@ -255,7 +255,9 @@ fn scan(
                         AnalyticConstantUnsupported::Function(name.clone()),
                     ));
                 }
-                if first.is_none() && let Some(rule) = rule_at(node) {
+                if first.is_none()
+                    && let Some(rule) = rule_at(node)
+                {
                     first = Some(Hit {
                         path: path.clone(),
                         rule,
@@ -475,11 +477,17 @@ pub fn verify_analytic_constant_rewrite(
     // and condition vectors before any potentially deep structural equality.
     let mut certificate_source_meter = Meter { nodes: 0, work: 0 };
     let _ = conditions_for(
-        &certificate.source, certificate.domain, &mut certificate_source_meter, limits
+        &certificate.source,
+        certificate.domain,
+        &mut certificate_source_meter,
+        limits,
     )?;
     let mut certificate_result_meter = Meter { nodes: 0, work: 0 };
     let _ = conditions_for(
-        &certificate.result, certificate.domain, &mut certificate_result_meter, limits
+        &certificate.result,
+        certificate.domain,
+        &mut certificate_result_meter,
+        limits,
     )?;
     if expected_source != &certificate.source {
         return Ok(false);

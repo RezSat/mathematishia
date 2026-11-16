@@ -337,6 +337,7 @@ fn assert_invariants(expr: &Expr) {
             assert_invariants(base);
             assert_invariants(exponent);
         }
+        ExprNode::Function { argument, .. } => assert_invariants(argument),
         _ => {}
     }
 }
@@ -356,6 +357,12 @@ fn shallow() -> impl Strategy<Value = Expr> {
         (atom(), atom()).prop_map(|(a, b)| Expr::add([a, b])),
         (atom(), atom()).prop_map(|(a, b)| Expr::mul([a, b])),
         (atom(), atom()).prop_map(|(a, b)| Expr::pow(a, b)),
+        atom().prop_map(Expr::sin),
+        atom().prop_map(Expr::cos),
+        atom().prop_map(Expr::tan),
+        atom().prop_map(Expr::exp),
+        atom().prop_map(Expr::log),
+        atom().prop_map(|a| Expr::function(Symbol::new("custom").unwrap(), a)),
     ]
 }
 
@@ -436,4 +443,104 @@ proptest! {
         prop_assert_eq!(hash(&whole), hash(&Expr::from(n)));
         prop_assert_eq!(whole, Expr::from(n));
     }
+}
+
+#[test]
+fn analytic_function_nodes_are_immutable_and_distinct() {
+    let x = symbol("x");
+    let constructors: [(&str, fn(Expr) -> Expr); 5] = [
+        ("sin", Expr::sin),
+        ("cos", Expr::cos),
+        ("tan", Expr::tan),
+        ("exp", Expr::exp),
+        ("log", Expr::log),
+    ];
+    let mut unique = HashSet::new();
+    for (name, construct) in constructors {
+        let call = construct(x.clone());
+        assert_eq!(call, Expr::function(Symbol::new(name).unwrap(), x.clone()));
+        assert_eq!(call.to_string(), format!("{name}(x)"));
+        assert!(unique.insert(call.clone()));
+        assert_eq!(hash(&call), hash(&construct(x.clone())));
+        assert!(matches!(call.view(), ExprView::Function { name: n, argument }
+            if n.name() == name && argument == &x));
+        assert_ne!(call, symbol(name));
+        assert_ne!(call, construct(symbol("y")));
+    }
+    assert_eq!(unique.len(), 5);
+    assert_ne!(Expr::function(Symbol::new("Sin").unwrap(), x.clone()), Expr::sin(x));
+}
+
+#[test]
+fn analytic_nodes_preserve_nesting_and_structure() {
+    let x = symbol("x");
+    let a = Expr::log(Expr::tan(Expr::add([1.into(), x.clone()])));
+    let b = Expr::log(Expr::tan(Expr::add([x.clone(), 1.into()])));
+    assert_eq!(a, b);
+    assert_eq!(hash(&a), hash(&b));
+    assert_eq!(a.to_string(), "log(tan(1 + x))");
+    assert_eq!(Expr::pow(Expr::sin(x.clone()), 2.into()).to_string(), "sin(x) ^ 2");
+    assert_eq!(Expr::mul([2.into(), Expr::sin(x.clone())]).to_string(), "2 * sin(x)");
+    assert_eq!(Expr::sin(0.into()).to_string(), "sin(0)");
+    assert_ne!(Expr::sin(0.into()), 0.into());
+    assert_ne!(Expr::exp(0.into()), 1.into());
+    assert_ne!(Expr::log(1.into()), 0.into());
+    assert_invariants(&a);
+    let custom = Expr::function(Symbol::new("f").unwrap(), Expr::cos(x));
+    assert_eq!(custom.to_string(), "f(cos(x))");
+    assert_eq!(custom.function_domain_conditions(ScalarDomain::Real), None);
+}
+
+#[test]
+fn analytic_canonical_order_and_hashing_are_deterministic() {
+    let x = symbol("x");
+    let f = Expr::sin(x.clone());
+    let g = Expr::sin(symbol("y"));
+    let h = Expr::cos(x.clone());
+    let left = Expr::add([g.clone(), h.clone(), x.clone(), f.clone()]);
+    let right = Expr::add([f.clone(), x.clone(), g.clone(), h.clone()]);
+    assert_eq!(left, right);
+    assert_eq!(hash(&left), hash(&right));
+    assert_eq!(left.to_string(), "x + cos(x) + sin(x) + sin(y)");
+    assert_eq!(f.canonical_cmp(&g), Ordering::Less);
+    assert_eq!(h.canonical_cmp(&f), Ordering::Less);
+    assert_eq!(f.canonical_cmp(&Expr::mul([2.into(), x.clone()])), Ordering::Less);
+    assert_eq!(Expr::pow(x, 2.into()).canonical_cmp(&f), Ordering::Less);
+}
+
+#[test]
+fn analytic_domain_conditions_are_explicit_and_unproved() {
+    let x = symbol("x");
+    for domain in [ScalarDomain::Real, ScalarDomain::Complex] {
+        for call in [Expr::sin(x.clone()), Expr::cos(x.clone()), Expr::exp(x.clone())] {
+            assert_eq!(call.function_domain_conditions(domain), Some(vec![]));
+        }
+        assert_eq!(
+            Expr::tan(x.clone()).function_domain_conditions(domain),
+            Some(vec![Condition::NonZero(Expr::cos(x.clone()))])
+        );
+        assert_eq!(
+            Expr::function(Symbol::new("f").unwrap(), x.clone())
+                .function_domain_conditions(domain),
+            None
+        );
+    }
+    assert_eq!(
+        Expr::log(x.clone()).function_domain_conditions(ScalarDomain::Real),
+        Some(vec![Condition::Positive(x.clone())])
+    );
+    assert_eq!(
+        Expr::log(x.clone()).function_domain_conditions(ScalarDomain::Complex),
+        Some(vec![Condition::NonZero(x.clone())])
+    );
+    for domain in [ScalarDomain::Integer, ScalarDomain::Rational] {
+        assert_eq!(Expr::sin(x.clone()).function_domain_conditions(domain), None);
+        assert_eq!(Expr::log(x.clone()).function_domain_conditions(domain), None);
+    }
+    assert_eq!(x.function_domain_conditions(ScalarDomain::Real), None);
+    // Nested argument restrictions must not be silently inferred as checked.
+    assert_eq!(
+        Expr::sin(Expr::log(x)).function_domain_conditions(ScalarDomain::Real),
+        Some(vec![])
+    );
 }

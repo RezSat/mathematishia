@@ -178,6 +178,19 @@ class ExactMathTests(unittest.TestCase):
         with self.assertRaises(m.ResourceLimitError):
             m.differentiate_expression("x^999999999999999999999999999999999999999", "x")
 
+    def test_real_analytic_derivatives_keep_conditions(self):
+        value = m.differentiate_expression_real("tan(log(x))", "x")
+        self.assertIn("cos(", value.derivative)
+        self.assertTrue(any(" > 0" in condition for condition in value.conditions))
+        self.assertTrue(any(" != 0" in condition for condition in value.conditions))
+        self.assertTrue(all(step.rule.startswith("calculus.") for step in value.steps))
+        self.assertEqual(value.steps[-1].rule, "calculus.tan_chain")
+        self.assertEqual(m.differentiate_expression("sin(x)", "x").derivative, "cos(x)")
+        with self.assertRaises(m.UnsupportedMathematicsError):
+            m.differentiate_expression("log(x)", "x")
+        with self.assertRaises(FrozenInstanceError):
+            value.conditions = ()
+
     def test_domain_aware_rational_function_and_holes(self):
         result = m.rational_function("x^2-1", "x-1", "x")
         self.assertEqual(result.numerator.coefficients, (Fraction(1), Fraction(1)))

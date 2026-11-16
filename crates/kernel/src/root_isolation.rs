@@ -126,7 +126,7 @@ impl EvaluationContext {
     /// Refines a *supplied* exact rational interval by at most max_bisections.
     ///
     /// The input must be a nonzero polynomial, lower < upper, and target_width
-    /// > 0. Exact endpoint roots take precedence. With matching nonzero endpoint
+    /// must be strictly positive. Exact endpoint roots take precedence. With matching nonzero endpoint
     /// signs the original interval is returned unresolved without sampling.
     /// With a strict sign change, each exact midpoint either supplies a rational
     /// zero or replaces the endpoint having the same sign. The final bracket

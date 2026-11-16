@@ -3,7 +3,9 @@
 //! Python performs representation and presentation only. All algebraic work
 //! is delegated to the checked core, never reimplemented using Python floats.
 
-use mathema::{Condition, DomainExpression, Equation, Expr, ExprView, Rational, ScalarDomain, Symbol};
+use mathema::{
+    Condition, DomainExpression, Equation, Expr, ExprView, Rational, ScalarDomain, Symbol,
+};
 use mathema_frontend::{
     DomainParseError, DomainStatement, Statement, parse_domain_expression,
     parse_domain_expression_in_domain, parse_domain_statement, parse_expression, parse_statement,
@@ -793,19 +795,23 @@ fn py_differentiate_expression_real(
     variable: &str,
 ) -> PyResult<PyConditionalDerivative> {
     let symbol = selected_variable(variable)?;
-    let expression = parse_domain_expression_in_domain(source, ScalarDomain::Real)
-        .map_err(map_domain_parse)?;
+    let expression =
+        parse_domain_expression_in_domain(source, ScalarDomain::Real).map_err(map_domain_parse)?;
     let result = EvaluationContext::default()
         .differentiate_domain_expression(&expression, &symbol, ScalarDomain::Real)
         .map_err(map_evaluation_error)?;
-    let steps = result.steps().iter().map(|step| {
-        (
-            step.before().to_string(),
-            step.derivative().to_string(),
-            step.rule().stable_id().to_owned(),
-            "derivative_of".to_owned(),
-        )
-    }).collect();
+    let steps = result
+        .steps()
+        .iter()
+        .map(|step| {
+            (
+                step.before().to_string(),
+                step.derivative().to_string(),
+                step.rule().stable_id().to_owned(),
+                "derivative_of".to_owned(),
+            )
+        })
+        .collect();
     Ok((
         result.derivative().to_string(),
         steps,

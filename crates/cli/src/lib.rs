@@ -6,7 +6,9 @@
 use std::fmt;
 use std::fmt::Write as _;
 
-use mathema::{Condition, DomainExpression, Equation, Expr, ExprView, Rational, ScalarDomain, Symbol};
+use mathema::{
+    Condition, DomainExpression, Equation, Expr, ExprView, Rational, ScalarDomain, Symbol,
+};
 use mathema_frontend::{
     DomainStatement, Statement, parse_domain_expression, parse_domain_expression_in_domain,
     parse_domain_statement, parse_expression, parse_statement,
@@ -970,7 +972,9 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
                 .map_err(|error| invalid(error.to_string()))?;
             let mut out = format!(
                 "derivative: {}\nconditions: {}\nsteps: {}",
-                result.derivative(), result.conditions().len(), result.steps().len()
+                result.derivative(),
+                result.conditions().len(),
+                result.steps().len()
             );
             for condition in result.conditions() {
                 write!(&mut out, "\nrequired: {}", condition_text(condition))
@@ -980,8 +984,12 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
                 write!(
                     &mut out,
                     "\n{}. d/d{symbol}({}) = {} [{}; derivative_of]",
-                    index + 1, step.before(), step.derivative(), step.rule().stable_id()
-                ).expect("writing to String is infallible");
+                    index + 1,
+                    step.before(),
+                    step.derivative(),
+                    step.rule().stable_id()
+                )
+                .expect("writing to String is infallible");
             }
             Ok(out)
         }

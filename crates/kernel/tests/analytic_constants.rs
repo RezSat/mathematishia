@@ -229,9 +229,16 @@ fn unsupported_domains_functions_and_powers_fail_closed() {
     );
     let symbolic_power = Expr::pow(symbol("x"), symbol("n"));
     let input = DomainExpression::with_conditions(
-        Expr::sin(0.into()), [Condition::NonZero(symbolic_power)], 100, 4
-    ).unwrap_err();
-    assert_eq!(input, mathema::DefinednessError::UnsupportedFunction);
+        0.into(), [Condition::NonZero(symbolic_power)], 100, 4
+    ).unwrap();
+    assert_eq!(
+        rewrite_analytic_constant_once(
+            &input, ScalarDomain::Real, AnalyticConstantLimits::default()
+        ),
+        Ok(AnalyticConstantOutcome::Unsupported(
+            AnalyticConstantUnsupported::Exponent
+        ))
+    );
 }
 
 #[test]

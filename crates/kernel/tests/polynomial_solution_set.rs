@@ -33,7 +33,10 @@ fn checked(polynomial: &RationalPolynomial) -> PartialPolynomialRootResult {
     result
 }
 
-fn forge(result: &PartialPolynomialRootResult, set: PolynomialZeroSet) -> PartialPolynomialRootResult {
+fn forge(
+    result: &PartialPolynomialRootResult,
+    set: PolynomialZeroSet,
+) -> PartialPolynomialRootResult {
     PartialPolynomialRootResult::from_unverified_parts(
         result.original().clone(),
         set,
@@ -91,8 +94,7 @@ fn quadratic_complex_roots_are_exact_and_distinct() {
         assert!(unresolved_cofactor.is_none());
         assert_eq!(roots.len(), 2);
         assert!(roots.iter().all(|root| {
-            root.multiplicity() == 1
-                && matches!(root.root(), ExactQuadraticRoot::Algebraic { .. })
+            root.multiplicity() == 1 && matches!(root.root(), ExactQuadraticRoot::Algebraic { .. })
         }));
         assert_ne!(roots[0].root(), roots[1].root());
         assert_eq!(result.root_evidence().len(), 1);
@@ -175,7 +177,10 @@ fn reducible_cubic_and_quartic_are_complete() {
     assert!(*complete);
     assert!(unresolved_cofactor.is_none());
     assert_eq!(roots.len(), 4);
-    assert_eq!(roots.iter().map(|root| root.multiplicity()).sum::<usize>(), 4);
+    assert_eq!(
+        roots.iter().map(|root| root.multiplicity()).sum::<usize>(),
+        4
+    );
 }
 
 #[test]
@@ -264,11 +269,8 @@ fn reject_forged_roots_completeness_multiplicity_and_source() {
         complete: true,
     };
     assert!(
-        !verify_partial_polynomial_roots(
-            &context,
-            &repeated,
-            &forge(&correct, wrong_multiplicity)
-        ).unwrap()
+        !verify_partial_polynomial_roots(&context, &repeated, &forge(&correct, wrong_multiplicity))
+            .unwrap()
     );
 
     let wrong_source = PartialPolynomialRootResult::from_unverified_parts(
@@ -284,7 +286,9 @@ fn reject_forged_roots_completeness_multiplicity_and_source() {
         unresolved_cofactor: None,
         complete: true,
     };
-    assert!(!verify_partial_polynomial_roots(&context, &repeated, &forge(&correct, duplicate)).unwrap());
+    assert!(
+        !verify_partial_polynomial_roots(&context, &repeated, &forge(&correct, duplicate)).unwrap()
+    );
 }
 
 #[test]
@@ -348,9 +352,9 @@ fn boundaries_large_coefficients_and_resource_exhaustion() {
     );
     assert_eq!(
         solve_partial_polynomial_roots(&context, &degree_33),
-        Err(PartialPolynomialRootError::Evaluation(EvaluationError::Limit(
-            ResourceLimitKind::PolynomialDegree
-        )))
+        Err(PartialPolynomialRootError::Evaluation(
+            EvaluationError::Limit(ResourceLimitKind::PolynomialDegree)
+        ))
     );
     let small = EvaluationContext::new(ResourceLimits {
         max_scalar_bits: 8,
@@ -358,9 +362,9 @@ fn boundaries_large_coefficients_and_resource_exhaustion() {
     });
     assert_eq!(
         solve_partial_polynomial_roots(&small, &p(&[1_000, 1])),
-        Err(PartialPolynomialRootError::Evaluation(EvaluationError::Limit(
-            ResourceLimitKind::ScalarBits
-        )))
+        Err(PartialPolynomialRootError::Evaluation(
+            EvaluationError::Limit(ResourceLimitKind::ScalarBits)
+        ))
     );
     let no_work = EvaluationContext::new(ResourceLimits {
         max_work_units: 0,
@@ -368,9 +372,9 @@ fn boundaries_large_coefficients_and_resource_exhaustion() {
     });
     assert_eq!(
         solve_partial_polynomial_roots(&no_work, &p(&[])),
-        Err(PartialPolynomialRootError::Evaluation(EvaluationError::Limit(
-            ResourceLimitKind::WorkUnits
-        )))
+        Err(PartialPolynomialRootError::Evaluation(
+            EvaluationError::Limit(ResourceLimitKind::WorkUnits)
+        ))
     );
 
     let large = p(&[-100_003, 0, 0, 1]);

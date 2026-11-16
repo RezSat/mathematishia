@@ -21,7 +21,7 @@ fn has_mul_with_add_factor(expr: &Expr) -> bool {
         ExprView::Pow { base, exponent } => {
             has_mul_with_add_factor(base) || has_mul_with_add_factor(exponent)
         }
-        ExprView::Integer(_) | ExprView::Rational(_) | ExprView::Symbol(_) => false,
+        ExprView::Integer(_) | ExprView::Rational(_) | ExprView::Symbol(_) | ExprView::Function { .. } => false,
     }
 }
 

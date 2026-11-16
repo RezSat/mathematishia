@@ -144,7 +144,8 @@ fn nested_affine_sums_and_scalar_distribution_verify_exactly() {
 fn complex_domain_entire_functions_are_supported() {
     let ctx = EvaluationContext::default();
     let variable = x();
-    for analytic in [Expr::sin, Expr::cos, Expr::exp] {
+    let analytics: [fn(Expr) -> Expr; 3] = [Expr::sin, Expr::cos, Expr::exp];
+    for analytic in analytics {
         let arg = affine(q(-3, 2), q(5, 4), &variable);
         let input = source(analytic(arg), ScalarDomain::Complex);
         let result = verify(&ctx, &input, &variable, ScalarDomain::Complex);

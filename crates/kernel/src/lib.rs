@@ -21,8 +21,10 @@ mod finite_field;
 mod finite_field_factorization;
 mod guarded_rewrite;
 mod hensel_lift;
+mod integration;
 mod modular_irreducibility;
 mod modular_reconstruction;
+mod multivariate_polynomial;
 mod poly_convert;
 mod poly_division;
 mod polynomial;
@@ -84,10 +86,12 @@ pub use guarded_rewrite::{
 pub use hensel_lift::{
     HenselError, HenselPair, IntegerPolynomial, hensel_lift_pair, verify_hensel_pair,
 };
+pub use integration::{DefinitePolynomialIntegral, IntegrationError, PolynomialPrimitive};
 pub use mathema::{DefinednessError, DomainExpression, definedness_obligations};
 pub use modular_irreducibility::{
     ModularIrreducibilityCertificate, modular_irreducibility_witness, verify_modular_irreducibility,
 };
+pub use multivariate_polynomial::{MultivariateError, MultivariateLimits, MultivariatePolynomial};
 pub use poly_convert::PolynomialConversionError;
 pub use poly_division::ZeroPolynomialDivisor;
 pub use polynomial::RationalPolynomial;
@@ -335,7 +339,8 @@ fn has_distributive_work(expr: &Expr) -> bool {
         ExprView::Integer(_)
         | ExprView::Rational(_)
         | ExprView::Symbol(_)
-        | ExprView::Pow { .. } => false,
+        | ExprView::Pow { .. }
+        | ExprView::Function { .. } => false,
     }
 }
 
@@ -398,6 +403,10 @@ pub fn substitute_symbol(expr: &Expr, symbol: &Symbol, replacement: &Expr) -> Ex
         ExprView::Pow { base, exponent } => Expr::pow(
             substitute_symbol(base, symbol, replacement),
             substitute_symbol(exponent, symbol, replacement),
+        ),
+        ExprView::Function { name, argument } => Expr::function(
+            name.clone(),
+            substitute_symbol(argument, symbol, replacement),
         ),
     }
 }

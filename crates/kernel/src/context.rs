@@ -240,6 +240,7 @@ fn expression_size(expr: &Expr) -> u64 {
                 stack.push(exponent);
             }
             ExprView::Integer(_) | ExprView::Rational(_) | ExprView::Symbol(_) => {}
+            ExprView::Function { argument, .. } => stack.push(argument),
         }
     }
     count
@@ -291,6 +292,9 @@ impl EvaluationContext {
                 ExprView::Integer(value) => self.check_integer(value)?,
                 ExprView::Rational(value) => self.check_rational(value)?,
                 ExprView::Symbol(_) => {}
+                ExprView::Function { argument, .. } => {
+                    work.push((argument, depth.saturating_add(1)));
+                }
                 ExprView::Add(children) | ExprView::Mul(children) => {
                     for child in children {
                         work.push((child, depth.saturating_add(1)));

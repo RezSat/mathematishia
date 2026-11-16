@@ -6,10 +6,12 @@
 use std::fmt;
 use std::fmt::Write as _;
 
-use mathema::{Condition, DomainExpression, Equation, Expr, ExprView, Rational, Symbol};
+use mathema::{
+    Condition, DomainExpression, Equation, Expr, ExprView, Rational, ScalarDomain, Symbol,
+};
 use mathema_frontend::{
-    DomainStatement, Statement, parse_domain_expression, parse_domain_statement, parse_expression,
-    parse_statement,
+    DomainStatement, Statement, parse_domain_expression, parse_domain_expression_in_domain,
+    parse_domain_statement, parse_expression, parse_statement,
 };
 use mathematishia_kernel::{
     AlgebraicRootEvidence, AlgebraicRootSet, Assumptions, CertifiedAlgebraicField,
@@ -53,6 +55,7 @@ Usage:
   mathematishia matmul <LEFT_ROWS> <RIGHT_ROWS>
   mathematishia matsolve <ROWS> <VECTOR>
   mathematishia diffexpr <EXPRESSION> <VARIABLE>
+  mathematishia diffreal <EXPRESSION> <VARIABLE>
   mathematishia rsimplify <EXPRESSION> <VARIABLE>
   mathematishia rdiff <EXPRESSION> <VARIABLE>
   mathematishia reval <EXPRESSION> <VARIABLE> <RATIONAL>
@@ -91,6 +94,7 @@ Examples:
   mathematishia matdet '2,1;5,3'
   mathematishia matsolve '2,1;5,3' '5,13'
   mathematishia diffexpr 'x*y+(x+1)^3' x
+  mathematishia diffreal 'tan(log(x))' x
   mathematishia rsimplify '(x^2-1)/(x-1)' x
   mathematishia rsolve '(x^2-1)/(x-1)=3' x
   mathematishia rat 'x^2-1' 'x-1' x
@@ -956,6 +960,36 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
                     entry.polynomial().to_expr(&symbol)
                 )
                 .expect("writing to a String is infallible");
+            }
+            Ok(out)
+        }
+        ["diffreal", input, name] => {
+            let source = parse_domain_expression_in_domain(input, ScalarDomain::Real)
+                .map_err(|error| invalid(error.to_string()))?;
+            let symbol = variable(name)?;
+            let result = EvaluationContext::default()
+                .differentiate_domain_expression(&source, &symbol, ScalarDomain::Real)
+                .map_err(|error| invalid(error.to_string()))?;
+            let mut out = format!(
+                "derivative: {}\nconditions: {}\nsteps: {}",
+                result.derivative(),
+                result.conditions().len(),
+                result.steps().len()
+            );
+            for condition in result.conditions() {
+                write!(&mut out, "\nrequired: {}", condition_text(condition))
+                    .expect("writing to String is infallible");
+            }
+            for (index, step) in result.steps().iter().enumerate() {
+                write!(
+                    &mut out,
+                    "\n{}. d/d{symbol}({}) = {} [{}; derivative_of]",
+                    index + 1,
+                    step.before(),
+                    step.derivative(),
+                    step.rule().stable_id()
+                )
+                .expect("writing to String is infallible");
             }
             Ok(out)
         }

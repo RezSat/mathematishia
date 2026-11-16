@@ -97,6 +97,7 @@ class SymbolicDerivative:
     variable: str
     derivative: str
     steps: tuple[SymbolicDifferentiationStep, ...]
+    conditions: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -532,6 +533,22 @@ def differentiate_expression(source: str, variable: str) -> SymbolicDerivative:
     )
 
 
+def differentiate_expression_real(source: str, variable: str) -> SymbolicDerivative:
+    """Differentiate a real function with exact checked steps and prerequisites.
+
+    Conditions are symbolic requirements, not claims that they hold. Complex
+    logarithm differentiation is outside this real-domain interface.
+    """
+    derivative, steps, conditions = _native.differentiate_expression_real(source, variable)
+    return SymbolicDerivative(
+        source,
+        variable,
+        derivative,
+        tuple(SymbolicDifferentiationStep(*step) for step in steps),
+        tuple(conditions),
+    )
+
+
 def square_free(source: str, variable: str) -> SquareFreeDecomposition:
     """Separate exact polynomial multiplicity classes, not irreducible factors."""
     unit, factors = _native.square_free(source, variable)
@@ -676,7 +693,7 @@ __all__ = [
     "AlgebraicExtensionValue", "extension_value", "extension_operation",
     "extension_power", "extension_minimal_polynomial",
     "SymbolicDifferentiationStep", "SymbolicDerivative",
-    "expression", "expand", "solve", "solve_quadratic", "algebraic_roots", "polynomial", "differentiate", "differentiate_expression", "square_free",
+    "expression", "expand", "solve", "solve_quadratic", "algebraic_roots", "polynomial", "differentiate", "differentiate_expression", "differentiate_expression_real", "square_free",
     "evaluate", "divide", "gcd", "rational_function", "rational_evaluate",
     "rational_differentiate", "rational_operation", "rational_solve_quadratic",
     "rational_simplify", "rational_derivative", "rational_value", "rational_solve",

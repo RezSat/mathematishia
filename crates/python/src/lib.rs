@@ -3,10 +3,12 @@
 //! Python performs representation and presentation only. All algebraic work
 //! is delegated to the checked core, never reimplemented using Python floats.
 
-use mathema::{Condition, DomainExpression, Equation, Expr, ExprView, Rational, Symbol};
+use mathema::{
+    Condition, DomainExpression, Equation, Expr, ExprView, Rational, ScalarDomain, Symbol,
+};
 use mathema_frontend::{
-    DomainParseError, DomainStatement, Statement, parse_domain_expression, parse_domain_statement,
-    parse_expression, parse_statement,
+    DomainParseError, DomainStatement, Statement, parse_domain_expression,
+    parse_domain_expression_in_domain, parse_domain_statement, parse_expression, parse_statement,
 };
 use mathematishia_kernel::{
     AlgebraicExtensionError, AlgebraicRootEvidence, AlgebraicRootSet, Assumptions,
@@ -785,6 +787,38 @@ fn py_square_free(source: &str, variable: &str) -> PyResult<PySquareFreeResult> 
 type PySymbolicStep = (String, String, String, String);
 type PySymbolicDerivative = (String, Vec<PySymbolicStep>);
 
+type PyConditionalDerivative = (String, Vec<PySymbolicStep>, Vec<String>);
+
+#[pyfunction(name = "differentiate_expression_real")]
+fn py_differentiate_expression_real(
+    source: &str,
+    variable: &str,
+) -> PyResult<PyConditionalDerivative> {
+    let symbol = selected_variable(variable)?;
+    let expression =
+        parse_domain_expression_in_domain(source, ScalarDomain::Real).map_err(map_domain_parse)?;
+    let result = EvaluationContext::default()
+        .differentiate_domain_expression(&expression, &symbol, ScalarDomain::Real)
+        .map_err(map_evaluation_error)?;
+    let steps = result
+        .steps()
+        .iter()
+        .map(|step| {
+            (
+                step.before().to_string(),
+                step.derivative().to_string(),
+                step.rule().stable_id().to_owned(),
+                "derivative_of".to_owned(),
+            )
+        })
+        .collect();
+    Ok((
+        result.derivative().to_string(),
+        steps,
+        result.conditions().iter().map(condition_text).collect(),
+    ))
+}
+
 #[pyfunction(name = "differentiate_expression")]
 fn py_differentiate_expression(source: &str, variable: &str) -> PyResult<PySymbolicDerivative> {
     let selected = selected_variable(variable)?;
@@ -1340,6 +1374,7 @@ fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(py_differentiate, m)?)?;
     m.add_function(wrap_pyfunction!(py_square_free, m)?)?;
     m.add_function(wrap_pyfunction!(py_differentiate_expression, m)?)?;
+    m.add_function(wrap_pyfunction!(py_differentiate_expression_real, m)?)?;
     m.add_function(wrap_pyfunction!(py_rational_function, m)?)?;
     m.add_function(wrap_pyfunction!(py_rational_simplify, m)?)?;
     m.add_function(wrap_pyfunction!(py_rational_derivative, m)?)?;

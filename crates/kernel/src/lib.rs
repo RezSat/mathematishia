@@ -85,10 +85,10 @@ pub use hensel_lift::{
     HenselError, HenselPair, IntegerPolynomial, hensel_lift_pair, verify_hensel_pair,
 };
 pub use mathema::{DefinednessError, DomainExpression, definedness_obligations};
-pub use multivariate_polynomial::{MultivariateError, MultivariateLimits, MultivariatePolynomial};
 pub use modular_irreducibility::{
     ModularIrreducibilityCertificate, modular_irreducibility_witness, verify_modular_irreducibility,
 };
+pub use multivariate_polynomial::{MultivariateError, MultivariateLimits, MultivariatePolynomial};
 pub use poly_convert::PolynomialConversionError;
 pub use poly_division::ZeroPolynomialDivisor;
 pub use polynomial::RationalPolynomial;

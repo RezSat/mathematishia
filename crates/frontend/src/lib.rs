@@ -72,7 +72,9 @@ impl fmt::Display for ParseError {
                 "expected an expression, not an equation".to_owned()
             }
             ParseErrorKind::UnknownFunction(name) => format!("unknown function {name:?}"),
-            ParseErrorKind::UnsupportedFunctionDomain => "analytic function domain parsing is unsupported".to_owned(),
+            ParseErrorKind::UnsupportedFunctionDomain => {
+                "analytic function domain parsing is unsupported".to_owned()
+            }
             ParseErrorKind::InputLimitExceeded => "input byte limit exceeded".to_owned(),
             ParseErrorKind::TokenLimitExceeded => "token limit exceeded".to_owned(),
             ParseErrorKind::NestingLimitExceeded => "expression nesting limit exceeded".to_owned(),
@@ -345,7 +347,7 @@ fn lower(node: Syntax<'_>) -> Result<Expr, ParseError> {
                 "log" => Expr::log(value),
                 _ => unreachable!("parser admits only built-in functions"),
             })
-        },
+        }
         Syntax::Sum(left, right) => Ok(Expr::add([lower(*left)?, lower(*right)?])),
         Syntax::Difference(left, right) => Ok(Expr::add([
             lower(*left)?,
@@ -446,11 +448,9 @@ fn parse_syntax(input: &str) -> Result<SyntaxStatement<'_>, ParseError> {
 fn lower_domain(node: Syntax<'_>) -> Result<DomainExpression, DomainParseError> {
     const MAX_CONDITIONS: usize = 256;
     match node {
-        Syntax::Function(..) => Err(ParseError::at(
-            0,
-            ParseErrorKind::UnsupportedFunctionDomain,
-        )
-        .into()),
+        Syntax::Function(..) => {
+            Err(ParseError::at(0, ParseErrorKind::UnsupportedFunctionDomain).into())
+        }
         leaf @ (Syntax::Integer(..) | Syntax::Name(..)) => {
             Ok(DomainExpression::from_expr(lower(leaf)?, MAX_TOKENS)?)
         }
@@ -561,7 +561,10 @@ mod analytic_tests {
             ("exp(x)", Expr::exp(x.clone())),
             ("log(x)", Expr::log(x.clone())),
             ("sin(log(x))", Expr::sin(Expr::log(x.clone()))),
-            ("log(tan(1 + x))", Expr::log(Expr::tan(Expr::add([1.into(), x.clone()])))),
+            (
+                "log(tan(1 + x))",
+                Expr::log(Expr::tan(Expr::add([1.into(), x.clone()]))),
+            ),
             ("sin(x)^2", Expr::pow(Expr::sin(x.clone()), 2.into())),
             ("2*sin(x)", Expr::mul([2.into(), Expr::sin(x.clone())])),
             ("-sin(x)", Expr::mul([(-1).into(), Expr::sin(x.clone())])),
@@ -588,15 +591,24 @@ mod analytic_tests {
                 Expr::add([1.into(), Expr::from(Symbol::new("x").unwrap())])
             ])
         );
-        assert_eq!(parsed("2^3^2"), Expr::pow(2.into(), Expr::pow(3.into(), 2.into())));
-        assert_eq!(parsed("-x^2"), Expr::mul([
-            (-1).into(),
-            Expr::pow(Expr::from(Symbol::new("x").unwrap()), 2.into())
-        ]));
-        assert_eq!(parsed("3/2 + x"), Expr::add([
-            Expr::from(Rational::new(3.into(), 2.into()).unwrap()),
-            Expr::from(Symbol::new("x").unwrap())
-        ]));
+        assert_eq!(
+            parsed("2^3^2"),
+            Expr::pow(2.into(), Expr::pow(3.into(), 2.into()))
+        );
+        assert_eq!(
+            parsed("-x^2"),
+            Expr::mul([
+                (-1).into(),
+                Expr::pow(Expr::from(Symbol::new("x").unwrap()), 2.into())
+            ])
+        );
+        assert_eq!(
+            parsed("3/2 + x"),
+            Expr::add([
+                Expr::from(Rational::new(3.into(), 2.into()).unwrap()),
+                Expr::from(Symbol::new("x").unwrap())
+            ])
+        );
     }
 
     #[test]
@@ -612,7 +624,16 @@ mod analytic_tests {
                 &ParseErrorKind::UnknownFunction(name.to_owned())
             );
         }
-        for source in ["sin()", "sin(", "log(,)", "tan(x, y)", "cos(x", "sin(x))", "sin(x)y", "2sin(x)"] {
+        for source in [
+            "sin()",
+            "sin(",
+            "log(,)",
+            "tan(x, y)",
+            "cos(x",
+            "sin(x))",
+            "sin(x)y",
+            "2sin(x)",
+        ] {
             assert!(parse_expression(source).is_err(), "{source}");
         }
         assert_eq!(

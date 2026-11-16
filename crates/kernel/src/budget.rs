@@ -698,7 +698,9 @@ impl WorkBudget {
                 RationalPolynomial::new(vec![zero(), one()])
             }
             ExprView::Symbol(_) => return Err(PolynomialConversionError::OtherSymbol.into()),
-            ExprView::Function { .. } => return Err(PolynomialConversionError::UnsupportedFunction.into()),
+            ExprView::Function { .. } => {
+                return Err(PolynomialConversionError::UnsupportedFunction.into());
+            }
             ExprView::Add(terms) => {
                 let mut sum = RationalPolynomial::zero();
                 for term in terms {

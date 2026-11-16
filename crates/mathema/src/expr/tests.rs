@@ -462,13 +462,18 @@ fn analytic_function_nodes_are_immutable_and_distinct() {
         assert_eq!(call.to_string(), format!("{name}(x)"));
         assert!(unique.insert(call.clone()));
         assert_eq!(hash(&call), hash(&construct(x.clone())));
-        assert!(matches!(call.view(), ExprView::Function { name: n, argument }
-            if n.name() == name && argument == &x));
+        assert!(
+            matches!(call.view(), ExprView::Function { name: n, argument }
+            if n.name() == name && argument == &x)
+        );
         assert_ne!(call, symbol(name));
         assert_ne!(call, construct(symbol("y")));
     }
     assert_eq!(unique.len(), 5);
-    assert_ne!(Expr::function(Symbol::new("Sin").unwrap(), x.clone()), Expr::sin(x));
+    assert_ne!(
+        Expr::function(Symbol::new("Sin").unwrap(), x.clone()),
+        Expr::sin(x)
+    );
 }
 
 #[test]
@@ -479,8 +484,14 @@ fn analytic_nodes_preserve_nesting_and_structure() {
     assert_eq!(a, b);
     assert_eq!(hash(&a), hash(&b));
     assert_eq!(a.to_string(), "log(tan(1 + x))");
-    assert_eq!(Expr::pow(Expr::sin(x.clone()), 2.into()).to_string(), "sin(x) ^ 2");
-    assert_eq!(Expr::mul([2.into(), Expr::sin(x.clone())]).to_string(), "2 * sin(x)");
+    assert_eq!(
+        Expr::pow(Expr::sin(x.clone()), 2.into()).to_string(),
+        "sin(x) ^ 2"
+    );
+    assert_eq!(
+        Expr::mul([2.into(), Expr::sin(x.clone())]).to_string(),
+        "2 * sin(x)"
+    );
     assert_eq!(Expr::sin(0.into()).to_string(), "sin(0)");
     assert_ne!(Expr::sin(0.into()), 0.into());
     assert_ne!(Expr::exp(0.into()), 1.into());
@@ -507,7 +518,10 @@ fn analytic_canonical_order_and_hashing_are_deterministic() {
     assert_eq!(left.to_string(), "x + cos(x) + sin(x) + sin(y)");
     assert_eq!(f.canonical_cmp(&g), Ordering::Less);
     assert_eq!(h.canonical_cmp(&f), Ordering::Less);
-    assert_eq!(f.canonical_cmp(&Expr::mul([2.into(), x.clone()])), Ordering::Less);
+    assert_eq!(
+        f.canonical_cmp(&Expr::mul([2.into(), x.clone()])),
+        Ordering::Less
+    );
     assert_eq!(Expr::pow(x, 2.into()).canonical_cmp(&f), Ordering::Less);
 }
 
@@ -515,7 +529,11 @@ fn analytic_canonical_order_and_hashing_are_deterministic() {
 fn analytic_domain_conditions_are_explicit_and_unproved() {
     let x = symbol("x");
     for domain in [ScalarDomain::Real, ScalarDomain::Complex] {
-        for call in [Expr::sin(x.clone()), Expr::cos(x.clone()), Expr::exp(x.clone())] {
+        for call in [
+            Expr::sin(x.clone()),
+            Expr::cos(x.clone()),
+            Expr::exp(x.clone()),
+        ] {
             assert_eq!(call.function_domain_conditions(domain), Some(vec![]));
         }
         assert_eq!(
@@ -523,8 +541,7 @@ fn analytic_domain_conditions_are_explicit_and_unproved() {
             Some(vec![Condition::NonZero(Expr::cos(x.clone()))])
         );
         assert_eq!(
-            Expr::function(Symbol::new("f").unwrap(), x.clone())
-                .function_domain_conditions(domain),
+            Expr::function(Symbol::new("f").unwrap(), x.clone()).function_domain_conditions(domain),
             None
         );
     }
@@ -537,8 +554,14 @@ fn analytic_domain_conditions_are_explicit_and_unproved() {
         Some(vec![Condition::NonZero(x.clone())])
     );
     for domain in [ScalarDomain::Integer, ScalarDomain::Rational] {
-        assert_eq!(Expr::sin(x.clone()).function_domain_conditions(domain), None);
-        assert_eq!(Expr::log(x.clone()).function_domain_conditions(domain), None);
+        assert_eq!(
+            Expr::sin(x.clone()).function_domain_conditions(domain),
+            None
+        );
+        assert_eq!(
+            Expr::log(x.clone()).function_domain_conditions(domain),
+            None
+        );
     }
     assert_eq!(x.function_domain_conditions(ScalarDomain::Real), None);
     // Nested argument restrictions must not be silently inferred as checked.

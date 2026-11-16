@@ -298,7 +298,8 @@ impl Expr {
                 }
             }
             ExprNode::Function { name, argument } => {
-                write!(f, "{name}(")?;
+                Expr::from(name.clone()).fmt_at(f, 0)?;
+                f.write_str("(")?;
                 argument.fmt_at(f, 0)?;
                 f.write_str(")")?;
             }

@@ -462,14 +462,14 @@ pub fn rewrite_analytic_constant_once(
 /// exact recomposition, and *identical* accumulated domain restrictions.
 pub fn verify_analytic_constant_rewrite(
     expected_source: &DomainExpression,
+    expected_domain: ScalarDomain,
     certificate: &AnalyticConstantRewrite,
     limits: AnalyticConstantLimits,
 ) -> Result<bool, AnalyticConstantError> {
     validate_limits(limits)?;
-    if !matches!(
-        certificate.domain,
-        ScalarDomain::Real | ScalarDomain::Complex
-    ) || certificate.path.len() > limits.max_depth
+    if certificate.domain != expected_domain
+        || !matches!(expected_domain, ScalarDomain::Real | ScalarDomain::Complex)
+        || certificate.path.len() > limits.max_depth
     {
         return Ok(false);
     }

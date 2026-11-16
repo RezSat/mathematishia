@@ -89,6 +89,11 @@ pub struct ExpressionLinearSystemSolution {
 }
 
 impl ExpressionLinearSystemSolution {
+    /// Constructs a candidate for independent verification; no validity is implied.
+    pub fn from_parts(variables: Vec<Symbol>, set: ExpressionLinearSystemSet) -> Self {
+        Self { variables, set }
+    }
+
     pub fn variables(&self) -> &[Symbol] {
         &self.variables
     }

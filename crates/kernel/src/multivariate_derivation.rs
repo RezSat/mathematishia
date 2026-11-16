@@ -131,7 +131,11 @@ struct BoundedLine<'a> {
 
 impl fmt::Write for BoundedLine<'_> {
     fn write_str(&mut self, text: &str) -> fmt::Result {
-        let line_bytes = self.content.len().checked_add(text.len()).ok_or(fmt::Error)?;
+        let line_bytes = self
+            .content
+            .len()
+            .checked_add(text.len())
+            .ok_or(fmt::Error)?;
         let total_bytes = self.total_bytes.checked_add(text.len()).ok_or(fmt::Error)?;
         if line_bytes > MAX_LINE_BYTES || total_bytes > MAX_RENDER_BYTES {
             return Err(fmt::Error);

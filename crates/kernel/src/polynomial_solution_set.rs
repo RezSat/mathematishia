@@ -3,6 +3,7 @@
 //! The zero set is over the complex numbers. Certified degree-three or higher
 //! factors still have unresolved roots: factor irreducibility is not a root formula.
 
+use std::cmp::Ordering;
 use std::error::Error;
 use std::fmt;
 
@@ -230,6 +231,34 @@ fn add_distinct_roots(
     true
 }
 
+// Canonical presentation order: rational roots are numerically ascending;
+// otherwise use exact minimal-polynomial coefficients and branch identifiers.
+// The complex roots have no mathematical total order.
+fn root_order(left: &ExactQuadraticRoot, right: &ExactQuadraticRoot) -> Ordering {
+    match (left, right) {
+        (ExactQuadraticRoot::Rational(a), ExactQuadraticRoot::Rational(b)) => a.cmp(b),
+        (ExactQuadraticRoot::Rational(_), ExactQuadraticRoot::Algebraic { .. }) => Ordering::Less,
+        (ExactQuadraticRoot::Algebraic { .. }, ExactQuadraticRoot::Rational(_)) => Ordering::Greater,
+        (
+            ExactQuadraticRoot::Algebraic {
+                minimal_polynomial: a,
+                branch: a_branch,
+            },
+            ExactQuadraticRoot::Algebraic {
+                minimal_polynomial: b,
+                branch: b_branch,
+            },
+        ) => a
+            .coefficients()
+            .cmp(b.coefficients())
+            .then_with(|| a_branch.stable_id().cmp(b_branch.stable_id())),
+    }
+}
+
+fn sort_roots(roots: &mut [PolynomialRootMultiplicity]) {
+    roots.sort_by(|left, right| root_order(left.root(), right.root()));
+}
+
 /// Finds every currently constructible exact root and retains all other
 /// factor powers as an unresolved cofactor. The classification is complete
 /// only if no unresolved nonconstant factor remains.
@@ -285,6 +314,7 @@ pub fn solve_partial_polynomial_roots(
         ));
     }
 
+    sort_roots(&mut roots);
     let unresolved_cofactor = unresolved_product(context, &factorization)?;
     let result = PartialPolynomialRootResult::from_unverified_parts(
         original.clone(),
@@ -383,6 +413,7 @@ pub fn verify_partial_polynomial_roots(
             return Ok(false);
         }
     }
+    sort_roots(&mut roots);
     let unresolved_cofactor = unresolved_product(context, &factorization)?;
     Ok(proposed.zero_set
         == PolynomialZeroSet::Finite {

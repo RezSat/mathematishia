@@ -89,7 +89,8 @@ fn distribution_candidates(expr: &Expr) -> Vec<Expr> {
         ExprView::Integer(_)
         | ExprView::Rational(_)
         | ExprView::Symbol(_)
-        | ExprView::Pow { .. } => {}
+        | ExprView::Pow { .. }
+        | ExprView::Function { .. } => {}
     }
     results
 }

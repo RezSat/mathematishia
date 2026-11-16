@@ -41,6 +41,7 @@ impl DerivativeRuleId {
 pub enum SymbolicDifferentiationError {
     /// Zero, negative, fractional and symbolic exponents are unsupported.
     UnsupportedPower,
+    UnsupportedFunction,
 }
 
 impl fmt::Display for SymbolicDifferentiationError {
@@ -49,6 +50,7 @@ impl fmt::Display for SymbolicDifferentiationError {
             Self::UnsupportedPower => {
                 f.write_str("symbolic differentiation requires positive integer exponents")
             }
+            Self::UnsupportedFunction => f.write_str("analytic function differentiation is unsupported"),
         }
     }
 }
@@ -136,6 +138,7 @@ fn produce(
             (DerivativeRuleId::SelectedSymbol, Expr::from(1))
         }
         ExprView::Symbol(_) => (DerivativeRuleId::OtherSymbol, Expr::from(0)),
+        ExprView::Function { .. } => return Err(SymbolicDifferentiationError::UnsupportedFunction.into()),
         ExprView::Add(terms) => {
             let mut derivatives = Vec::with_capacity(terms.len());
             for term in terms {
@@ -227,6 +230,7 @@ pub enum DerivativeVerificationError {
     IncorrectRule,
     IncorrectDerivative,
     UnsupportedPower,
+    UnsupportedFunction,
     DepthLimit,
 }
 
@@ -238,6 +242,7 @@ impl fmt::Display for DerivativeVerificationError {
             Self::IncorrectRule => "wrong differentiation rule or relation",
             Self::IncorrectDerivative => "claimed derivative is not justified",
             Self::UnsupportedPower => "unsupported derivative power in claimed proof",
+            Self::UnsupportedFunction => "unsupported analytic function in claimed proof",
             Self::DepthLimit => "derivative verification nesting limit exceeded",
         };
         f.write_str(message)
@@ -267,6 +272,7 @@ fn verify_node<'a>(
             (DerivativeRuleId::SelectedSymbol, Expr::from(1))
         }
         ExprView::Symbol(_) => (DerivativeRuleId::OtherSymbol, Expr::from(0)),
+        ExprView::Function { .. } => return Err(E::UnsupportedFunction),
         ExprView::Add(terms) => {
             let mut expected_terms = Vec::with_capacity(terms.len());
             for term in terms {

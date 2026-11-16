@@ -394,6 +394,10 @@ pub fn substitute_symbol(expr: &Expr, symbol: &Symbol, replacement: &Expr) -> Ex
             substitute_symbol(base, symbol, replacement),
             substitute_symbol(exponent, symbol, replacement),
         ),
+        ExprView::Function { name, argument } => Expr::function(
+            name.clone(),
+            substitute_symbol(argument, symbol, replacement),
+        ),
     }
 }
 

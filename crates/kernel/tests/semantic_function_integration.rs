@@ -33,7 +33,7 @@ fn exact_substitution_recurses_through_unevaluated_calls() {
     let result = substitute_symbol(&original, &x, &Expr::from(2));
     assert_eq!(result, Expr::log(Expr::sin(Expr::add([Expr::from(2), y]))));
     assert_eq!(
-        substitute_symbol(&Expr::cos(Expr::from(x.clone())), &x, &Expr::from(x)),
+        substitute_symbol(&Expr::cos(Expr::from(x.clone())), &x, &Expr::from(x.clone())),
         Expr::cos(Expr::from(symbol("x")))
     );
 }

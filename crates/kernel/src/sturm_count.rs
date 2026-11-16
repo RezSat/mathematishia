@@ -289,8 +289,12 @@ impl EvaluationContext {
             upper_variations,
             root_count,
         };
-        verify_sturm_count(self, polynomial, lower, upper, &certificate)
-            .map_err(SturmCountError::Verification)?;
+        verify_sturm_count(self, polynomial, lower, upper, &certificate).map_err(|error| {
+            match error {
+                SturmVerificationError::Evaluation(error) => SturmCountError::Evaluation(error),
+                other => SturmCountError::Verification(other),
+            }
+        })?;
         Ok(certificate)
     }
 }
@@ -358,7 +362,8 @@ pub fn verify_sturm_count(
             {
                 return Err(SturmVerificationError::InvalidEvidence);
             }
-            let recomposed = work.add(&work.multiply(divisor, &evidence.quotient)?, &evidence.remainder)?;
+            let product = work.multiply(divisor, &evidence.quotient)?;
+            let recomposed = work.add(&product, &evidence.remainder)?;
             if recomposed != *dividend {
                 return Err(SturmVerificationError::InvalidEvidence);
             }

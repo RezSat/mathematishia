@@ -38,6 +38,7 @@ mod rational_expression;
 mod rational_factorization;
 mod rational_function;
 mod rational_quadratic;
+mod root_isolation;
 mod solve_linear;
 mod square_free;
 mod verification;
@@ -118,6 +119,10 @@ pub use rational_factorization::{
 pub use rational_function::{RationalFunction, RationalFunctionError};
 pub use rational_quadratic::{
     RationalQuadraticResult, RationalQuadraticRoots, verify_rational_quadratic_equation,
+};
+pub use root_isolation::{
+    RootIntervalOutcome, RootRefinement, RootRefinementError, RootRefinementVerificationError,
+    verify_root_refinement,
 };
 pub use solve_linear::{
     EquationRuleId, EquationStep, LinearSolution, LinearSolveError, LinearSolveResult,

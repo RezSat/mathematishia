@@ -527,3 +527,47 @@ mod adversarial {
         );
     }
 }
+
+#[cfg(test)]
+mod analytic_adversarial {
+    use super::*;
+    use crate::EvaluationContext;
+
+    #[test]
+    fn forged_domain_and_function_rule_do_not_verify() {
+        let symbol = Symbol::new("x").unwrap();
+        let original = Expr::log(Expr::from(symbol.clone()));
+        let real_source = DomainExpression::from_expr_in_domain(
+            original.clone(), ScalarDomain::Real, 64, 8,
+        ).unwrap();
+        let valid = EvaluationContext::default()
+            .differentiate_domain_expression(&real_source, &symbol, ScalarDomain::Real)
+            .unwrap();
+        assert_eq!(verify_symbolic_derivative(&valid), Ok(()));
+
+        let mut changed = valid.clone();
+        changed.steps.last_mut().unwrap().rule = DerivativeRuleId::Constant;
+        assert_eq!(
+            verify_symbolic_derivative(&changed),
+            Err(DerivativeVerificationError::IncorrectRule)
+        );
+
+        let mut changed = valid.clone();
+        changed.domain = Some(ScalarDomain::Complex);
+        assert_eq!(
+            verify_symbolic_derivative(&changed),
+            Err(DerivativeVerificationError::MissingDomainCondition)
+        );
+
+        let mut changed = valid.clone();
+        changed.source = Some(
+            DomainExpression::from_expr_in_domain(
+                original, ScalarDomain::Complex, 64, 8,
+            ).unwrap(),
+        );
+        assert_eq!(
+            verify_symbolic_derivative(&changed),
+            Err(DerivativeVerificationError::MissingDomainCondition)
+        );
+    }
+}

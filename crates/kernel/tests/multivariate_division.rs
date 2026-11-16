@@ -24,14 +24,14 @@ fn exact_division_and_nontrivial_remainder() {
     let limits = MultivariateLimits::default();
     let dividend = p(&[(2, 0, 1), (0, 1, 1)]);
     let divisor = p(&[(1, 0, 1), (0, 0, 1)]);
-    let result = divide_multivariate(&dividend, &[divisor.clone()], limits).unwrap();
+    let result = divide_multivariate(&dividend, std::slice::from_ref(&divisor), limits).unwrap();
     assert_eq!(result.quotients(), &[p(&[(1, 0, 1), (0, 0, -1)])]);
     assert_eq!(result.remainder(), &p(&[(0, 1, 1), (0, 0, 1)]));
     assert!(verify_multivariate_division(&dividend, &[divisor], &result, limits).unwrap());
 
     let divisible = p(&[(2, 0, 1), (1, 1, 1), (1, 0, 1), (0, 1, 1)]);
     let divisor = p(&[(1, 0, 1), (0, 1, 1)]);
-    let result = divide_multivariate(&divisible, &[divisor.clone()], limits).unwrap();
+    let result = divide_multivariate(&divisible, std::slice::from_ref(&divisor), limits).unwrap();
     assert_eq!(result.quotients(), &[p(&[(1, 0, 1), (0, 0, 1)])]);
     assert!(result.remainder().is_zero());
     assert!(verify_multivariate_division(&divisible, &[divisor], &result, limits).unwrap());
@@ -103,7 +103,7 @@ fn zero_polynomial_remains_in_ambient_ring() {
     let limits = MultivariateLimits::default();
     let zero = p(&[]);
     let divisor = p(&[(1, 0, 1)]);
-    let result = divide_multivariate(&zero, &[divisor.clone()], limits).unwrap();
+    let result = divide_multivariate(&zero, std::slice::from_ref(&divisor), limits).unwrap();
     assert_eq!(result.remainder(), &zero);
     assert_eq!(result.quotients(), &[zero.clone()]);
     assert_eq!(result.steps(), 0);

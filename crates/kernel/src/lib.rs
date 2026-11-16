@@ -330,7 +330,8 @@ fn has_distributive_work(expr: &Expr) -> bool {
         ExprView::Integer(_)
         | ExprView::Rational(_)
         | ExprView::Symbol(_)
-        | ExprView::Pow { .. } => false,
+        | ExprView::Pow { .. }
+        | ExprView::Function { .. } => false,
     }
 }
 

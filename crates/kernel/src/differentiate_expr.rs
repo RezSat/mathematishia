@@ -50,7 +50,9 @@ impl fmt::Display for SymbolicDifferentiationError {
             Self::UnsupportedPower => {
                 f.write_str("symbolic differentiation requires positive integer exponents")
             }
-            Self::UnsupportedFunction => f.write_str("analytic function differentiation is unsupported"),
+            Self::UnsupportedFunction => {
+                f.write_str("analytic function differentiation is unsupported")
+            }
         }
     }
 }
@@ -138,7 +140,9 @@ fn produce(
             (DerivativeRuleId::SelectedSymbol, Expr::from(1))
         }
         ExprView::Symbol(_) => (DerivativeRuleId::OtherSymbol, Expr::from(0)),
-        ExprView::Function { .. } => return Err(SymbolicDifferentiationError::UnsupportedFunction.into()),
+        ExprView::Function { .. } => {
+            return Err(SymbolicDifferentiationError::UnsupportedFunction.into());
+        }
         ExprView::Add(terms) => {
             let mut derivatives = Vec::with_capacity(terms.len());
             for term in terms {

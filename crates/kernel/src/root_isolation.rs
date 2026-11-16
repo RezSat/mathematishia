@@ -125,9 +125,9 @@ fn checked_input(
 impl EvaluationContext {
     /// Refines a *supplied* exact rational interval by at most max_bisections.
     ///
-    /// The input must be a nonzero polynomial, lower < upper, and target_width
-    /// must be strictly positive. Exact endpoint roots take precedence. With matching nonzero endpoint
-    /// signs the original interval is returned unresolved without sampling.
+    /// The input must be nonzero, with strictly increasing endpoints and a
+    /// positive target width. Exact endpoint roots take precedence. Matching
+    /// nonzero endpoint signs leave the original interval unresolved.
     /// With a strict sign change, each exact midpoint either supplies a rational
     /// zero or replaces the endpoint having the same sign. The final bracket
     /// certifies existence, never uniqueness. It may still contain other roots.

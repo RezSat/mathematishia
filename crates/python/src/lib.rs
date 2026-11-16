@@ -839,6 +839,7 @@ fn map_rational_expression(error: RationalExpressionError) -> PyErr {
         RationalExpressionError::RationalFunction(_)
         | RationalExpressionError::OtherSymbol
         | RationalExpressionError::UnsupportedExponent
+        | RationalExpressionError::UnsupportedFunction
         | RationalExpressionError::ExponentLimitExceeded
         | RationalExpressionError::UnsupportedCondition => {
             UnsupportedMathematicsError::new_err(error.to_string())

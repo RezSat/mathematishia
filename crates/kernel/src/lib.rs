@@ -23,6 +23,7 @@ mod guarded_rewrite;
 mod hensel_lift;
 mod modular_irreducibility;
 mod modular_reconstruction;
+mod multivariate_polynomial;
 mod poly_convert;
 mod poly_division;
 mod polynomial;
@@ -84,6 +85,7 @@ pub use hensel_lift::{
     HenselError, HenselPair, IntegerPolynomial, hensel_lift_pair, verify_hensel_pair,
 };
 pub use mathema::{DefinednessError, DomainExpression, definedness_obligations};
+pub use multivariate_polynomial::{MultivariateError, MultivariateLimits, MultivariatePolynomial};
 pub use modular_irreducibility::{
     ModularIrreducibilityCertificate, modular_irreducibility_witness, verify_modular_irreducibility,
 };

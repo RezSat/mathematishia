@@ -187,7 +187,6 @@ fn extract(
             Ok(result)
         }
         ExprView::Function { .. } => Err(LinearSystemExprError::UnsupportedFunction),
-        ExprView::Function { .. } => Err(LinearSystemExprError::UnsupportedFunction),
         ExprView::Pow { base, exponent } => {
             let ExprView::Integer(n) = exponent.view() else {
                 return Err(LinearSystemExprError::UnsupportedPower);
@@ -332,6 +331,7 @@ fn substitute(
             }
             Ok(product)
         }
+        ExprView::Function { .. } => Err(LinearSystemExprError::UnsupportedFunction),
         ExprView::Pow { base, exponent } => {
             let ExprView::Integer(power) = exponent.view() else {
                 return Err(LinearSystemExprError::UnsupportedPower);

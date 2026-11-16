@@ -299,14 +299,16 @@ fn substitute(
         ExprView::Add(children) => {
             let mut sum = zero();
             for child in children {
-                sum = work.add_scalar(&sum, &substitute(child, variables, values, work)?)?;
+                let value = substitute(child, variables, values, work)?;
+                sum = work.add_scalar(&sum, &value)?;
             }
             Ok(sum)
         }
         ExprView::Mul(children) => {
             let mut product = one();
             for child in children {
-                product = work.multiply_scalar(&product, &substitute(child, variables, values, work)?)?;
+                let value = substitute(child, variables, values, work)?;
+                product = work.multiply_scalar(&product, &value)?;
             }
             Ok(product)
         }

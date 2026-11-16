@@ -7,7 +7,10 @@
 use std::error::Error;
 use std::fmt;
 
-use mathema::{Equation, Expr, ExprView, Integer, Rational, Symbol};
+use mathema::{
+    DomainExpression, Equation, Expr, ExprView, Integer, Rational, ScalarDomain, Symbol,
+    definedness_obligations_in_domain,
+};
 
 use crate::algebraic::checked_algebraic_roots;
 use crate::budget::{RationalBinaryOp, WorkBudget};
@@ -442,8 +445,46 @@ impl EvaluationContext {
             self.limits.max_symbolic_power,
             &mut meter,
             |derivative| self.check_expression(derivative),
+            None,
         )?;
         meter.charge(expression_size(original).saturating_pow(2))?;
+        verify_symbolic_derivative(&result)?;
+        self.check_expression(result.derivative())?;
+        Ok(result)
+    }
+
+    /// Differentiates in an explicitly selected scalar domain. Conditions
+    /// attached to the source are necessary prerequisites, not proven facts.
+    /// Complex principal-log differentiation is unsupported because NonZero
+    /// alone does not exclude its branch cut.
+    pub fn differentiate_domain_expression(
+        &self,
+        source: &DomainExpression,
+        variable: &Symbol,
+        domain: ScalarDomain,
+    ) -> Result<SymbolicDerivative, EvaluationError> {
+        self.check_expression(source.expression())?;
+        if source.conditions().len() > self.limits.max_rational_conditions {
+            return Err(EvaluationError::Limit(ResourceLimitKind::RationalConditions));
+        }
+        let required = definedness_obligations_in_domain(
+            source.expression(),
+            self.limits.max_expression_nodes,
+            domain,
+        ).map_err(|_| SymbolicDifferentiationError::MissingDomainCondition)?;
+        if required.iter().any(|condition| !source.conditions().contains(condition)) {
+            return Err(SymbolicDifferentiationError::MissingDomainCondition.into());
+        }
+        let mut meter = WorkBudget::new(self.limits);
+        let result = generate_symbolic_derivative(
+            source.expression(),
+            variable,
+            self.limits.max_symbolic_power,
+            &mut meter,
+            |derivative| self.check_expression(derivative),
+            Some((source, domain)),
+        )?;
+        meter.charge(expression_size(source.expression()).saturating_pow(2))?;
         verify_symbolic_derivative(&result)?;
         self.check_expression(result.derivative())?;
         Ok(result)

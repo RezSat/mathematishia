@@ -6,7 +6,7 @@
 use std::error::Error;
 use std::fmt;
 
-use mathema::{DomainExpression, Expr, Integer, Rational, Symbol};
+use mathema::{DomainExpression, Integer, Rational, Symbol};
 
 use crate::budget::WorkBudget;
 use crate::{
@@ -173,7 +173,13 @@ fn verify_definite_checked(
     let mut low_power = Rational::from(Integer::one());
     let mut high_power = Rational::from(Integer::one());
     let mut sum = Rational::from(Integer::zero());
-    for (degree, coefficient) in claim.primitive.integrand().coefficients().iter().enumerate() {
+    for (degree, coefficient) in claim
+        .primitive
+        .integrand()
+        .coefficients()
+        .iter()
+        .enumerate()
+    {
         low_power = work.multiply_scalar(&low_power, &claim.lower)?;
         high_power = work.multiply_scalar(&high_power, &claim.upper)?;
         let power_difference = work.subtract_scalar(&high_power, &low_power)?;

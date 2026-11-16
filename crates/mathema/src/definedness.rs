@@ -65,7 +65,10 @@ impl DomainExpression {
         if conditions.len() > max_conditions {
             return Err(DefinednessError::ConditionLimitExceeded);
         }
-        Ok(Self { expression, conditions })
+        Ok(Self {
+            expression,
+            conditions,
+        })
     }
 
     /// Applies a supported unary function while preserving all restrictions
@@ -87,7 +90,10 @@ impl DomainExpression {
         for condition in direct {
             append_unique(&mut conditions, condition, max_conditions)?;
         }
-        Ok(Self { expression, conditions })
+        Ok(Self {
+            expression,
+            conditions,
+        })
     }
 
     /// Constructs an expression with additional restrictions from an earlier

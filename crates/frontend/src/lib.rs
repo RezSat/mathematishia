@@ -7,7 +7,8 @@ use std::error::Error;
 use std::fmt;
 
 use mathema::{
-    DefinednessError, DomainExpression, Equation, Expr, ExprView, Integer, Rational, ScalarDomain, Symbol,
+    DefinednessError, DomainExpression, Equation, Expr, ExprView, Integer, Rational, ScalarDomain,
+    Symbol,
 };
 
 const MAX_INPUT_BYTES: usize = 32_768;
@@ -445,7 +446,10 @@ fn parse_syntax(input: &str) -> Result<SyntaxStatement<'_>, ParseError> {
     Ok(statement)
 }
 
-fn lower_domain(node: Syntax<'_>, domain: ScalarDomain) -> Result<DomainExpression, DomainParseError> {
+fn lower_domain(
+    node: Syntax<'_>,
+    domain: ScalarDomain,
+) -> Result<DomainExpression, DomainParseError> {
     const MAX_CONDITIONS: usize = 256;
     match node {
         Syntax::Function(name, argument) => Ok(DomainExpression::function(
@@ -479,7 +483,8 @@ fn lower_domain(node: Syntax<'_>, domain: ScalarDomain) -> Result<DomainExpressi
             MAX_CONDITIONS,
         )?),
         Syntax::Quotient(left, right, _) => {
-            Ok(lower_domain(*left, domain)?.divide(lower_domain(*right, domain)?, MAX_CONDITIONS)?)
+            Ok(lower_domain(*left, domain)?
+                .divide(lower_domain(*right, domain)?, MAX_CONDITIONS)?)
         }
         Syntax::Power(left, right) => {
             Ok(lower_domain(*left, domain)?.pow(lower_domain(*right, domain)?, MAX_CONDITIONS)?)
@@ -510,8 +515,9 @@ pub fn parse_domain_statement_in_domain(
     domain: ScalarDomain,
 ) -> Result<DomainStatement, DomainParseError> {
     match parse_syntax(input)? {
-        SyntaxStatement::Expression(node) =>
-            Ok(DomainStatement::Expression(lower_domain(node, domain)?)),
+        SyntaxStatement::Expression(node) => {
+            Ok(DomainStatement::Expression(lower_domain(node, domain)?))
+        }
         SyntaxStatement::Equation(left, right) => Ok(DomainStatement::Equation {
             left: lower_domain(left, domain)?,
             right: lower_domain(right, domain)?,
@@ -666,17 +672,21 @@ mod analytic_tests {
     fn domain_parser_does_not_discard_function_obligations() {
         let x = Expr::from(Symbol::new("x").unwrap());
         let complex = parse_domain_expression("sin(log(x))").unwrap();
-        assert_eq!(complex.conditions(), &[mathema::Condition::NonZero(x.clone())]);
+        assert_eq!(
+            complex.conditions(),
+            &[mathema::Condition::NonZero(x.clone())]
+        );
 
-        let real = parse_domain_expression_in_domain(
-            "0 * tan(log(x))",
-            ScalarDomain::Real,
-        ).unwrap();
+        let real =
+            parse_domain_expression_in_domain("0 * tan(log(x))", ScalarDomain::Real).unwrap();
         assert_eq!(real.expression(), &Expr::from(0));
-        assert_eq!(real.conditions(), &[
-            mathema::Condition::Positive(x.clone()),
-            mathema::Condition::NonZero(Expr::cos(Expr::log(x.clone()))),
-        ]);
+        assert_eq!(
+            real.conditions(),
+            &[
+                mathema::Condition::Positive(x.clone()),
+                mathema::Condition::NonZero(Expr::cos(Expr::log(x.clone()))),
+            ]
+        );
         let tan = parse_domain_expression("tan(x)").unwrap();
         assert_eq!(
             tan.conditions(),
@@ -684,7 +694,10 @@ mod analytic_tests {
         );
         let no_conditions = parse_domain_expression("sin(exp(x))").unwrap();
         assert!(no_conditions.conditions().is_empty());
-        assert_eq!(parse_domain_expression("1/x").unwrap().conditions().len(),1);
+        assert_eq!(
+            parse_domain_expression("1/x").unwrap().conditions().len(),
+            1
+        );
     }
 
     #[test]

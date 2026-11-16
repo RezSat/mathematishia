@@ -13,8 +13,7 @@ mod symbol;
 
 pub use condition::{Condition, ScalarDomain};
 pub use definedness::{
-    DefinednessError, DomainExpression, definedness_obligations,
-    definedness_obligations_in_domain,
+    DefinednessError, DomainExpression, definedness_obligations, definedness_obligations_in_domain,
 };
 pub use equation::Equation;
 pub use expr::{Expr, ExprView};

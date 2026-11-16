@@ -225,13 +225,12 @@ pub fn verify_root_refinement(
     max_bisections: usize,
     claimed: &RootRefinement,
 ) -> Result<(), RootRefinementVerificationError> {
-    checked_input(ctx, polynomial, lower, upper, target_width)
-        .map_err(|error| match error {
-            RootRefinementError::Evaluation(error) => {
-                RootRefinementVerificationError::Evaluation(error)
-            }
-            _ => RootRefinementVerificationError::InvalidInput,
-        })?;
+    checked_input(ctx, polynomial, lower, upper, target_width).map_err(|error| match error {
+        RootRefinementError::Evaluation(error) => {
+            RootRefinementVerificationError::Evaluation(error)
+        }
+        _ => RootRefinementVerificationError::InvalidInput,
+    })?;
     if claimed.bisections > max_bisections {
         return Err(RootRefinementVerificationError::InvalidEvidence);
     }
@@ -313,9 +312,7 @@ pub fn verify_root_refinement(
         RootIntervalOutcome::SignChange { lower, upper } => {
             ctx.check_rational(lower)?;
             ctx.check_rational(upper)?;
-            if lower >= upper
-                || sign(&work.evaluate(polynomial, lower)?) == Ordering::Equal
-            {
+            if lower >= upper || sign(&work.evaluate(polynomial, lower)?) == Ordering::Equal {
                 return Err(RootRefinementVerificationError::InvalidEvidence);
             }
             let left_sign = sign(&work.evaluate(polynomial, lower)?);

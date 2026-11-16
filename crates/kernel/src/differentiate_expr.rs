@@ -154,6 +154,7 @@ fn produce(
     original: &Expr,
     selected: &Symbol,
     power_limit: usize,
+    domain: Option<ScalarDomain>,
     meter: &mut WorkBudget,
     steps: &mut Vec<DifferentiationStep>,
     check: &mut impl FnMut(&Expr) -> Result<(), EvaluationError>,
@@ -165,13 +166,46 @@ fn produce(
             (DerivativeRuleId::SelectedSymbol, Expr::from(1))
         }
         ExprView::Symbol(_) => (DerivativeRuleId::OtherSymbol, Expr::from(0)),
-        ExprView::Function { .. } => {
-            return Err(SymbolicDifferentiationError::UnsupportedFunction.into());
+        ExprView::Function { name, argument } => {
+            match name.name() {
+                "sin" | "cos" | "exp" => {}
+                "tan" if matches!(domain, Some(ScalarDomain::Real | ScalarDomain::Complex)) => {}
+                "log" if domain == Some(ScalarDomain::Real) => {}
+                _ => return Err(SymbolicDifferentiationError::UnsupportedFunction.into()),
+            }
+            let inner = produce(argument, selected, power_limit, domain, meter, steps, check)?;
+            meter.charge(4)?;
+            match name.name() {
+                "sin" => (
+                    DerivativeRuleId::SineChain,
+                    Expr::mul([Expr::cos(argument.clone()), inner]),
+                ),
+                "cos" => (
+                    DerivativeRuleId::CosineChain,
+                    Expr::mul([Expr::from(-1), Expr::sin(argument.clone()), inner]),
+                ),
+                "tan" => (
+                    DerivativeRuleId::TangentChain,
+                    Expr::mul([
+                        Expr::pow(Expr::cos(argument.clone()), Expr::from(-2)),
+                        inner,
+                    ]),
+                ),
+                "exp" => (
+                    DerivativeRuleId::ExponentialChain,
+                    Expr::mul([Expr::exp(argument.clone()), inner]),
+                ),
+                "log" => (
+                    DerivativeRuleId::LogarithmChain,
+                    Expr::mul([Expr::pow(argument.clone(), Expr::from(-1)), inner]),
+                ),
+                _ => return Err(SymbolicDifferentiationError::UnsupportedFunction.into()),
+            }
         }
         ExprView::Add(terms) => {
             let mut derivatives = Vec::with_capacity(terms.len());
             for term in terms {
-                derivatives.push(produce(term, selected, power_limit, meter, steps, check)?);
+                derivatives.push(produce(term, selected, power_limit, domain, meter, steps, check)?);
             }
             meter.charge(terms.len() as u64)?;
             (DerivativeRuleId::Sum, Expr::add(derivatives))
@@ -182,7 +216,7 @@ fn produce(
             meter.charge(n.saturating_mul(n))?;
             let mut derivatives = Vec::with_capacity(factors.len());
             for factor in factors {
-                derivatives.push(produce(factor, selected, power_limit, meter, steps, check)?);
+                derivatives.push(produce(factor, selected, power_limit, domain, meter, steps, check)?);
             }
             let terms = factors.iter().enumerate().map(|(index, _)| {
                 Expr::mul(factors.iter().enumerate().map(|(other, factor)| {
@@ -204,7 +238,7 @@ fn produce(
                 return Err(EvaluationError::Limit(ResourceLimitKind::SymbolicPower));
             }
             let power = positive_power(exponent)?;
-            let inner = produce(base, selected, power_limit, meter, steps, check)?;
+            let inner = produce(base, selected, power_limit, domain, meter, steps, check)?;
             meter.charge(3)?;
             let reduced = if power == 1 {
                 Expr::from(1)
@@ -234,12 +268,14 @@ pub(crate) fn generate_symbolic_derivative(
     power_limit: usize,
     meter: &mut WorkBudget,
     mut check: impl FnMut(&Expr) -> Result<(), EvaluationError>,
+    source: Option<(&DomainExpression, ScalarDomain)>,
 ) -> Result<SymbolicDerivative, EvaluationError> {
     let mut steps = Vec::new();
     let derivative = produce(
         original,
         variable,
         power_limit,
+        source.map(|(_, domain)| domain),
         meter,
         &mut steps,
         &mut check,
@@ -249,6 +285,8 @@ pub(crate) fn generate_symbolic_derivative(
         variable: variable.clone(),
         derivative,
         steps,
+        source: source.map(|(source, _)| source.clone()),
+        domain: source.map(|(_, domain)| domain),
     })
 }
 

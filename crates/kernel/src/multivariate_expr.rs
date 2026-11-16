@@ -386,10 +386,7 @@ impl MultivariatePolynomial {
     ///
     /// The ambient ring is not encoded by Expr; callers must supply the same
     /// ring on conversion back. The returned AST need not match original syntax.
-    pub fn to_expr(
-        &self,
-        limits: MultivariateLimits,
-    ) -> Result<Expr, MultivariateExprError> {
+    pub fn to_expr(&self, limits: MultivariateLimits) -> Result<Expr, MultivariateExprError> {
         let mut meter = BridgeMeter::new(limits);
         meter.admit(self)?;
         meter.charge(1)?;

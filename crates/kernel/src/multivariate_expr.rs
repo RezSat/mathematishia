@@ -168,6 +168,9 @@ impl BridgeMeter {
         if polynomial.terms().len() > self.limits.max_terms {
             return Err(MultivariateError::TermLimit.into());
         }
+        if polynomial.terms().len() > self.limits.max_input_terms {
+            return Err(MultivariateError::InputTermLimit.into());
+        }
         for (powers, coefficient) in polynomial.terms() {
             let degree = powers.iter().try_fold(0_u32, |sum, &power| {
                 sum.checked_add(power)

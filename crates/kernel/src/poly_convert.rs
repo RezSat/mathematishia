@@ -13,6 +13,8 @@ pub enum PolynomialConversionError {
     /// Powers require positive, explicitly integer exponents fitting in usize.
     /// Zero powers are not interpreted because the expression IR leaves 0^0 undefined.
     UnsupportedPower,
+    /// Function calls are not rational polynomials.
+    UnsupportedFunction,
     /// The requested degree/power bound would be exceeded.
     DegreeLimitExceeded,
 }
@@ -22,6 +24,7 @@ impl fmt::Display for PolynomialConversionError {
         match self {
             Self::OtherSymbol => f.write_str("expression contains another symbol"),
             Self::UnsupportedPower => f.write_str("unsupported polynomial power"),
+            Self::UnsupportedFunction => f.write_str("functions are not rational polynomials"),
             Self::DegreeLimitExceeded => f.write_str("polynomial degree or power limit exceeded"),
         }
     }
@@ -57,6 +60,7 @@ impl RationalPolynomial {
                 ]))
             }
             ExprView::Symbol(_) => Err(PolynomialConversionError::OtherSymbol),
+            ExprView::Function { .. } => Err(PolynomialConversionError::UnsupportedFunction),
             ExprView::Add(children) => {
                 let mut sum = Self::zero();
                 for child in children {

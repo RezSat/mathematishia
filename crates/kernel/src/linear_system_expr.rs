@@ -47,7 +47,9 @@ impl fmt::Display for LinearSystemExprError {
             Self::DimensionLimit => f.write_str("system exceeds the 16 by 16 limit"),
             Self::UnlistedSymbol => f.write_str("expression contains an undeclared symbol"),
             Self::NonAffine => f.write_str("expression is not affine in the declared variables"),
-            Self::UnsupportedPower => f.write_str("power is unsupported in a rational affine system"),
+            Self::UnsupportedPower => {
+                f.write_str("power is unsupported in a rational affine system")
+            }
             Self::Evaluation(error) => write!(f, "{error}"),
             Self::Matrix(error) => write!(f, "{error}"),
             Self::VerificationFailed => f.write_str("exact solution verification failed"),
@@ -118,7 +120,9 @@ impl Affine {
     }
 
     fn is_constant(&self) -> bool {
-        self.coefficients.iter().all(|coefficient| coefficient.numerator().is_zero())
+        self.coefficients
+            .iter()
+            .all(|coefficient| coefficient.numerator().is_zero())
     }
 }
 
@@ -129,7 +133,10 @@ fn extract(
 ) -> Result<Affine, LinearSystemExprError> {
     work.charge(1)?;
     match expression.view() {
-        ExprView::Integer(value) => Ok(Affine::scalar(Rational::from(value.clone()), variables.len())),
+        ExprView::Integer(value) => Ok(Affine::scalar(
+            Rational::from(value.clone()),
+            variables.len(),
+        )),
         ExprView::Rational(value) => Ok(Affine::scalar(value.clone(), variables.len())),
         ExprView::Symbol(symbol) => {
             let Some(column) = variables.iter().position(|variable| variable == symbol) else {
@@ -297,7 +304,9 @@ fn substitute(
         ExprView::Integer(value) => Ok(Rational::from(value.clone())),
         ExprView::Rational(value) => Ok(value.clone()),
         ExprView::Symbol(symbol) => {
-            let position = variables.iter().position(|variable| variable == symbol)
+            let position = variables
+                .iter()
+                .position(|variable| variable == symbol)
                 .ok_or(LinearSystemExprError::UnlistedSymbol)?;
             Ok(values[position].clone())
         }
@@ -330,7 +339,11 @@ fn substitute(
                 return Err(LinearSystemExprError::UnsupportedPower);
             }
             let mut result = one();
-            let mut magnitude = if power < &Integer::zero() { -power } else { power.clone() };
+            let mut magnitude = if power < &Integer::zero() {
+                -power
+            } else {
+                power.clone()
+            };
             while magnitude > Integer::zero() {
                 result = work.multiply_scalar(&result, &base)?;
                 magnitude = magnitude - Integer::one();

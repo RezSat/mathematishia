@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 use std::fmt;
 use std::sync::Arc;
 
-use crate::{Integer, Rational, Symbol};
+use crate::{Condition, Integer, Rational, ScalarDomain, Symbol};
 
 /// An opaque immutable expression with canonical structural equality and hashing.
 ///
@@ -22,6 +22,7 @@ enum ExprNode {
     Add(Vec<Expr>),
     Mul(Vec<Expr>),
     Pow(Expr, Expr),
+    Function { name: Symbol, argument: Expr },
 }
 
 /// A borrowed read-only semantic view of an expression.
@@ -35,7 +36,15 @@ pub enum ExprView<'a> {
     Symbol(&'a Symbol),
     Add(&'a [Expr]),
     Mul(&'a [Expr]),
-    Pow { base: &'a Expr, exponent: &'a Expr },
+    Pow {
+        base: &'a Expr,
+        exponent: &'a Expr,
+    },
+    /// An unevaluated unary function. Unknown names have no assigned domain semantics.
+    Function {
+        name: &'a Symbol,
+        argument: &'a Expr,
+    },
 }
 
 impl Expr {
@@ -116,6 +125,70 @@ impl Expr {
         }
     }
 
+    /// Constructs an unevaluated unary symbolic call. The name is exact and
+    /// case-sensitive. It does not imply that evaluation or differentiation
+    /// is implemented, including for the five built-in names.
+    pub fn function(name: Symbol, argument: Self) -> Self {
+        Self::new(ExprNode::Function { name, argument })
+    }
+
+    /// Constructs a symbolic sine (complex entire function).
+    pub fn sin(argument: Self) -> Self {
+        Self::builtin("sin", argument)
+    }
+
+    /// Constructs a symbolic cosine (complex entire function).
+    pub fn cos(argument: Self) -> Self {
+        Self::builtin("cos", argument)
+    }
+
+    /// Constructs a symbolic tangent (meromorphic, with cos(argument) != 0).
+    pub fn tan(argument: Self) -> Self {
+        Self::builtin("tan", argument)
+    }
+
+    /// Constructs a symbolic exponential (complex entire function).
+    pub fn exp(argument: Self) -> Self {
+        Self::builtin("exp", argument)
+    }
+
+    /// Constructs a symbolic natural logarithm. Complex values use the
+    /// principal branch if a future evaluator supports it; no evaluation occurs.
+    pub fn log(argument: Self) -> Self {
+        Self::builtin("log", argument)
+    }
+
+    fn builtin(name: &str, argument: Self) -> Self {
+        Self::function(
+            Symbol::new(name).expect("builtin name is nonempty"),
+            argument,
+        )
+    }
+
+    /// Direct restrictions of this function node in the selected scalar domain.
+    ///
+    /// None means this is not a supported built-in function/domain pair,
+    /// including arbitrary symbolic calls and integer/rational-only domains.
+    /// Some is a list of unproved obligations for the call itself; it does
+    /// not inspect nested arguments or prove those obligations. For real log,
+    /// the argument must be positive. For complex log, the argument must be
+    /// nonzero (principal branch). Tangent requires cos(argument) != 0 in
+    /// either domain. All other built-ins are total over real and complex inputs.
+    pub fn function_domain_conditions(&self, domain: ScalarDomain) -> Option<Vec<Condition>> {
+        let ExprNode::Function { name, argument } = self.0.as_ref() else {
+            return None;
+        };
+        match (name.name(), domain) {
+            ("sin" | "cos" | "exp", ScalarDomain::Real | ScalarDomain::Complex) => Some(Vec::new()),
+            ("log", ScalarDomain::Real) => Some(vec![Condition::Positive(argument.clone())]),
+            ("log", ScalarDomain::Complex) => Some(vec![Condition::NonZero(argument.clone())]),
+            ("tan", ScalarDomain::Real | ScalarDomain::Complex) => {
+                Some(vec![Condition::NonZero(Self::cos(argument.clone()))])
+            }
+            _ => None,
+        }
+    }
+
     /// Borrows the semantic form of this expression without exposing storage.
     pub fn view(&self) -> ExprView<'_> {
         match self.0.as_ref() {
@@ -125,6 +198,7 @@ impl Expr {
             ExprNode::Add(children) => ExprView::Add(children),
             ExprNode::Mul(children) => ExprView::Mul(children),
             ExprNode::Pow(base, exponent) => ExprView::Pow { base, exponent },
+            ExprNode::Function { name, argument } => ExprView::Function { name, argument },
         }
     }
 
@@ -136,15 +210,16 @@ impl Expr {
         }
     }
 
-    // Canonical rank is scalar < symbol < power < product < sum. This is a
+    // Canonical rank is scalar < symbol < power < function < product < sum. This is a
     // structural convention, not mathematical ordering or enum declaration order.
     fn rank(&self) -> u8 {
         match self.0.as_ref() {
             ExprNode::Integer(_) | ExprNode::Rational(_) => 0,
             ExprNode::Symbol(_) => 1,
             ExprNode::Pow(..) => 2,
-            ExprNode::Mul(_) => 3,
-            ExprNode::Add(_) => 4,
+            ExprNode::Function { .. } => 3,
+            ExprNode::Mul(_) => 4,
+            ExprNode::Add(_) => 5,
         }
     }
 
@@ -164,6 +239,16 @@ impl Expr {
                 (ExprNode::Pow(a, b), ExprNode::Pow(c, d)) => {
                     a.canonical_cmp(c).then_with(|| b.canonical_cmp(d))
                 }
+                (
+                    ExprNode::Function {
+                        name: a,
+                        argument: b,
+                    },
+                    ExprNode::Function {
+                        name: c,
+                        argument: d,
+                    },
+                ) => a.cmp(c).then_with(|| b.canonical_cmp(d)),
                 (ExprNode::Add(a), ExprNode::Add(b)) | (ExprNode::Mul(a), ExprNode::Mul(b)) => {
                     for (left, right) in a.iter().zip(b) {
                         let order = left.canonical_cmp(right);
@@ -220,6 +305,12 @@ impl Expr {
                     }
                     child.fmt_at(f, self.precedence())?;
                 }
+            }
+            ExprNode::Function { name, argument } => {
+                Expr::from(name.clone()).fmt_at(f, 0)?;
+                f.write_str("(")?;
+                argument.fmt_at(f, 0)?;
+                f.write_str(")")?;
             }
             ExprNode::Pow(base, exponent) => {
                 // Parenthesize powers on either side rather than assume an

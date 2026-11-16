@@ -5,6 +5,7 @@ This file tracks implemented areas and the next domain extensions. See [CAPABILI
 ## Implemented
 
 - Exact arbitrary-precision integers and rationals; immutable symbolic expressions with structural canonicalization.
+- Unevaluated sine, cosine, tangent, exponential and logarithm nodes; explicit call parsing and direct domain-condition queries.
 - Bounded expression/equation parser and Rust CLI.
 - Univariate rational-polynomial arithmetic, long division, GCD, differentiation and verified square-free decomposition.
 - Extended Euclidean algorithm with verified polynomial Bézout certificates and modular inverses in Q[x].
@@ -25,7 +26,7 @@ This file tracks implemented areas and the next domain extensions. See [CAPABILI
 ## In progress / next
 
 1. Expand multivariate polynomial and rational-expression representations and connect them to a general algebra simplifier.
-2. Introduce trigonometric, exponential and logarithmic expression nodes with domain conditions and verified differentiation rules.
+2. Add verified analytic differentiation rules and retain nested function-domain conditions through parsing and rewriting.
 3. Extend equation and inequality solving, including systems and selected polynomial roots beyond quadratic degree.
 4. Implement rule-verified student-facing derivations and stable structured outputs for algebra and calculus.
 5. Add elementary integration, limits and series with explicit supported domains and unresolved results.

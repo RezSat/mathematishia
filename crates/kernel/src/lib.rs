@@ -332,7 +332,8 @@ fn has_distributive_work(expr: &Expr) -> bool {
         ExprView::Integer(_)
         | ExprView::Rational(_)
         | ExprView::Symbol(_)
-        | ExprView::Pow { .. } => false,
+        | ExprView::Pow { .. }
+        | ExprView::Function { .. } => false,
     }
 }
 
@@ -395,6 +396,10 @@ pub fn substitute_symbol(expr: &Expr, symbol: &Symbol, replacement: &Expr) -> Ex
         ExprView::Pow { base, exponent } => Expr::pow(
             substitute_symbol(base, symbol, replacement),
             substitute_symbol(exponent, symbol, replacement),
+        ),
+        ExprView::Function { name, argument } => Expr::function(
+            name.clone(),
+            substitute_symbol(argument, symbol, replacement),
         ),
     }
 }

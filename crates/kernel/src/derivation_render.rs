@@ -472,7 +472,7 @@ pub fn render_linear_solution(
 pub fn render_symbolic_derivative(
     result: &SymbolicDerivative,
 ) -> Result<RenderedDerivation, DerivationRenderError> {
-    if result.steps().len() + 1 > MAX_LINES {
+    if result.steps().len() + result.conditions().len() + 1 > MAX_LINES {
         return Err(DerivationRenderError::ResourceLimitExceeded);
     }
     let mut remaining = MAX_EXPRESSION_NODES;
@@ -482,6 +482,9 @@ pub fn render_symbolic_derivative(
         inspect_expr(step.before(), &mut remaining)?;
         inspect_expr(step.derivative(), &mut remaining)?;
     }
+    for condition in result.conditions() {
+        inspect_expr(condition.expression(), &mut remaining)?;
+    }
     verify_symbolic_derivative(result).map_err(DerivationRenderError::Derivative)?;
     let original = RenderedStatement::Expression(result.original().clone());
     let mut lines = vec![RenderedLine::Input {
@@ -489,6 +492,14 @@ pub fn render_symbolic_derivative(
         display: bounded_text(statement_text(&original))?,
         statement: original,
     }];
+    for condition in result.conditions() {
+        lines.push(RenderedLine::Condition(RenderedCondition {
+            condition: condition.clone(),
+            status: ConditionStatus::Assumed,
+            proof_node: None,
+            display: bounded_text(condition_text(condition))?,
+        }));
+    }
     for step in result.steps() {
         if step.relation() != Relation::DerivativeOf {
             return Err(DerivationRenderError::UnsupportedEvidence);
@@ -500,6 +511,11 @@ pub fn render_symbolic_derivative(
             crate::DerivativeRuleId::Sum => "sum rule",
             crate::DerivativeRuleId::Product => "product rule",
             crate::DerivativeRuleId::PositiveIntegerPower => "positive integer power rule",
+            crate::DerivativeRuleId::SineChain => "sine chain rule",
+            crate::DerivativeRuleId::CosineChain => "cosine chain rule",
+            crate::DerivativeRuleId::TangentChain => "tangent chain rule",
+            crate::DerivativeRuleId::ExponentialChain => "exponential chain rule",
+            crate::DerivativeRuleId::LogarithmChain => "real logarithm chain rule",
         };
         lines.push(RenderedLine::Step(render_step(
             None,
@@ -511,7 +527,21 @@ pub fn render_symbolic_derivative(
             },
             step.rule().stable_id(),
             explanation,
-            Vec::new(),
+            match step.before().view() {
+                ExprView::Function { .. } => step
+                    .before()
+                    .function_domain_conditions(result.domain().unwrap_or(ScalarDomain::Real))
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(|condition| RenderedCondition {
+                        display: condition_text(&condition),
+                        condition,
+                        status: ConditionStatus::Assumed,
+                        proof_node: None,
+                    })
+                    .collect(),
+                _ => Vec::new(),
+            },
         )?));
     }
     Ok(RenderedDerivation {

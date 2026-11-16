@@ -8,7 +8,10 @@
 use std::error::Error;
 use std::fmt;
 
-use mathema::{Expr, ExprView, Integer, Symbol};
+use mathema::{
+    Condition, DomainExpression, Expr, ExprView, Integer, ScalarDomain, Symbol,
+    definedness_obligations_in_domain,
+};
 
 use crate::budget::WorkBudget;
 use crate::{EvaluationError, Relation, ResourceLimitKind};
@@ -22,6 +25,11 @@ pub enum DerivativeRuleId {
     Sum,
     Product,
     PositiveIntegerPower,
+    SineChain,
+    CosineChain,
+    TangentChain,
+    ExponentialChain,
+    LogarithmChain,
 }
 
 impl DerivativeRuleId {
@@ -33,6 +41,11 @@ impl DerivativeRuleId {
             Self::Sum => "calculus.sum",
             Self::Product => "calculus.product",
             Self::PositiveIntegerPower => "calculus.positive_integer_power",
+            Self::SineChain => "calculus.sin_chain",
+            Self::CosineChain => "calculus.cos_chain",
+            Self::TangentChain => "calculus.tan_chain",
+            Self::ExponentialChain => "calculus.exp_chain",
+            Self::LogarithmChain => "calculus.log_chain",
         }
     }
 }
@@ -42,6 +55,7 @@ pub enum SymbolicDifferentiationError {
     /// Zero, negative, fractional and symbolic exponents are unsupported.
     UnsupportedPower,
     UnsupportedFunction,
+    MissingDomainCondition,
 }
 
 impl fmt::Display for SymbolicDifferentiationError {
@@ -51,8 +65,9 @@ impl fmt::Display for SymbolicDifferentiationError {
                 f.write_str("symbolic differentiation requires positive integer exponents")
             }
             Self::UnsupportedFunction => {
-                f.write_str("analytic function differentiation is unsupported")
+                f.write_str("analytic function differentiation is unsupported in this domain")
             }
+            Self::MissingDomainCondition => f.write_str("missing analytic domain restrictions"),
         }
     }
 }
@@ -92,6 +107,8 @@ pub struct SymbolicDerivative {
     variable: Symbol,
     derivative: Expr,
     steps: Vec<DifferentiationStep>,
+    source: Option<DomainExpression>,
+    domain: Option<ScalarDomain>,
 }
 
 impl SymbolicDerivative {
@@ -109,6 +126,17 @@ impl SymbolicDerivative {
 
     pub fn steps(&self) -> &[DifferentiationStep] {
         &self.steps
+    }
+
+    /// Symbolic prerequisites; the engine does not assert they are proven.
+    pub fn conditions(&self) -> &[Condition] {
+        self.source
+            .as_ref()
+            .map_or(&[], DomainExpression::conditions)
+    }
+
+    pub const fn domain(&self) -> Option<ScalarDomain> {
+        self.domain
     }
 }
 
@@ -129,6 +157,7 @@ fn produce(
     original: &Expr,
     selected: &Symbol,
     power_limit: usize,
+    domain: Option<ScalarDomain>,
     meter: &mut WorkBudget,
     steps: &mut Vec<DifferentiationStep>,
     check: &mut impl FnMut(&Expr) -> Result<(), EvaluationError>,
@@ -140,13 +169,54 @@ fn produce(
             (DerivativeRuleId::SelectedSymbol, Expr::from(1))
         }
         ExprView::Symbol(_) => (DerivativeRuleId::OtherSymbol, Expr::from(0)),
-        ExprView::Function { .. } => {
-            return Err(SymbolicDifferentiationError::UnsupportedFunction.into());
+        ExprView::Function { name, argument } => {
+            match name.name() {
+                "sin" | "cos" | "exp" => {}
+                "tan" if matches!(domain, Some(ScalarDomain::Real | ScalarDomain::Complex)) => {}
+                "log" if domain == Some(ScalarDomain::Real) => {}
+                _ => return Err(SymbolicDifferentiationError::UnsupportedFunction.into()),
+            }
+            let inner = produce(argument, selected, power_limit, domain, meter, steps, check)?;
+            meter.charge(4)?;
+            match name.name() {
+                "sin" => (
+                    DerivativeRuleId::SineChain,
+                    Expr::mul([Expr::cos(argument.clone()), inner]),
+                ),
+                "cos" => (
+                    DerivativeRuleId::CosineChain,
+                    Expr::mul([Expr::from(-1), Expr::sin(argument.clone()), inner]),
+                ),
+                "tan" => (
+                    DerivativeRuleId::TangentChain,
+                    Expr::mul([
+                        Expr::pow(Expr::cos(argument.clone()), Expr::from(-2)),
+                        inner,
+                    ]),
+                ),
+                "exp" => (
+                    DerivativeRuleId::ExponentialChain,
+                    Expr::mul([Expr::exp(argument.clone()), inner]),
+                ),
+                "log" => (
+                    DerivativeRuleId::LogarithmChain,
+                    Expr::mul([Expr::pow(argument.clone(), Expr::from(-1)), inner]),
+                ),
+                _ => return Err(SymbolicDifferentiationError::UnsupportedFunction.into()),
+            }
         }
         ExprView::Add(terms) => {
             let mut derivatives = Vec::with_capacity(terms.len());
             for term in terms {
-                derivatives.push(produce(term, selected, power_limit, meter, steps, check)?);
+                derivatives.push(produce(
+                    term,
+                    selected,
+                    power_limit,
+                    domain,
+                    meter,
+                    steps,
+                    check,
+                )?);
             }
             meter.charge(terms.len() as u64)?;
             (DerivativeRuleId::Sum, Expr::add(derivatives))
@@ -157,7 +227,15 @@ fn produce(
             meter.charge(n.saturating_mul(n))?;
             let mut derivatives = Vec::with_capacity(factors.len());
             for factor in factors {
-                derivatives.push(produce(factor, selected, power_limit, meter, steps, check)?);
+                derivatives.push(produce(
+                    factor,
+                    selected,
+                    power_limit,
+                    domain,
+                    meter,
+                    steps,
+                    check,
+                )?);
             }
             let terms = factors.iter().enumerate().map(|(index, _)| {
                 Expr::mul(factors.iter().enumerate().map(|(other, factor)| {
@@ -179,7 +257,7 @@ fn produce(
                 return Err(EvaluationError::Limit(ResourceLimitKind::SymbolicPower));
             }
             let power = positive_power(exponent)?;
-            let inner = produce(base, selected, power_limit, meter, steps, check)?;
+            let inner = produce(base, selected, power_limit, domain, meter, steps, check)?;
             meter.charge(3)?;
             let reduced = if power == 1 {
                 Expr::from(1)
@@ -209,12 +287,14 @@ pub(crate) fn generate_symbolic_derivative(
     power_limit: usize,
     meter: &mut WorkBudget,
     mut check: impl FnMut(&Expr) -> Result<(), EvaluationError>,
+    source: Option<(&DomainExpression, ScalarDomain)>,
 ) -> Result<SymbolicDerivative, EvaluationError> {
     let mut steps = Vec::new();
     let derivative = produce(
         original,
         variable,
         power_limit,
+        source.map(|(_, domain)| domain),
         meter,
         &mut steps,
         &mut check,
@@ -224,6 +304,8 @@ pub(crate) fn generate_symbolic_derivative(
         variable: variable.clone(),
         derivative,
         steps,
+        source: source.map(|(source, _)| source.clone()),
+        domain: source.map(|(_, domain)| domain),
     })
 }
 
@@ -235,6 +317,7 @@ pub enum DerivativeVerificationError {
     IncorrectDerivative,
     UnsupportedPower,
     UnsupportedFunction,
+    MissingDomainCondition,
     DepthLimit,
 }
 
@@ -247,6 +330,7 @@ impl fmt::Display for DerivativeVerificationError {
             Self::IncorrectDerivative => "claimed derivative is not justified",
             Self::UnsupportedPower => "unsupported derivative power in claimed proof",
             Self::UnsupportedFunction => "unsupported analytic function in claimed proof",
+            Self::MissingDomainCondition => "missing or mismatched analytic domain evidence",
             Self::DepthLimit => "derivative verification nesting limit exceeded",
         };
         f.write_str(message)
@@ -264,6 +348,7 @@ fn verify_node<'a>(
     variable: &Symbol,
     steps: &mut impl Iterator<Item = &'a DifferentiationStep>,
     depth: usize,
+    domain: Option<ScalarDomain>,
 ) -> Result<Expr, DerivativeVerificationError> {
     use DerivativeVerificationError as E;
 
@@ -276,18 +361,52 @@ fn verify_node<'a>(
             (DerivativeRuleId::SelectedSymbol, Expr::from(1))
         }
         ExprView::Symbol(_) => (DerivativeRuleId::OtherSymbol, Expr::from(0)),
-        ExprView::Function { .. } => return Err(E::UnsupportedFunction),
+        ExprView::Function { name, argument } => {
+            match name.name() {
+                "sin" | "cos" | "exp" => {}
+                "tan" if matches!(domain, Some(ScalarDomain::Real | ScalarDomain::Complex)) => {}
+                "log" if domain == Some(ScalarDomain::Real) => {}
+                _ => return Err(E::UnsupportedFunction),
+            }
+            let inner = verify_node(argument, variable, steps, depth + 1, domain)?;
+            match name.name() {
+                "sin" => (
+                    DerivativeRuleId::SineChain,
+                    Expr::mul([Expr::cos(argument.clone()), inner]),
+                ),
+                "cos" => (
+                    DerivativeRuleId::CosineChain,
+                    Expr::mul([Expr::from(-1), Expr::sin(argument.clone()), inner]),
+                ),
+                "tan" => (
+                    DerivativeRuleId::TangentChain,
+                    Expr::mul([
+                        Expr::pow(Expr::cos(argument.clone()), Expr::from(-2)),
+                        inner,
+                    ]),
+                ),
+                "exp" => (
+                    DerivativeRuleId::ExponentialChain,
+                    Expr::mul([Expr::exp(argument.clone()), inner]),
+                ),
+                "log" => (
+                    DerivativeRuleId::LogarithmChain,
+                    Expr::mul([Expr::pow(argument.clone(), Expr::from(-1)), inner]),
+                ),
+                _ => return Err(E::UnsupportedFunction),
+            }
+        }
         ExprView::Add(terms) => {
             let mut expected_terms = Vec::with_capacity(terms.len());
             for term in terms {
-                expected_terms.push(verify_node(term, variable, steps, depth + 1)?);
+                expected_terms.push(verify_node(term, variable, steps, depth + 1, domain)?);
             }
             (DerivativeRuleId::Sum, Expr::add(expected_terms))
         }
         ExprView::Mul(factors) => {
             let mut gradients = Vec::with_capacity(factors.len());
             for factor in factors {
-                gradients.push(verify_node(factor, variable, steps, depth + 1)?);
+                gradients.push(verify_node(factor, variable, steps, depth + 1, domain)?);
             }
             let mut sum = Vec::with_capacity(factors.len());
             for i in 0..factors.len() {
@@ -305,7 +424,7 @@ fn verify_node<'a>(
         }
         ExprView::Pow { base, exponent } => {
             let exponent = positive_power(exponent).map_err(|_| E::UnsupportedPower)?;
-            let derivative = verify_node(base, variable, steps, depth + 1)?;
+            let derivative = verify_node(base, variable, steps, depth + 1, domain)?;
             let power = if exponent == 1 {
                 Expr::from(1)
             } else {
@@ -339,8 +458,31 @@ pub fn verify_symbolic_derivative(
     if result.steps.len() > 100_000 {
         return Err(E::UnexpectedStep);
     }
+    match (&result.source, result.domain) {
+        (None, None) => {}
+        (Some(source), Some(domain)) => {
+            if source.expression() != &result.original {
+                return Err(E::MissingDomainCondition);
+            }
+            let required = definedness_obligations_in_domain(&result.original, 100_000, domain)
+                .map_err(|_| E::MissingDomainCondition)?;
+            if required
+                .iter()
+                .any(|condition| !source.conditions().contains(condition))
+            {
+                return Err(E::MissingDomainCondition);
+            }
+        }
+        _ => return Err(E::MissingDomainCondition),
+    }
     let mut steps = result.steps.iter();
-    let verified = verify_node(&result.original, &result.variable, &mut steps, 1)?;
+    let verified = verify_node(
+        &result.original,
+        &result.variable,
+        &mut steps,
+        1,
+        result.domain,
+    )?;
     if steps.next().is_some() {
         return Err(E::UnexpectedStep);
     }
@@ -409,6 +551,48 @@ mod adversarial {
         assert_eq!(
             verify_symbolic_derivative(&claimed),
             Err(DerivativeVerificationError::MissingStep)
+        );
+    }
+}
+
+#[cfg(test)]
+mod analytic_adversarial {
+    use super::*;
+    use crate::EvaluationContext;
+
+    #[test]
+    fn forged_domain_and_function_rule_do_not_verify() {
+        let symbol = Symbol::new("x").unwrap();
+        let original = Expr::log(Expr::from(symbol.clone()));
+        let real_source =
+            DomainExpression::from_expr_in_domain(original.clone(), ScalarDomain::Real, 64, 8)
+                .unwrap();
+        let valid = EvaluationContext::default()
+            .differentiate_domain_expression(&real_source, &symbol, ScalarDomain::Real)
+            .unwrap();
+        assert_eq!(verify_symbolic_derivative(&valid), Ok(()));
+
+        let mut changed = valid.clone();
+        changed.steps.last_mut().unwrap().rule = DerivativeRuleId::Constant;
+        assert_eq!(
+            verify_symbolic_derivative(&changed),
+            Err(DerivativeVerificationError::IncorrectRule)
+        );
+
+        let mut changed = valid.clone();
+        changed.domain = Some(ScalarDomain::Complex);
+        assert_eq!(
+            verify_symbolic_derivative(&changed),
+            Err(DerivativeVerificationError::MissingDomainCondition)
+        );
+
+        let mut changed = valid.clone();
+        changed.source = Some(
+            DomainExpression::from_expr_in_domain(original, ScalarDomain::Complex, 64, 8).unwrap(),
+        );
+        assert_eq!(
+            verify_symbolic_derivative(&changed),
+            Err(DerivativeVerificationError::MissingDomainCondition)
         );
     }
 }

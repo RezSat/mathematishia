@@ -7,7 +7,7 @@
 use std::error::Error;
 use std::fmt;
 
-use mathema::{Integer, Rational};
+use mathema::Rational;
 
 use crate::{MultivariateError, MultivariateLimits, MultivariatePolynomial};
 
@@ -32,8 +32,12 @@ impl fmt::Display for MultivariateDivisionError {
             Self::TooManyDivisors => f.write_str("multivariate divisor count limit exceeded"),
             Self::ZeroDivisor => f.write_str("multivariate division by zero polynomial"),
             Self::ResourceLimit => f.write_str("multivariate division step limit exceeded"),
-            Self::NondecreasingLeadingTerm => f.write_str("multivariate reduction did not decrease its leading monomial"),
-            Self::InvalidCertificate => f.write_str("multivariate quotient and remainder failed exact verification"),
+            Self::NondecreasingLeadingTerm => {
+                f.write_str("multivariate reduction did not decrease its leading monomial")
+            }
+            Self::InvalidCertificate => {
+                f.write_str("multivariate quotient and remainder failed exact verification")
+            }
             Self::Polynomial(error) => write!(f, "{error}"),
         }
     }
@@ -92,10 +96,7 @@ fn divides(left: &[u32], right: &[u32]) -> bool {
     left.iter().zip(right).all(|(a, b)| a <= b)
 }
 
-fn coefficient_quotient(
-    numerator: &Rational,
-    denominator: &Rational,
-) -> Rational {
+fn coefficient_quotient(numerator: &Rational, denominator: &Rational) -> Rational {
     // Leading coefficients of stored polynomials are nonzero.
     Rational::new(
         numerator.numerator() * denominator.denominator(),
@@ -110,9 +111,10 @@ fn monomial(
     coefficient: Rational,
     limits: MultivariateLimits,
 ) -> Result<MultivariatePolynomial, MultivariateDivisionError> {
-    let converted = powers.into_iter().map(|n| {
-        i32::try_from(n).map_err(|_| MultivariateDivisionError::ResourceLimit)
-    }).collect::<Result<Vec<_>, _>>()?;
+    let converted = powers
+        .into_iter()
+        .map(|n| i32::try_from(n).map_err(|_| MultivariateDivisionError::ResourceLimit))
+        .collect::<Result<Vec<_>, _>>()?;
     Ok(MultivariatePolynomial::try_new(
         prototype.variables().to_vec(),
         [(converted, coefficient)],
@@ -131,14 +133,16 @@ pub fn divide_multivariate(
     check_divisors(dividend, divisors)?;
     let mut quotients = Vec::with_capacity(divisors.len());
     for _ in divisors {
-        quotients.push(MultivariatePolynomial::zero(dividend.variables().to_vec(), limits)?);
+        quotients.push(MultivariatePolynomial::zero(
+            dividend.variables().to_vec(),
+            limits,
+        )?);
     }
     let mut remainder = MultivariatePolynomial::zero(dividend.variables().to_vec(), limits)?;
     let mut pending = dividend.clone();
     let mut steps = 0_usize;
-    let budget = MAX_DIVISION_STEPS.min(
-        usize::try_from(limits.max_work_units).unwrap_or(usize::MAX),
-    );
+    let budget =
+        MAX_DIVISION_STEPS.min(usize::try_from(limits.max_work_units).unwrap_or(usize::MAX));
 
     while let Some((powers, coefficient)) = pending.terms().last_key_value() {
         if steps >= budget {
@@ -157,8 +161,11 @@ pub fn divide_multivariate(
             if !divides(divisor_powers, &powers) {
                 continue;
             }
-            let difference = powers.iter().zip(divisor_powers)
-                .map(|(a,b)| a-b).collect();
+            let difference = powers
+                .iter()
+                .zip(divisor_powers)
+                .map(|(a, b)| a - b)
+                .collect();
             let factor = monomial(
                 dividend,
                 difference,
@@ -167,7 +174,11 @@ pub fn divide_multivariate(
             )?;
             let product = factor.multiply(divisor, limits)?;
             let next = pending.subtract(&product, limits)?;
-            if next.terms().last_key_value().is_some_and(|(key, _)| key >= &old_lead) {
+            if next
+                .terms()
+                .last_key_value()
+                .is_some_and(|(key, _)| key >= &old_lead)
+            {
                 return Err(MultivariateDivisionError::NondecreasingLeadingTerm);
             }
             quotients[i] = quotients[i].add(&factor, limits)?;
@@ -207,15 +218,20 @@ pub fn verify_multivariate_division(
         || claimed.steps > MAX_DIVISION_STEPS
         || claimed.steps > usize::try_from(limits.max_work_units).unwrap_or(usize::MAX)
         || claimed.remainder.variables() != dividend.variables()
-        || claimed.quotients.iter().any(|q| q.variables() != dividend.variables())
+        || claimed
+            .quotients
+            .iter()
+            .any(|q| q.variables() != dividend.variables())
     {
         return Ok(false);
     }
     for (powers, _) in claimed.remainder.terms() {
-        if divisors.iter().any(|g| divides(
-            g.terms().last_key_value().expect("nonzero divisor").0,
-            powers,
-        )) {
+        if divisors.iter().any(|g| {
+            divides(
+                g.terms().last_key_value().expect("nonzero divisor").0,
+                powers,
+            )
+        }) {
             return Ok(false);
         }
     }
@@ -230,7 +246,7 @@ pub fn verify_multivariate_division(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mathema::Symbol;
+    use mathema::{Integer, Symbol};
 
     fn sym(s: &str) -> Symbol {
         Symbol::new(s).unwrap()
@@ -238,34 +254,45 @@ mod tests {
     fn p(terms: &[(i32, i32, i64)]) -> MultivariatePolynomial {
         MultivariatePolynomial::try_new(
             vec![sym("x"), sym("y")],
-            terms.iter().map(|&(x,y,c)| (vec![x,y], Rational::from(Integer::from(c)))),
+            terms
+                .iter()
+                .map(|&(x, y, c)| (vec![x, y], Rational::from(Integer::from(c)))),
             MultivariateLimits::default(),
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]
     fn forged_quotient_and_remainder_are_rejected() {
         let limits = MultivariateLimits::default();
-        let dividend = p(&[(2,0,1),(0,1,1)]);
-        let divisor = p(&[(1,0,1),(0,0,1)]);
+        let dividend = p(&[(2, 0, 1), (0, 1, 1)]);
+        let divisor = p(&[(1, 0, 1), (0, 0, 1)]);
         let result = divide_multivariate(&dividend, &[divisor.clone()], limits).unwrap();
-        assert!(verify_multivariate_division(&dividend,&[divisor.clone()],&result,limits).unwrap());
+        assert!(
+            verify_multivariate_division(&dividend, &[divisor.clone()], &result, limits).unwrap()
+        );
         let mut forged = result.clone();
-        forged.quotients[0] = p(&[(1,0,5)]);
-        assert!(!verify_multivariate_division(&dividend,&[divisor.clone()],&forged,limits).unwrap());
+        forged.quotients[0] = p(&[(1, 0, 5)]);
+        assert!(
+            !verify_multivariate_division(&dividend, &[divisor.clone()], &forged, limits).unwrap()
+        );
         let mut forged = result.clone();
-        forged.remainder = p(&[(1,0,1)]);
-        assert!(!verify_multivariate_division(&dividend,&[divisor],&forged,limits).unwrap());
+        forged.remainder = p(&[(1, 0, 1)]);
+        assert!(!verify_multivariate_division(&dividend, &[divisor], &forged, limits).unwrap());
     }
 
     #[test]
     fn limit_exhaustion_rejects_without_partial_result() {
-        let dividend = p(&[(3,0,1),(2,0,1),(1,0,1),(0,0,1)]);
-        let divisor = p(&[(1,0,1),(0,0,1)]);
-        let limits = MultivariateLimits { max_work_units: 1, ..MultivariateLimits::default() };
+        let dividend = p(&[(3, 0, 1), (2, 0, 1), (1, 0, 1), (0, 0, 1)]);
+        let divisor = p(&[(1, 0, 1), (0, 0, 1)]);
+        let limits = MultivariateLimits {
+            max_work_units: 1,
+            ..MultivariateLimits::default()
+        };
         assert!(matches!(
-            divide_multivariate(&dividend,&[divisor],limits),
-            Err(MultivariateDivisionError::ResourceLimit | MultivariateDivisionError::Polynomial(MultivariateError::WorkLimit))
+            divide_multivariate(&dividend, &[divisor], limits),
+            Err(MultivariateDivisionError::ResourceLimit
+                | MultivariateDivisionError::Polynomial(MultivariateError::WorkLimit))
         ));
     }
 }

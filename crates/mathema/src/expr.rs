@@ -36,9 +36,15 @@ pub enum ExprView<'a> {
     Symbol(&'a Symbol),
     Add(&'a [Expr]),
     Mul(&'a [Expr]),
-    Pow { base: &'a Expr, exponent: &'a Expr },
+    Pow {
+        base: &'a Expr,
+        exponent: &'a Expr,
+    },
     /// An unevaluated unary function. Unknown names have no assigned domain semantics.
-    Function { name: &'a Symbol, argument: &'a Expr },
+    Function {
+        name: &'a Symbol,
+        argument: &'a Expr,
+    },
 }
 
 impl Expr {
@@ -153,7 +159,10 @@ impl Expr {
     }
 
     fn builtin(name: &str, argument: Self) -> Self {
-        Self::function(Symbol::new(name).expect("builtin name is nonempty"), argument)
+        Self::function(
+            Symbol::new(name).expect("builtin name is nonempty"),
+            argument,
+        )
     }
 
     /// Direct restrictions of this function node in the selected scalar domain.
@@ -170,15 +179,9 @@ impl Expr {
             return None;
         };
         match (name.name(), domain) {
-            ("sin" | "cos" | "exp", ScalarDomain::Real | ScalarDomain::Complex) => {
-                Some(Vec::new())
-            }
-            ("log", ScalarDomain::Real) => {
-                Some(vec![Condition::Positive(argument.clone())])
-            }
-            ("log", ScalarDomain::Complex) => {
-                Some(vec![Condition::NonZero(argument.clone())])
-            }
+            ("sin" | "cos" | "exp", ScalarDomain::Real | ScalarDomain::Complex) => Some(Vec::new()),
+            ("log", ScalarDomain::Real) => Some(vec![Condition::Positive(argument.clone())]),
+            ("log", ScalarDomain::Complex) => Some(vec![Condition::NonZero(argument.clone())]),
             ("tan", ScalarDomain::Real | ScalarDomain::Complex) => {
                 Some(vec![Condition::NonZero(Self::cos(argument.clone()))])
             }
@@ -237,8 +240,14 @@ impl Expr {
                     a.canonical_cmp(c).then_with(|| b.canonical_cmp(d))
                 }
                 (
-                    ExprNode::Function { name: a, argument: b },
-                    ExprNode::Function { name: c, argument: d },
+                    ExprNode::Function {
+                        name: a,
+                        argument: b,
+                    },
+                    ExprNode::Function {
+                        name: c,
+                        argument: d,
+                    },
                 ) => a.cmp(c).then_with(|| b.canonical_cmp(d)),
                 (ExprNode::Add(a), ExprNode::Add(b)) | (ExprNode::Mul(a), ExprNode::Mul(b)) => {
                     for (left, right) in a.iter().zip(b) {

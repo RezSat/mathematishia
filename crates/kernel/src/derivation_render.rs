@@ -31,8 +31,14 @@ pub enum RenderedStatement {
 /// Distinct verified claims: differentiation is not an equality rewrite.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum RenderedClaim {
-    Equal { before: Expr, after: Expr },
-    Equivalent { before: Equation, after: Equation },
+    Equal {
+        before: Expr,
+        after: Expr,
+    },
+    Equivalent {
+        before: Equation,
+        after: Equation,
+    },
     DerivativeOf {
         expression: Expr,
         derivative: Expr,
@@ -122,7 +128,9 @@ impl fmt::Display for DerivationRenderError {
             Self::Equation(err) => write!(f, "invalid equation derivation: {err}"),
             Self::Derivative(err) => write!(f, "invalid derivative derivation: {err}"),
             Self::UnsupportedEvidence => f.write_str("unsupported derivation evidence"),
-            Self::ResourceLimitExceeded => f.write_str("derivation rendering resource limit exceeded"),
+            Self::ResourceLimitExceeded => {
+                f.write_str("derivation rendering resource limit exceeded")
+            }
         }
     }
 }
@@ -162,7 +170,10 @@ fn inspect_expr(expr: &Expr, remaining: &mut usize) -> Result<(), DerivationRend
     Ok(())
 }
 
-fn inspect_equation(equation: &Equation, remaining: &mut usize) -> Result<(), DerivationRenderError> {
+fn inspect_equation(
+    equation: &Equation,
+    remaining: &mut usize,
+) -> Result<(), DerivationRenderError> {
     inspect_expr(equation.left(), remaining)?;
     inspect_expr(equation.right(), remaining)
 }
@@ -323,7 +334,9 @@ pub fn render_proof_graph(
                 )?)
             }
             ProofNodeKind::GuardedCancellation {
-                source, condition, step,
+                source,
+                condition,
+                step,
             } => {
                 if step.relation() != Relation::Equal {
                     return Err(DerivationRenderError::UnsupportedEvidence);
@@ -346,7 +359,9 @@ pub fn render_proof_graph(
                 )?)
             }
             ProofNodeKind::CompositeCancellation {
-                source, conditions, step,
+                source,
+                conditions,
+                step,
             } => {
                 if step.relation() != Relation::Equal {
                     return Err(DerivationRenderError::UnsupportedEvidence);

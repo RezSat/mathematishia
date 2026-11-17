@@ -8,6 +8,7 @@ use mathema::{Expr, ExprView, Symbol};
 
 mod algebraic;
 mod algebraic_extension;
+mod analytic_constants;
 mod assumptions;
 mod budget;
 mod conditional_rewrite;
@@ -27,12 +28,15 @@ mod integration;
 mod linear_system_expr;
 mod modular_irreducibility;
 mod modular_reconstruction;
+mod multivariate_derivation;
 mod multivariate_division;
+mod multivariate_expr;
 mod multivariate_polynomial;
 mod poly_convert;
 mod poly_division;
 mod polynomial;
 mod polynomial_residue;
+mod polynomial_solution_set;
 mod proof_graph;
 mod quadratic;
 mod quadratic_field;
@@ -45,6 +49,7 @@ mod rational_quadratic;
 mod root_isolation;
 mod solve_linear;
 mod square_free;
+mod sturm_count;
 mod verification;
 
 pub use algebraic::{
@@ -54,6 +59,11 @@ pub use algebraic::{
 pub use algebraic_extension::{
     AlgebraicExtensionElement, AlgebraicExtensionError, CertifiedAlgebraicField,
     verify_certified_algebraic_field,
+};
+pub use analytic_constants::{
+    AnalyticConstantError, AnalyticConstantLimit, AnalyticConstantLimits, AnalyticConstantOutcome,
+    AnalyticConstantRewrite, AnalyticConstantRule, AnalyticConstantUnsupported,
+    rewrite_analytic_constant_once, verify_analytic_constant_rewrite,
 };
 pub use assumptions::{AssumptionError, Assumptions, ConditionStatus};
 pub use conditional_rewrite::{
@@ -107,15 +117,26 @@ pub use mathema::{DefinednessError, DomainExpression, definedness_obligations};
 pub use modular_irreducibility::{
     ModularIrreducibilityCertificate, modular_irreducibility_witness, verify_modular_irreducibility,
 };
+pub use multivariate_derivation::{
+    DivisionExplanationKind, DivisionExplanationLine, DivisionMonomialOrder, DivisionProduct,
+    DivisionRecompositionClaim, DivisionReducedRemainderClaim, MultivariateDerivationError,
+    MultivariateDivisionDerivation, render_multivariate_division, verify_multivariate_derivation,
+};
 pub use multivariate_division::{
     MultivariateDivision, MultivariateDivisionError, divide_multivariate,
     verify_multivariate_division,
 };
+pub use multivariate_expr::{DomainMultivariatePolynomial, MultivariateExprError};
 pub use multivariate_polynomial::{MultivariateError, MultivariateLimits, MultivariatePolynomial};
 pub use poly_convert::PolynomialConversionError;
 pub use poly_division::ZeroPolynomialDivisor;
 pub use polynomial::RationalPolynomial;
 pub use polynomial_residue::{PolynomialResidue, ResidueError, verify_residue_product};
+pub use polynomial_solution_set::{
+    PartialPolynomialRootError, PartialPolynomialRootResult, PolynomialFactorRootEvidence,
+    PolynomialRootMultiplicity, PolynomialZeroSet, solve_partial_polynomial_roots,
+    verify_partial_polynomial_roots,
+};
 pub use proof_graph::{
     ProofGraph, ProofGraphBuildError, ProofGraphVerificationError, ProofNode, ProofNodeId,
     ProofNodeKind, verify_proof_graph,
@@ -151,6 +172,10 @@ pub use solve_linear::{
 pub use square_free::{
     SquareFreeDecomposition, SquareFreeError, SquareFreeFactor, SquareFreeVerificationError,
     verify_square_free_decomposition,
+};
+pub use sturm_count::{
+    SturmCountCertificate, SturmCountError, SturmDivisionEvidence, SturmSign,
+    SturmVerificationError, verify_sturm_count,
 };
 pub use verification::{
     VerificationError, verify_distribution, verify_distribution_step, verify_equation_step,

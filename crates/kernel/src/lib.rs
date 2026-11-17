@@ -27,6 +27,7 @@ mod linear_system_expr;
 mod modular_irreducibility;
 mod modular_reconstruction;
 mod multivariate_division;
+mod multivariate_expr;
 mod multivariate_polynomial;
 mod poly_convert;
 mod poly_division;
@@ -108,6 +109,7 @@ pub use multivariate_division::{
     MultivariateDivision, MultivariateDivisionError, divide_multivariate,
     verify_multivariate_division,
 };
+pub use multivariate_expr::{DomainMultivariatePolynomial, MultivariateExprError};
 pub use multivariate_polynomial::{MultivariateError, MultivariateLimits, MultivariatePolynomial};
 pub use poly_convert::PolynomialConversionError;
 pub use poly_division::ZeroPolynomialDivisor;

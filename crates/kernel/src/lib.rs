@@ -26,6 +26,7 @@ mod integration;
 mod linear_system_expr;
 mod modular_irreducibility;
 mod modular_reconstruction;
+mod multivariate_derivation;
 mod multivariate_division;
 mod multivariate_expr;
 mod multivariate_polynomial;
@@ -105,6 +106,11 @@ pub use linear_system_expr::{
 pub use mathema::{DefinednessError, DomainExpression, definedness_obligations};
 pub use modular_irreducibility::{
     ModularIrreducibilityCertificate, modular_irreducibility_witness, verify_modular_irreducibility,
+};
+pub use multivariate_derivation::{
+    DivisionExplanationKind, DivisionExplanationLine, DivisionMonomialOrder, DivisionProduct,
+    DivisionRecompositionClaim, DivisionReducedRemainderClaim, MultivariateDerivationError,
+    MultivariateDivisionDerivation, render_multivariate_division, verify_multivariate_derivation,
 };
 pub use multivariate_division::{
     MultivariateDivision, MultivariateDivisionError, divide_multivariate,

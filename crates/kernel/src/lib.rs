@@ -27,6 +27,7 @@ mod linear_system_expr;
 mod modular_irreducibility;
 mod modular_reconstruction;
 mod multivariate_division;
+mod multivariate_expr;
 mod multivariate_polynomial;
 mod poly_convert;
 mod poly_division;
@@ -45,6 +46,7 @@ mod rational_quadratic;
 mod root_isolation;
 mod solve_linear;
 mod square_free;
+mod sturm_count;
 mod verification;
 
 pub use algebraic::{
@@ -108,6 +110,7 @@ pub use multivariate_division::{
     MultivariateDivision, MultivariateDivisionError, divide_multivariate,
     verify_multivariate_division,
 };
+pub use multivariate_expr::{DomainMultivariatePolynomial, MultivariateExprError};
 pub use multivariate_polynomial::{MultivariateError, MultivariateLimits, MultivariatePolynomial};
 pub use poly_convert::PolynomialConversionError;
 pub use poly_division::ZeroPolynomialDivisor;
@@ -153,6 +156,10 @@ pub use solve_linear::{
 pub use square_free::{
     SquareFreeDecomposition, SquareFreeError, SquareFreeFactor, SquareFreeVerificationError,
     verify_square_free_decomposition,
+};
+pub use sturm_count::{
+    SturmCountCertificate, SturmCountError, SturmDivisionEvidence, SturmSign,
+    SturmVerificationError, verify_sturm_count,
 };
 pub use verification::{
     VerificationError, verify_distribution, verify_distribution_step, verify_equation_step,

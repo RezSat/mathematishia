@@ -33,6 +33,7 @@ mod poly_convert;
 mod poly_division;
 mod polynomial;
 mod polynomial_residue;
+mod polynomial_solution_set;
 mod proof_graph;
 mod quadratic;
 mod quadratic_field;
@@ -115,6 +116,11 @@ pub use poly_convert::PolynomialConversionError;
 pub use poly_division::ZeroPolynomialDivisor;
 pub use polynomial::RationalPolynomial;
 pub use polynomial_residue::{PolynomialResidue, ResidueError, verify_residue_product};
+pub use polynomial_solution_set::{
+    PartialPolynomialRootError, PartialPolynomialRootResult, PolynomialFactorRootEvidence,
+    PolynomialRootMultiplicity, PolynomialZeroSet, solve_partial_polynomial_roots,
+    verify_partial_polynomial_roots,
+};
 pub use proof_graph::{
     ProofGraph, ProofGraphBuildError, ProofGraphVerificationError, ProofNode, ProofNodeId,
     ProofNodeKind, verify_proof_graph,

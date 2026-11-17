@@ -76,3 +76,13 @@ jobs:
           .venv/bin/python -m pip check
       - name: Test package built from source distribution
         run: .venv/bin/python -m unittest discover -s crates/python/tests -v
+
+  runtime-smoke:
+    name: runtime user-problem smoke audit (temporary branch)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Execute 38 representative Mathematishia CLI problems
+        shell: bash
+        run: bash scripts/runtime-smoke-audit.sh

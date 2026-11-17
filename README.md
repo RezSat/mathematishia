@@ -108,6 +108,8 @@ They do not select real or complex embeddings. The `qvalue` interface handles
 embedded quadratic arithmetic separately. Cross-field arithmetic and analytic numerical evaluation are not implemented.
 Checked derivatives cover selected analytic functions with domain conditions.
 
+Additional checked Rust kernel APIs now support exact multivariate expression conversion, Sturm interval root counting, partial complex polynomial root sets, five analytic constant identities, rational-affine sine/cosine/exponential primitives, and final-result explanations for ordered multivariate division. These additions do not yet have matching CLI or Python commands; consult [CAPABILITIES.md](CAPABILITIES.md) for their exact mathematical domains and limits.
+
 Resource limits bound selected algebraic operations; they are not process
 memory or execution-time limits.
 

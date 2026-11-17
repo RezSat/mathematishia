@@ -45,6 +45,7 @@ mod rational_quadratic;
 mod root_isolation;
 mod solve_linear;
 mod square_free;
+mod sturm_count;
 mod verification;
 
 pub use algebraic::{
@@ -149,6 +150,10 @@ pub use solve_linear::{
 pub use square_free::{
     SquareFreeDecomposition, SquareFreeError, SquareFreeFactor, SquareFreeVerificationError,
     verify_square_free_decomposition,
+};
+pub use sturm_count::{
+    SturmCountCertificate, SturmCountError, SturmDivisionEvidence, SturmSign,
+    SturmVerificationError, verify_sturm_count,
 };
 pub use verification::{
     VerificationError, verify_distribution, verify_distribution_step, verify_equation_step,

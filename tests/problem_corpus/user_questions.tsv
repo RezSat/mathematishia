@@ -62,8 +62,8 @@ id	category	question	outcome	exit	error_kind	arguments	semantic_lines	conditions
 058	equations	Solve 3x=9	solved	0	-	solveauto¦3*x=9	status: exact¦solution: x = 3¦verified: true	-	none	exact	cycle4
 059	equations	Solve x+1=x+2	solved	0	-	solveauto¦x+1=x+2	status: exact¦solution: none¦verified: true	-	none	exact	cycle4
 060	equations	Solve x=x	solved	0	-	solveauto¦x=x	status: exact¦solution: all rational values¦verified: true	-	none	exact	cycle4
-061	equations	Solve x^2-2=0 over C	solved	0	-	solveauto¦x^2-2=0	status: exact¦domain: C¦roots: 2¦verified: true	-	none	exact	cycle4
-062	equations	Solve x^2+1=0 over C	solved	0	-	solveauto¦x^2+1=0	status: exact¦domain: C¦roots: 2¦verified: true	-	none	exact	cycle4
+061	equations	Solve x^2-2=0 over C	solved	0	-	solveauto¦x^2-2=0	status: exact¦domain: C¦roots: 2¦verified: true¦root 1: lower_real of minimal polynomial -2 + x ^ 2 ; multiplicity: 1¦root 2: upper_real of minimal polynomial -2 + x ^ 2 ; multiplicity: 1	-	none	exact	cycle4
+062	equations	Solve x^2+1=0 over C	solved	0	-	solveauto¦x^2+1=0	status: exact¦domain: C¦roots: 2¦verified: true¦root 1: negative_imaginary of minimal polynomial 1 + x ^ 2 ; multiplicity: 1¦root 2: positive_imaginary of minimal polynomial 1 + x ^ 2 ; multiplicity: 1	-	none	exact	cycle4
 063	equations	Find repeated root of (x-2)^2	solved	0	-	roots¦x^2-4*x+4	status: exact¦roots: 1¦root 1: 2 ; multiplicity: 2¦verified: true	-	none	exact	cycle4
 064	equations	Find all roots of the zero polynomial	solved	0	-	roots¦0	status: exact¦solution: all complex numbers¦verified: true	-	none	exact	cycle4
 065	equations	Find roots of constant nonzero polynomial	solved	0	-	roots¦5	status: exact¦roots: 0¦verified: true	-	none	exact	cycle4
@@ -85,9 +85,9 @@ id	category	question	outcome	exit	error_kind	arguments	semantic_lines	conditions
 081	integrals	Integrate 0	solved	0	-	integrate¦0	status: exact¦primitive: 0¦verified: true	conditions: none	none	exact	cycle4
 082	integrals	Integrate 5	solved	0	-	integrate¦5	status: exact¦primitive: 5 * x¦verified: true	conditions: none	none	exact	cycle4
 083	integrals	Integrate x	solved	0	-	integrate¦x	status: exact¦primitive: 1/2 * x ^ 2¦verified: true	conditions: none	none	exact	cycle4
-084	integrals	Integrate sin(2x+1)	solved	0	-	integrate¦sin(2*x+1)	status: exact¦rule: calculus.integrate_affine_sine¦verified: true	conditions: none	rules=1	affine_analytic	cycle4
-085	integrals	Integrate cos(x)	solved	0	-	integrate¦cos(x)	status: exact¦rule: calculus.integrate_affine_cosine¦verified: true	conditions: none	rules=1	affine_analytic	cycle4
-086	integrals	Integrate exp(x)	solved	0	-	integrate¦exp(x)	status: exact¦rule: calculus.integrate_affine_exponential¦verified: true	conditions: none	rules=1	affine_analytic	cycle4
+084	integrals	Integrate sin(2x+1)	solved	0	-	integrate¦sin(2*x+1)	status: exact¦rule: calculus.integrate_affine_sine¦verified: true¦primitive: -1/2 * cos(1 + 2 * x)	conditions: none	rules=1	affine_analytic	cycle4
+085	integrals	Integrate cos(x)	solved	0	-	integrate¦cos(x)	status: exact¦rule: calculus.integrate_affine_cosine¦verified: true¦primitive: sin(x)	conditions: none	rules=1	affine_analytic	cycle4
+086	integrals	Integrate exp(x)	solved	0	-	integrate¦exp(x)	status: exact¦rule: calculus.integrate_affine_exponential¦verified: true¦primitive: exp(x)	conditions: none	rules=1	affine_analytic	cycle4
 087	integrals	Reject 1/x as a polynomial primitive	unsupported	2	Unsupported	integrate¦1/x	error:*	-	none	logarithmic_integral_unavailable	cycle4
 088	integrals	Reject x^-1 definite integral over a pole	unsupported	2	Unsupported	integrate¦x^-1¦x¦0¦1	error:*	-	none	domain_restricted_integral	cycle4
 089	limits	Evaluate lim x->1 (x^2-1)/(x-1)	unsupported	2	InvalidInput	limit¦(x^2-1)/(x-1)¦x¦1	error: invalid command or argument count; use --help	-	none	limit_command_unavailable	cycle4

@@ -3,14 +3,6 @@ use mathema::{
 };
 use mathematishia_kernel::*;
 
-#[path = "../src/problem_result.rs"]
-mod problem_result;
-
-use problem_result::{
-    ExactAnswer, ProblemError, ProblemEvidence, ProblemOperation, ProblemOutcome, ProblemRequest,
-    ProblemRestriction, ProblemStatement, UndefinedReason, UnsupportedReason,
-    adapt_verified_problem, dispatch_problem,
-};
 
 fn variable(name: &str) -> Symbol {
     Symbol::new(name).unwrap()

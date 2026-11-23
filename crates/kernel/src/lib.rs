@@ -37,6 +37,7 @@ mod poly_division;
 mod polynomial;
 mod polynomial_residue;
 mod polynomial_solution_set;
+mod problem_result;
 mod proof_graph;
 mod quadratic;
 mod quadratic_field;
@@ -136,6 +137,11 @@ pub use polynomial_solution_set::{
     PartialPolynomialRootError, PartialPolynomialRootResult, PolynomialFactorRootEvidence,
     PolynomialRootMultiplicity, PolynomialZeroSet, solve_partial_polynomial_roots,
     verify_partial_polynomial_roots,
+};
+pub use problem_result::{
+    CheckedBy, ExactAnswer, ProblemError, ProblemEvidence, ProblemOperation, ProblemOutcome,
+    ProblemRequest, ProblemRestriction, ProblemResult, ProblemStatement, StepReference,
+    UndefinedReason, UnsupportedReason, adapt_verified_problem, dispatch_problem,
 };
 pub use proof_graph::{
     ProofGraph, ProofGraphBuildError, ProofGraphVerificationError, ProofNode, ProofNodeId,

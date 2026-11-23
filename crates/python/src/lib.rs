@@ -7,17 +7,22 @@ use mathema::{
     Condition, DomainExpression, Equation, Expr, ExprView, Rational, ScalarDomain, Symbol,
 };
 use mathema_frontend::{
-    DomainParseError, DomainStatement, Statement, parse_domain_expression,
-    parse_domain_expression_in_domain, parse_domain_statement, parse_expression, parse_statement,
+    DomainParseError, DomainStatement, ParseError, ParseErrorKind, Statement,
+    parse_domain_expression, parse_domain_expression_in_domain, parse_domain_statement,
+    parse_expression, parse_statement,
 };
 use mathematishia_kernel::{
-    AlgebraicExtensionError, AlgebraicRootEvidence, AlgebraicRootSet, Assumptions,
-    CertifiedAlgebraicField, DefinednessError, DomainOperationError, DomainRewriteOutcome,
-    EvaluationContext, EvaluationError, ExactMatrix, ExactQuadraticRoot, LinearSolution,
-    LinearSystemSolution, MatrixError, PolynomialResidue, ProofNodeKind, QuadraticBranch,
-    QuadraticElement, QuadraticField, QuadraticFieldError, QuadraticRoots, RationalExpressionError,
-    RationalFunction, RationalFunctionError, RationalPolynomial, RationalQuadraticRoots,
-    ResidueError, ResourceLimitKind, VerifiedCondition, rewrite_domain_once, substitute_domain,
+    AlgebraicExtensionError, AlgebraicRootEvidence, AlgebraicRootSet, AnalyticConstantError,
+    AnalyticConstantLimits, AnalyticConstantOutcome, Assumptions, CertifiedAlgebraicField,
+    DefinednessError, DomainOperationError, DomainRewriteOutcome, ElementaryIntegrationError,
+    EvaluationContext, EvaluationError, ExactMatrix, ExactQuadraticRoot, IntegrationError,
+    LinearSolution, LinearSystemSolution, MatrixError, PartialPolynomialRootError,
+    PolynomialResidue, PolynomialZeroSet, ProofNodeKind, QuadraticBranch, QuadraticElement,
+    QuadraticField, QuadraticFieldError, QuadraticRoots, RationalExpressionError, RationalFunction,
+    RationalFunctionError, RationalPolynomial, RationalQuadraticRoots, ResidueError,
+    ResourceLimitKind, SturmCountError, SturmSign, SturmVerificationError, VerifiedCondition,
+    rewrite_domain_once, substitute_domain, verify_analytic_constant_rewrite,
+    verify_partial_polynomial_roots, verify_sturm_count,
 };
 use pyo3::create_exception;
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
@@ -69,9 +74,17 @@ fn map_evaluation_error(error: EvaluationError) -> PyErr {
     }
 }
 
+fn map_syntax_error(error: ParseError) -> PyErr {
+    match error.kind() {
+        ParseErrorKind::InputLimitExceeded
+        | ParseErrorKind::TokenLimitExceeded
+        | ParseErrorKind::NestingLimitExceeded => ResourceLimitError::new_err(error.to_string()),
+        _ => MathSyntaxError::new_err(error.to_string()),
+    }
+}
+
 fn checked_expression(source: &str) -> PyResult<Expr> {
-    let expr =
-        parse_expression(source).map_err(|error| MathSyntaxError::new_err(error.to_string()))?;
+    let expr = parse_expression(source).map_err(map_syntax_error)?;
     EvaluationContext::default()
         .check_expression(&expr)
         .map_err(map_evaluation_error)?;
@@ -88,7 +101,7 @@ fn selected_variable(name: &str) -> PyResult<Symbol> {
 }
 
 fn selected_equation(source: &str) -> PyResult<Equation> {
-    match parse_statement(source).map_err(|error| MathSyntaxError::new_err(error.to_string()))? {
+    match parse_statement(source).map_err(map_syntax_error)? {
         Statement::Equation(eq) => Ok(eq),
         Statement::Expression(_) => Err(MathSyntaxError::new_err(
             "expected an equation containing '='",
@@ -129,10 +142,13 @@ fn show_equation(eq: &Equation) -> String {
 
 fn map_domain_parse(error: DomainParseError) -> PyErr {
     match error {
-        DomainParseError::Syntax(error) => MathSyntaxError::new_err(error.to_string()),
-        DomainParseError::Domain(
-            DefinednessError::UnsupportedExponent | DefinednessError::ZeroDenominator,
-        ) => UnsupportedMathematicsError::new_err(error.to_string()),
+        DomainParseError::Syntax(error) => map_syntax_error(error),
+        DomainParseError::Domain(DefinednessError::ZeroDenominator) => {
+            UndefinedAtPointError::new_err(error.to_string())
+        }
+        DomainParseError::Domain(DefinednessError::UnsupportedExponent) => {
+            UnsupportedMathematicsError::new_err(error.to_string())
+        }
         DomainParseError::Domain(_) => ResourceLimitError::new_err(error.to_string()),
     }
 }
@@ -1346,6 +1362,423 @@ fn py_algebraic_roots(source: &str, variable: &str) -> PyResult<PyAlgebraicResul
     Ok((kind, roots, evidence))
 }
 
+fn selected_unrestricted_polynomial(
+    source: &str,
+    variable: &Symbol,
+) -> PyResult<RationalPolynomial> {
+    let value = checked_domain(source)?;
+    if !value.conditions().is_empty() {
+        return Err(UnsupportedMathematicsError::new_err(
+            "polynomial operations cannot discard source-domain restrictions",
+        ));
+    }
+    EvaluationContext::default()
+        .polynomial(value.expression(), variable)
+        .map_err(map_evaluation_error)
+}
+
+fn selected_polynomial_equation(source: &str, variable: &Symbol) -> PyResult<RationalPolynomial> {
+    let statement = parse_domain_statement(source).map_err(map_domain_parse)?;
+    let DomainStatement::Equation { left, right } = statement else {
+        return Err(MathSyntaxError::new_err(
+            "expected an equation containing '='",
+        ));
+    };
+    if !left.conditions().is_empty() || !right.conditions().is_empty() {
+        return Err(UnsupportedMathematicsError::new_err(
+            "polynomial equation solving cannot discard source-domain restrictions",
+        ));
+    }
+    let ctx = EvaluationContext::default();
+    ctx.check_expression(left.expression())
+        .map_err(map_evaluation_error)?;
+    ctx.check_expression(right.expression())
+        .map_err(map_evaluation_error)?;
+    let difference = Expr::add([
+        left.expression().clone(),
+        Expr::mul([Expr::from(-1), right.expression().clone()]),
+    ]);
+    ctx.polynomial(&difference, variable)
+        .map_err(map_evaluation_error)
+}
+
+fn map_partial_root_error(error: PartialPolynomialRootError) -> PyErr {
+    match error {
+        PartialPolynomialRootError::Evaluation(error) => map_evaluation_error(error),
+        PartialPolynomialRootError::Factorization(error) => map_factorization_error(error),
+        PartialPolynomialRootError::InvalidFactorization(_)
+        | PartialPolynomialRootError::IncorrectCertificate => {
+            VerificationFailure::new_err(error.to_string())
+        }
+    }
+}
+
+type PyCertifiedRoot = (
+    String,
+    Option<String>,
+    Option<PyPolynomialData>,
+    Option<String>,
+    usize,
+);
+type PyPartialRoots = (
+    PyPolynomialData,
+    String,
+    Vec<PyCertifiedRoot>,
+    Option<PyPolynomialData>,
+    bool,
+);
+
+fn checked_partial_roots(
+    polynomial: RationalPolynomial,
+    variable: &Symbol,
+) -> PyResult<PyPartialRoots> {
+    let ctx = EvaluationContext::default();
+    let result = ctx
+        .partial_polynomial_roots(&polynomial)
+        .map_err(map_partial_root_error)?;
+    if !verify_partial_polynomial_roots(&ctx, &polynomial, &result)
+        .map_err(map_partial_root_error)?
+    {
+        return Err(VerificationFailure::new_err(
+            "polynomial root-set certificate failed independent verification",
+        ));
+    }
+    let (kind, roots, unresolved, complete) = match result.zero_set() {
+        PolynomialZeroSet::AllComplexNumbers => ("all_complex", Vec::new(), None, true),
+        PolynomialZeroSet::Finite {
+            roots,
+            unresolved_cofactor,
+            complete,
+        } => {
+            let roots = roots
+                .iter()
+                .map(|entry| {
+                    let (kind, rational, minimal, branch) = match entry.root() {
+                        ExactQuadraticRoot::Rational(value) => {
+                            ("rational", Some(value.to_string()), None, None)
+                        }
+                        ExactQuadraticRoot::Algebraic {
+                            minimal_polynomial,
+                            branch,
+                        } => (
+                            if matches!(
+                                branch,
+                                QuadraticBranch::LowerReal | QuadraticBranch::UpperReal
+                            ) {
+                                "real_quadratic"
+                            } else {
+                                "complex_quadratic"
+                            },
+                            None,
+                            Some(poly_data(minimal_polynomial, variable)),
+                            Some(branch.stable_id().to_owned()),
+                        ),
+                    };
+                    (
+                        kind.to_owned(),
+                        rational,
+                        minimal,
+                        branch,
+                        entry.multiplicity(),
+                    )
+                })
+                .collect();
+            (
+                "finite",
+                roots,
+                unresolved_cofactor
+                    .as_ref()
+                    .map(|cofactor| poly_data(cofactor, variable)),
+                *complete,
+            )
+        }
+    };
+    Ok((
+        poly_data(&polynomial, variable),
+        kind.to_owned(),
+        roots,
+        unresolved,
+        complete,
+    ))
+}
+
+#[pyfunction(name = "polynomial_roots")]
+fn py_polynomial_roots(source: &str, variable: &str) -> PyResult<PyPartialRoots> {
+    let symbol = selected_variable(variable)?;
+    checked_partial_roots(selected_unrestricted_polynomial(source, &symbol)?, &symbol)
+}
+
+#[pyfunction(name = "solve_polynomial_equation")]
+fn py_solve_polynomial_equation(source: &str, variable: &str) -> PyResult<PyPartialRoots> {
+    let symbol = selected_variable(variable)?;
+    checked_partial_roots(selected_polynomial_equation(source, &symbol)?, &symbol)
+}
+
+fn map_sturm_error(error: SturmCountError) -> PyErr {
+    match error {
+        SturmCountError::Evaluation(error) => map_evaluation_error(error),
+        SturmCountError::Verification(SturmVerificationError::Evaluation(error)) => {
+            map_evaluation_error(error)
+        }
+        SturmCountError::Verification(_) => VerificationFailure::new_err(error.to_string()),
+        SturmCountError::RootAtEndpoint => UndefinedAtPointError::new_err(error.to_string()),
+        SturmCountError::ZeroPolynomial
+        | SturmCountError::NonSquareFree
+        | SturmCountError::InvalidInterval => {
+            UnsupportedMathematicsError::new_err(error.to_string())
+        }
+    }
+}
+
+fn sturm_sign(sign: &SturmSign) -> &'static str {
+    match sign {
+        SturmSign::Negative => "negative",
+        SturmSign::Zero => "zero",
+        SturmSign::Positive => "positive",
+    }
+}
+
+type PySturmCount = (
+    PyPolynomialData,
+    (String, String),
+    (usize, usize, usize),
+    Vec<PyPolynomialData>,
+    (Vec<String>, Vec<String>),
+);
+
+#[pyfunction(name = "sturm_root_count")]
+fn py_sturm_root_count(
+    source: &str,
+    variable: &str,
+    lower: &str,
+    upper: &str,
+) -> PyResult<PySturmCount> {
+    let symbol = selected_variable(variable)?;
+    let poly = selected_unrestricted_polynomial(source, &symbol)?;
+    let a = selected_scalar(lower)?;
+    let b = selected_scalar(upper)?;
+    let ctx = EvaluationContext::default();
+    let certificate = ctx
+        .count_real_roots_sturm(&poly, &a, &b)
+        .map_err(map_sturm_error)?;
+    verify_sturm_count(&ctx, &poly, &a, &b, &certificate).map_err(|error| match error {
+        SturmVerificationError::Evaluation(error) => map_evaluation_error(error),
+        other => VerificationFailure::new_err(other.to_string()),
+    })?;
+    Ok((
+        poly_data(&poly, &symbol),
+        (a.to_string(), b.to_string()),
+        (
+            certificate.root_count(),
+            certificate.lower_variations(),
+            certificate.upper_variations(),
+        ),
+        certificate
+            .sequence()
+            .iter()
+            .map(|term| poly_data(term, &symbol))
+            .collect(),
+        (
+            certificate
+                .lower_signs()
+                .iter()
+                .map(|sign| sturm_sign(sign).to_owned())
+                .collect(),
+            certificate
+                .upper_signs()
+                .iter()
+                .map(|sign| sturm_sign(sign).to_owned())
+                .collect(),
+        ),
+    ))
+}
+
+fn map_integration_error(error: IntegrationError) -> PyErr {
+    match error {
+        IntegrationError::Evaluation(reason) => map_evaluation_error(reason),
+        IntegrationError::UnsupportedIntegrand(_) | IntegrationError::RestrictedDomain => {
+            UnsupportedMathematicsError::new_err(error.to_string())
+        }
+        IntegrationError::NoncanonicalConstant
+        | IntegrationError::IncorrectDerivative
+        | IntegrationError::IncorrectFundamentalTheorem
+        | IntegrationError::IncorrectTermwiseValue => {
+            VerificationFailure::new_err(error.to_string())
+        }
+    }
+}
+
+#[pyfunction(name = "integrate_polynomial")]
+fn py_integrate_polynomial(
+    source: &str,
+    variable: &str,
+) -> PyResult<(PyPolynomialData, PyPolynomialData)> {
+    let symbol = selected_variable(variable)?;
+    let integrand = checked_domain(source)?;
+    let ctx = EvaluationContext::default();
+    let result = ctx
+        .integrate_domain_expression(&integrand, &symbol)
+        .map_err(map_integration_error)?;
+    ctx.verify_polynomial_primitive(&result)
+        .map_err(map_integration_error)?;
+    Ok((
+        poly_data(result.integrand(), &symbol),
+        poly_data(result.primitive(), &symbol),
+    ))
+}
+
+type PyDefiniteIntegral = (PyPolynomialData, PyPolynomialData, String, String, String);
+
+#[pyfunction(name = "integrate_polynomial_between")]
+fn py_integrate_polynomial_between(
+    source: &str,
+    variable: &str,
+    lower: &str,
+    upper: &str,
+) -> PyResult<PyDefiniteIntegral> {
+    let symbol = selected_variable(variable)?;
+    let integrand = checked_domain(source)?;
+    let a = selected_scalar(lower)?;
+    let b = selected_scalar(upper)?;
+    let ctx = EvaluationContext::default();
+    let result = ctx
+        .integrate_domain_expression_between(&integrand, &symbol, &a, &b)
+        .map_err(map_integration_error)?;
+    ctx.verify_definite_polynomial_integral(&result)
+        .map_err(map_integration_error)?;
+    Ok((
+        poly_data(result.primitive().integrand(), &symbol),
+        poly_data(result.primitive().primitive(), &symbol),
+        a.to_string(),
+        b.to_string(),
+        result.value().to_string(),
+    ))
+}
+
+fn selected_analytic_domain(domain: &str) -> PyResult<ScalarDomain> {
+    match domain {
+        "real" => Ok(ScalarDomain::Real),
+        "complex" => Ok(ScalarDomain::Complex),
+        _ => Err(UnsupportedMathematicsError::new_err(
+            "domain must be 'real' or 'complex'",
+        )),
+    }
+}
+
+fn map_analytic_error(error: AnalyticConstantError) -> PyErr {
+    match error {
+        AnalyticConstantError::Limit(_) => ResourceLimitError::new_err(error.to_string()),
+        AnalyticConstantError::Unsupported(_) => {
+            UnsupportedMathematicsError::new_err(error.to_string())
+        }
+        AnalyticConstantError::ContradictedCondition(_)
+        | AnalyticConstantError::Definedness(DefinednessError::ZeroDenominator) => {
+            UndefinedAtPointError::new_err(error.to_string())
+        }
+        AnalyticConstantError::Definedness(_) => {
+            UnsupportedMathematicsError::new_err(error.to_string())
+        }
+        AnalyticConstantError::InvalidRulePath => VerificationFailure::new_err(error.to_string()),
+    }
+}
+
+type PyAnalyticConstant = (String, String, Vec<String>, Option<String>, Vec<usize>);
+
+#[pyfunction(name = "analytic_constant", signature = (source, domain="real"))]
+fn py_analytic_constant(source: &str, domain: &str) -> PyResult<PyAnalyticConstant> {
+    let domain = selected_analytic_domain(domain)?;
+    let parsed = parse_domain_expression_in_domain(source, domain).map_err(map_domain_parse)?;
+    let ctx = EvaluationContext::default();
+    ctx.check_expression(parsed.expression())
+        .map_err(map_evaluation_error)?;
+    for condition in parsed.conditions() {
+        ctx.check_expression(condition.expression())
+            .map_err(map_evaluation_error)?;
+    }
+    let limits = AnalyticConstantLimits::default();
+    match mathematishia_kernel::rewrite_analytic_constant_once(&parsed, domain, limits)
+        .map_err(map_analytic_error)?
+    {
+        AnalyticConstantOutcome::NoRule {
+            retained_conditions,
+        } => Ok((
+            "unchanged".to_owned(),
+            parsed.expression().to_string(),
+            retained_conditions.iter().map(condition_text).collect(),
+            None,
+            Vec::new(),
+        )),
+        AnalyticConstantOutcome::Exact(certificate) => {
+            if !verify_analytic_constant_rewrite(&parsed, domain, &certificate, limits)
+                .map_err(map_analytic_error)?
+            {
+                return Err(VerificationFailure::new_err(
+                    "analytic rewrite certificate failed independent verification",
+                ));
+            }
+            Ok((
+                "exact".to_owned(),
+                certificate.result.expression().to_string(),
+                domain_conditions(&certificate.result),
+                Some(certificate.rule.stable_id().to_owned()),
+                certificate.path,
+            ))
+        }
+        AnalyticConstantOutcome::Unsupported(reason) => {
+            Err(UnsupportedMathematicsError::new_err(format!("{reason:?}")))
+        }
+    }
+}
+
+fn map_elementary_integration_error(error: ElementaryIntegrationError) -> PyErr {
+    match error {
+        ElementaryIntegrationError::Evaluation(reason) => map_evaluation_error(reason),
+        ElementaryIntegrationError::DerivativeVerification(_)
+        | ElementaryIntegrationError::MissingDomainCondition
+        | ElementaryIntegrationError::SourceMismatch
+        | ElementaryIntegrationError::IncorrectRule
+        | ElementaryIntegrationError::IncorrectAffineEvidence
+        | ElementaryIntegrationError::IncorrectPrimitive
+        | ElementaryIntegrationError::IncorrectConditions
+        | ElementaryIntegrationError::IncorrectDerivative
+        | ElementaryIntegrationError::IncorrectDerivativeEvidence => {
+            VerificationFailure::new_err(error.to_string())
+        }
+        ElementaryIntegrationError::Definedness(DefinednessError::ZeroDenominator) => {
+            UndefinedAtPointError::new_err(error.to_string())
+        }
+        _ => UnsupportedMathematicsError::new_err(error.to_string()),
+    }
+}
+
+type PyElementaryIntegral = (String, String, Vec<String>, String, String, String, String);
+
+#[pyfunction(name = "integrate_elementary", signature = (source, variable, domain="real"))]
+fn py_integrate_elementary(
+    source: &str,
+    variable: &str,
+    domain: &str,
+) -> PyResult<PyElementaryIntegral> {
+    let symbol = selected_variable(variable)?;
+    let domain = selected_analytic_domain(domain)?;
+    let input = parse_domain_expression_in_domain(source, domain).map_err(map_domain_parse)?;
+    let ctx = EvaluationContext::default();
+    let result = ctx
+        .integrate_elementary_affine(&input, &symbol, domain)
+        .map_err(map_elementary_integration_error)?;
+    ctx.verify_elementary_antiderivative(&input, &symbol, domain, &result)
+        .map_err(map_elementary_integration_error)?;
+    Ok((
+        input.expression().to_string(),
+        result.primitive().expression().to_string(),
+        result.conditions().iter().map(condition_text).collect(),
+        result.rule().stable_id().to_owned(),
+        result.input_scale().to_string(),
+        result.slope().to_string(),
+        result.intercept().to_string(),
+    ))
+}
+
 #[pymodule]
 fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(py_expression, m)?)?;
@@ -1392,6 +1825,13 @@ fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(py_quadratic_operation, m)?)?;
     m.add_function(wrap_pyfunction!(py_quadratic_inverse, m)?)?;
     m.add_function(wrap_pyfunction!(py_rational_solve_quadratic, m)?)?;
+    m.add_function(wrap_pyfunction!(py_polynomial_roots, m)?)?;
+    m.add_function(wrap_pyfunction!(py_solve_polynomial_equation, m)?)?;
+    m.add_function(wrap_pyfunction!(py_sturm_root_count, m)?)?;
+    m.add_function(wrap_pyfunction!(py_integrate_polynomial, m)?)?;
+    m.add_function(wrap_pyfunction!(py_integrate_polynomial_between, m)?)?;
+    m.add_function(wrap_pyfunction!(py_analytic_constant, m)?)?;
+    m.add_function(wrap_pyfunction!(py_integrate_elementary, m)?)?;
     m.add("MathSyntaxError", m.py().get_type::<MathSyntaxError>())?;
     m.add(
         "UndefinedAtPointError",

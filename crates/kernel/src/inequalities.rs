@@ -375,12 +375,13 @@ fn negative_infinity_sign(polynomial: &RationalPolynomial) -> i8 {
 }
 
 fn append_interval(intervals: &mut Vec<RealInterval>, next: RealInterval) {
-    if let Some(previous) = intervals.last_mut() {
-        if previous.upper == next.lower && (previous.upper_closed || next.lower_closed) {
-            previous.upper = next.upper;
-            previous.upper_closed = next.upper_closed;
-            return;
-        }
+    if let Some(previous) = intervals.last_mut()
+        && previous.upper == next.lower
+        && (previous.upper_closed || next.lower_closed)
+    {
+        previous.upper = next.upper;
+        previous.upper_closed = next.upper_closed;
+        return;
     }
     intervals.push(next);
 }

@@ -263,7 +263,10 @@ pub(super) fn integrate(
             ))
         }
         Err(IntegrationError::UnsupportedIntegrand(_))
-        | Err(IntegrationError::RestrictedDomain) => {
+        | Err(IntegrationError::RestrictedDomain)
+        | Err(IntegrationError::Evaluation(EvaluationError::Polynomial(
+            mathematishia_kernel::PolynomialConversionError::UnsupportedFunction,
+        ))) => {
             let result = ctx
                 .integrate_elementary_affine(&source, &symbol, ScalarDomain::Real)
                 .map_err(|error| match error {

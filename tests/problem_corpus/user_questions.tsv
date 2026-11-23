@@ -117,7 +117,7 @@ id	category	question	outcome	exit	error_kind	arguments	semantic_lines	conditions
 113	trigonometry	Evaluate cos(0)	solved	0	-	evalexact¦cos(0)	status: exact¦value: 1¦verified: true	conditions: none	rules=1	exact	cycle4
 114	trigonometry	Evaluate tan(0)	solved	0	-	evalexact¦tan(0)	status: exact¦value: 0¦verified: true	required: cos(0) != 0	rules=1	exact	cycle4
 115	trigonometry	Evaluate exp(0)	solved	0	-	evalexact¦exp(0)	status: exact¦value: 1¦verified: true	conditions: none	rules=1	exact	cycle4
-116	trigonometry	Evaluate log(1)	solved	0	-	evalexact¦log(1)	status: exact¦value: 0¦verified: true	conditions: none	rules=1	exact	cycle4
+116	trigonometry	Evaluate log(1)	solved	0	-	evalexact¦log(1)	status: exact¦value: 0¦verified: true	required: 1 > 0	rules=1	exact	cycle4
 117	trigonometry	Evaluate sin(0)+cos(0)	solved	0	-	evalexact¦sin(0)+cos(0)	status: exact¦value: 1¦verified: true	conditions: none	rules=2	exact	cycle4
 118	trigonometry	Return a partial evaluation of sin(x)	partial	0	-	evalexact¦sin(x)	status: partial¦expression: sin(x)¦verified: true	conditions: none	none	symbolic_analytic_unresolved	cycle4
 119	trigonometry	Return a partial evaluation of cos(1)	partial	0	-	evalexact¦cos(1)	status: partial¦expression: cos(1)¦verified: true	conditions: none	none	symbolic_analytic_unresolved	cycle4

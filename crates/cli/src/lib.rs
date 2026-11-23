@@ -3,6 +3,8 @@
 //! The CLI owns input/output formatting only; mathematical behavior lives in
 //! mathema-frontend and mathematishia-kernel.
 
+mod user_solve;
+
 use std::fmt;
 use std::fmt::Write as _;
 
@@ -27,8 +29,13 @@ Usage:
   mathematishia domain <EXPRESSION_OR_EQUATION>
   mathematishia subdomain <EXPRESSION> <SYMBOL> <REPLACEMENT>
   mathematishia rewrite <EXPRESSION> [NONZERO_PREMISE ...]
-  mathematishia expand <EXPRESSION> [MAX_STEPS]
+  mathematishia expand <EXPRESSION> [MAX_STEPS]  (distributive rules only)
   mathematishia solve <EQUATION> <VARIABLE>
+  mathematishia solveauto <EQUATION> [VARIABLE]  (defaults to x)
+  mathematishia roots <POLYNOMIAL> [VARIABLE]
+  mathematishia integrate <EXPRESSION> [VARIABLE]
+  mathematishia integrate <POLYNOMIAL> <VARIABLE> <LOWER> <UPPER>
+  mathematishia evalexact <EXPRESSION>
   mathematishia solveq <POLYNOMIAL> <VARIABLE>
   mathematishia roots2 <POLYNOMIAL> <VARIABLE>
   mathematishia qvalue <MINPOLY> <BRANCH> <A> <B> <VARIABLE>
@@ -75,6 +82,11 @@ Examples:
   mathematishia rewrite '(x+1)*(x+1)^-1' 'x+1'
   mathematishia expand '2*(x+3)' 4
   mathematishia solve '2*x+4=10' x
+  mathematishia solveauto 'x^2-2=0'
+  mathematishia solveauto '(x^2-1)/(x-1)=3'
+  mathematishia roots 'x^3-2'
+  mathematishia integrate 'x^2' x 0 2
+  mathematishia evalexact 'sin(0)'
   mathematishia solveq 'x^2-5*x+6' x
   mathematishia roots2 'x^2-2' x
   mathematishia qvalue 'x^2-2' upper_real 1 2 x
@@ -104,23 +116,50 @@ Examples:
 
 Syntax: integers, exact scalar or symbolic division, identifiers, + - * / ^ ( ) =.
 Use explicit multiplication. Rational-expression operations accept one formula.
-Canceled denominator zeros remain excluded.";
+Canceled denominator zeros remain excluded. New operations display partial and unsupported
+status explicitly; polynomial roots are complex, rational-function roots Q-only.
+Exact primitives use the zero-constant convention. JSON awaits typed result integration.";
 
 const MAX_DISTRIBUTION_STEPS: usize = 12;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CliErrorKind {
+    InvalidInput,
+    Unsupported,
+    Domain,
+    Resource,
+    Verification,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct CliError(String);
+pub struct CliError {
+    kind: CliErrorKind,
+    message: String,
+}
+
+impl CliError {
+    pub const fn kind(&self) -> CliErrorKind {
+        self.kind
+    }
+}
 
 impl fmt::Display for CliError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.0)
+        f.write_str(&self.message)
     }
 }
 
 impl std::error::Error for CliError {}
 
+fn problem_error(kind: CliErrorKind, message: impl Into<String>) -> CliError {
+    CliError {
+        kind,
+        message: message.into(),
+    }
+}
+
 fn invalid(message: impl Into<String>) -> CliError {
-    CliError(message.into())
+    problem_error(CliErrorKind::InvalidInput, message)
 }
 
 fn expression(input: &str) -> Result<Expr, CliError> {
@@ -342,6 +381,23 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
     match args {
         [] | ["--help" | "-h" | "help"] => Ok(HELP.to_owned()),
         ["expr", input] => Ok(format!("expression: {}", expression(input)?)),
+        ["solveauto", input] => user_solve::solve_auto(input, "x"),
+        ["solveauto", input, name] if *name != "--json" => user_solve::solve_auto(input, name),
+        ["roots", input] => user_solve::roots(input, "x"),
+        ["roots", input, name] if *name != "--json" => user_solve::roots(input, name),
+        ["integrate", input] => user_solve::integrate(input, "x", None),
+        ["integrate", input, name] if *name != "--json" => user_solve::integrate(input, name, None),
+        ["integrate", input, name, lower, upper] => {
+            user_solve::integrate(input, name, Some((lower, upper)))
+        }
+        ["evalexact", input] => user_solve::eval_exact(input),
+        ["solveauto" | "roots" | "integrate" | "evalexact", ..] if args.contains(&"--json") => {
+            Err(problem_error(
+                CliErrorKind::Unsupported,
+                "JSON output awaits the verified typed result contract",
+            ))
+        }
+
         ["domain", input] => {
             let parsed =
                 parse_domain_statement(input).map_err(|error| invalid(error.to_string()))?;
@@ -476,7 +532,7 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
                 .expand(&parsed)
                 .map_err(|error| invalid(error.to_string()))?;
             let mut out = format!(
-                "result: {}\nsteps: {}\ncomplete: {}",
+                "result: {}\nsteps: {}\ndistribution_complete: {}\npolynomial_expansion: not certified",
                 result.result(),
                 result.steps().len(),
                 result.is_complete()

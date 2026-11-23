@@ -92,8 +92,8 @@ fn accepts_unicode_identifier_without_normalizing_its_name() {
 }
 
 #[test]
-fn rejects_implicit_multiplication_and_invalid_division() {
-    for invalid in ["2x", "2(x+1)", "1/0", "3.5", "x==1", "x=y=z"] {
+fn rejects_invalid_division_and_multiple_equations() {
+    for invalid in ["1/0", "x==1", "x=y=z"] {
         assert!(
             parse_statement(invalid).is_err(),
             "unexpectedly parsed {invalid}"

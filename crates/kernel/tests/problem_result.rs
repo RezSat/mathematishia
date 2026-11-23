@@ -3,7 +3,6 @@ use mathema::{
 };
 use mathematishia_kernel::*;
 
-
 fn variable(name: &str) -> Symbol {
     Symbol::new(name).unwrap()
 }

@@ -25,6 +25,7 @@ mod finite_field_factorization;
 mod guarded_rewrite;
 mod hensel_lift;
 mod integration;
+mod integration_dispatch;
 mod linear_system_expr;
 mod modular_irreducibility;
 mod modular_reconstruction;
@@ -110,6 +111,10 @@ pub use hensel_lift::{
     HenselError, HenselPair, IntegerPolynomial, hensel_lift_pair, verify_hensel_pair,
 };
 pub use integration::{DefinitePolynomialIntegral, IntegrationError, PolynomialPrimitive};
+pub use integration_dispatch::{
+    DispatchedAntiderivative, DispatchedDefiniteIntegral, IntegrationDispatchError,
+    IntegrationTermEvidence,
+};
 pub use linear_system_expr::{
     ExpressionLinearSystemSet, ExpressionLinearSystemSolution, LinearSystemExprError,
     solve_linear_system_expr, verify_linear_system_expr,

@@ -17,10 +17,10 @@ fn expression_command_performs_conservative_semantic_normalization() {
 fn expansion_shows_complete_and_partial_derivations() {
     let full = run(&["expand", "2*(x+3)", "2"]).unwrap();
     assert!(full.starts_with("result: "));
-    assert!(full.contains("steps: 1\ncomplete: true"));
+    assert!(full.contains("steps: 1\ndistribution_complete: true"));
     assert!(full.contains("[algebra.distribute_product_over_sum]"));
     let partial = run(&["expand", "2*(x+3)", "0"]).unwrap();
-    assert!(partial.contains("steps: 0\ncomplete: false"));
+    assert!(partial.contains("steps: 0\ndistribution_complete: false"));
 }
 
 #[test]

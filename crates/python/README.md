@@ -270,3 +270,74 @@ All these operations use the kernel's default fixed resource budgets.
 `UndefinedAtPointError` and `VerificationFailure` distinguish the principal
 error categories. Numeric inputs are exact rational **strings** rather than
 binary floats. API object fields are immutable.
+
+
+## Wave 2: complete polynomial expansion and combined integration
+
+These Python interfaces call the same certified Rust kernel operations as the
+corresponding CLI commands. They return frozen, typed results with exact
+`fractions.Fraction` coefficients and do not implement arithmetic in Python.
+
+```python
+from fractions import Fraction
+import mathematishia as m
+
+square = m.expandall("(x+1)^2", ["x"])
+assert square.status == "exact" and square.complete
+assert square.variables == ("x",)
+assert {(term.exponents, term.coefficient) for term in square.terms} == {
+    ((0,), Fraction(1)), ((1,), Fraction(2)), ((2,), Fraction(1))
+}
+
+cube = m.expand_polynomial("(x-y)^3", ["y", "x"])
+assert cube.variables == ("x", "y")
+assert {(t.exponents, t.coefficient) for t in cube.terms} == {
+    ((3, 0), Fraction(1)), ((2, 1), Fraction(-3)),
+    ((1, 2), Fraction(3)), ((0, 3), Fraction(-1))
+}
+
+answer = m.integrate("x^2+sin(2*x)", "x")
+assert answer.status == "exact"
+assert len(answer.terms) == 2
+assert answer.primitive.conditions == answer.source.conditions
+```
+
+- `expandall(source, variables)` and `expand_polynomial(source, variables)`
+  are the same fully checked polynomial expansion. The explicit ambient
+  `Q[variables]` ring is sorted canonically in the result; each `MultivariateTerm`
+  has an exponent tuple aligned with that ring and an exact rational coefficient.
+  `source` and `expanded` are domain-aware objects with original conditions.
+  `status="exact"` and `complete=True` mean *all* supported polynomial
+  terms were expanded, not merely one distributive step. The older
+  `expand(source, max_steps)` remains the stepwise distribution API.
+- `integrate(source, variable, domain="real")` and
+  `integrate_expression_dispatch(...)` return a `DispatchedIntegral`
+  with an exact zero-additive-constant primitive, retained unproved
+  conditions, and checked `IntegrationTerm` evidence. A polynomial term
+  exposes an exact polynomial-primitive certificate; a sine/cosine/exponential
+  term exposes its affine scale/slope/intercept, rule ID and derivative
+  verification rules. Domains `"rational"`, `"real"`, and `"complex"` are
+  explicit; analytic terms require real or complex domain. The older
+  `integrate_polynomial`, `integrate_polynomial_between` and
+  `integrate_elementary` APIs remain available.
+
+**Mathematical boundaries:** Expansion supports finite bounded rational
+polynomials only. Undeclared symbols, negative/fractional/symbolic powers and
+analytic functions are unsupported. Complex exponentials and general
+analytic simplification are not polynomial expansion. A zero expression with
+history such as `0*x^-1` remains subject to `x != 0`.
+
+Combined integration supports bounded *top-level sums* of rational-polynomial
+terms and rational-affine sin/cos/exp terms. Products such as `x*sin(x)`,
+`sin(x)*cos(x)`, unexpanded products of sums, logarithms, tangents,
+nonlinear analytic arguments, general substitutions and symbolic additive
+constants are not claimed. Unresolved domain conditions are retained,
+not discharged. Exact analytic definite endpoint evaluation is not provided.
+
+**Refusal and proof handling:** No partially expanded expression is falsely
+reported as complete. Unsupported input raises `UnsupportedMathematicsError`,
+admission/term/work budgets raise `ResourceLimitError`, invalid syntax
+raises `MathSyntaxError`, and a failed independent Rust certificate check
+raises `VerificationFailure`. Mathematical evidence comes from the
+independently verified kernel, not user-modifiable Python display fields.
+Scalar inputs are exact strings rather than binary floating-point estimates.

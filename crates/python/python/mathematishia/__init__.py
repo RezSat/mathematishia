@@ -840,7 +840,136 @@ def integrate_elementary(
     )
 
 
+
+@dataclass(frozen=True)
+class MultivariateTerm:
+    exponents: tuple[int, ...]
+    coefficient: Fraction
+
+
+@dataclass(frozen=True)
+class PolynomialExpansion:
+    status: Literal["exact"]
+    source: DomainExpression
+    expanded: DomainExpression
+    variables: tuple[str, ...]
+    terms: tuple[MultivariateTerm, ...]
+    complete: bool
+    syntactically_unchanged: bool
+
+
+def expand_polynomial(
+    source: str, variables: tuple[str, ...] | list[str]
+) -> PolynomialExpansion:
+    """Expand completely in an explicit Q[variables] ring with checked proof.
+
+    The ring is canonicalized into variable-name order. Result conditions are
+    original, unproved domain obligations. Unsupported expressions and budget
+    refusals raise distinct existing Mathematishia exceptions.
+    """
+    if isinstance(variables, (str, bytes)):
+        raise TypeError("variables must be a sequence of identifiers")
+    status, original, expanded, original_conditions, output_conditions, ring, terms, complete, unchanged = (
+        _native.expand_polynomial(source, list(variables))
+    )
+    return PolynomialExpansion(
+        status,
+        DomainExpression(original, tuple(original_conditions)),
+        DomainExpression(expanded, tuple(output_conditions)),
+        tuple(ring),
+        tuple(MultivariateTerm(tuple(exponents), Fraction(coefficient))
+              for exponents, coefficient in terms),
+        complete,
+        unchanged,
+    )
+
+
+def expandall(
+    source: str, variables: tuple[str, ...] | list[str]
+) -> PolynomialExpansion:
+    """Alias for the fully certified polynomial expansion, unlike stepwise expand."""
+    return expand_polynomial(source, variables)
+
+
+@dataclass(frozen=True)
+class AffineIntegrationEvidence:
+    input_scale: Fraction
+    slope: Fraction
+    intercept: Fraction
+
+
+@dataclass(frozen=True)
+class IntegrationTerm:
+    kind: Literal["polynomial", "elementary"]
+    source: str
+    primitive: str
+    rule: str | None
+    polynomial: PolynomialIntegral | None
+    affine: AffineIntegrationEvidence | None
+    derivative_rules: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class DispatchedIntegral:
+    status: Literal["exact"]
+    source: DomainExpression
+    primitive: DomainExpression
+    variable: str
+    domain: Literal["rational", "real", "complex"]
+    terms: tuple[IntegrationTerm, ...]
+
+
+def integrate_expression_dispatch(
+    source: str,
+    variable: str,
+    domain: Literal["rational", "real", "complex"] = "real",
+) -> DispatchedIntegral:
+    """Integrate supported bounded polynomial and affine analytic sums exactly.
+
+    Returns the zero-additive-constant primitive with all source conditions.
+    Each term has independently checked polynomial or elementary evidence.
+    Generic analytic products, log, tan and nonlinear arguments are unsupported.
+    """
+    status, original, primitive, selected_domain, source_conditions, result_conditions, terms = (
+        _native.integrate_expression_dispatch(source, variable, domain)
+    )
+    parsed_terms = []
+    for kind, term, term_primitive, rule, polynomial, affine, derivative_rules in terms:
+        polynomial_proof = (
+            PolynomialIntegral(_poly(polynomial[0]), _poly(polynomial[1]))
+            if polynomial is not None else None
+        )
+        affine_proof = (
+            AffineIntegrationEvidence(*(Fraction(value) for value in affine))
+            if affine is not None else None
+        )
+        parsed_terms.append(
+            IntegrationTerm(kind, term, term_primitive, rule, polynomial_proof,
+                            affine_proof, tuple(derivative_rules))
+        )
+    return DispatchedIntegral(
+        status,
+        DomainExpression(original, tuple(source_conditions)),
+        DomainExpression(primitive, tuple(result_conditions)),
+        variable,
+        selected_domain,
+        tuple(parsed_terms),
+    )
+
+
+def integrate(
+    source: str,
+    variable: str,
+    domain: Literal["rational", "real", "complex"] = "real",
+) -> DispatchedIntegral:
+    """Alias for verified polynomial and supported affine analytic sum integration."""
+    return integrate_expression_dispatch(source, variable, domain)
+
+
 __all__ = [
+    "MultivariateTerm", "PolynomialExpansion", "expand_polynomial", "expandall",
+    "AffineIntegrationEvidence", "IntegrationTerm", "DispatchedIntegral",
+    "integrate_expression_dispatch", "integrate",
     "CertifiedPolynomialRoot", "PolynomialRootSet", "polynomial_roots",
     "solve_polynomial_equation", "SturmRootCount", "sturm_root_count",
     "PolynomialIntegral", "DefinitePolynomialIntegral",

@@ -7,10 +7,12 @@
 | Polynomial arithmetic, division and GCD | `crates/kernel/src/polynomial.rs`, `poly_division.rs` |
 | Canonical bounded multivariate polynomials over Q | `crates/kernel/src/multivariate_polynomial.rs` |
 | Explicit bounded Expr and DomainExpression conversion to multivariate Q-polynomials | `crates/kernel/src/multivariate_expr.rs` |
+| Independently checked bounded polynomial expansion in an explicit ambient ring | `crates/kernel/src/expand_polynomial.rs` |
 | Exact ordered multivariate polynomial division and checked remainder | `crates/kernel/src/multivariate_division.rs` |
 | Verified final-result multivariate division explanation records | `crates/kernel/src/multivariate_derivation.rs` |
 | Exact polynomial primitives and directed definite integrals | `crates/kernel/src/integration.rs` |
 | Checked exact sin/cos/exp primitives for rational-affine arguments | `crates/kernel/src/elementary_integration.rs` |
+| Verified bounded polynomial and affine analytic integration dispatch | `crates/kernel/src/integration_dispatch.rs` |
 | Extended polynomial GCD, Bézout verification, modular inverses | `crates/kernel/src/extended_gcd.rs` |
 | Polynomial quotient rings and canonical residue arithmetic | `crates/kernel/src/polynomial_residue.rs` |
 | Exact rational matrices, RREF, determinant, inverse and affine linear systems | `crates/kernel/src/exact_matrix.rs` |
@@ -33,18 +35,24 @@
 | Exact minimal polynomials of extension elements | `crates/kernel/src/extension_minimal.rs` |
 | Verified symbolic differentiation, including analytic chain rules | `crates/kernel/src/differentiate_expr.rs`, `context.rs` |
 | Bounded exact analytic-constant rewrites with checked domain provenance | `crates/kernel/src/analytic_constants.rs` |
+| Checked, typed problem outcomes and mathematical evidence adapters | `crates/kernel/src/problem_result.rs` |
 | Assumptions and guarded rewrites | `crates/kernel/src/assumptions.rs`, `guarded_rewrite.rs`, `conditional_rewrite.rs` |
 | Definedness and domain-preserving expression composition | `crates/mathema/src/definedness.rs` |
 | Proof graph and dependency verification | `crates/kernel/src/proof_graph.rs` |
 | Verified derivation rendering for supported proofs, equations and derivatives | `crates/kernel/src/derivation_render.rs` |
 | Distribution and linear-step checking | `crates/kernel/src/lib.rs`, `verification.rs` |
-| Domain-aware expression/equation parser | `crates/frontend/src/lib.rs` |
+| Domain-aware parser with exact decimal literals and selected implicit multiplication | `crates/frontend/src/lib.rs` |
 | Domain-preserving substitution and proof-checked rewrites | `crates/kernel/src/domain_operations.rs` |
-| Parser and command-line commands | `crates/frontend/`, `crates/cli/` |
-| Python bindings | `crates/python/` |
+| CLI equation dispatch, root sets, selected integrals and exact analytic constants | `crates/cli/src/lib.rs`, `crates/cli/src/user_solve.rs` |
+| Python bindings for checked polynomial roots, Sturm counts, exact integrals and analytic identities | `crates/python/` |
 | Build and package checks | `.github/workflows/ci.yml` |
 
 ## Current boundaries
+
+The parser now accepts exact finite decimals and selected implicit multiplication, including `2x`, `2(x+1)`, and `(x+1)(x-1)`. Ambiguous identifier juxtaposition, inequality comparisons, `abs`, and `sqrt` remain outside the accepted grammar.
+
+The Rust kernel now has independently checked positive-integer polynomial expansion, an integration dispatcher for bounded sums of polynomial and supported affine analytic terms, and a public typed result contract that distinguishes exact, conditional, partial, unsupported and undefined cases. The existing CLI `expand` command still performs distributive steps rather than the full kernel expansion. `solveauto`, `roots`, `integrate`, and `evalexact` expose selected checked operations, not arbitrary problem solving. Python exposes separate typed root-set, Sturm-count, polynomial/elementary-integration, and analytic-constant functions. Neither frontend yet uses the shared result contract for one unified public API; CLI JSON, general analytic integration and inequalities remain pending.
+
 
 Analytic calls support `sin`, `cos`, `tan`, `exp` and natural `log` as unevaluated expressions. The domain-aware parser preserves restrictions through nested calls and structural normalization, with real or complex domain selection. The derivative verifier supports chain rules for sine, cosine and exponential. Tangent requires `cos(argument) != 0`; real logarithm requires a positive argument. Complex principal-log derivatives are not admitted because the current domain model does not encode its branch cut. Conditions remain unproved prerequisites, not claims of validity. CLI `diffreal` and Python `differentiate_expression_real` expose the checked real-domain result. The existing polynomial converter rejects function calls. A separate bounded one-step rewrite supports exactly `sin(0)=0`, `cos(0)=1`, `tan(0)=0`, `exp(0)=1` and `log(1)=0`, with independent rule checking and preserved input domain conditions; this is not arbitrary analytic evaluation.
 

@@ -2,7 +2,7 @@
 
 The CLI dispatches typed parsed equation statements; it does not infer an
 operation from a string search. The default variable is `x`; select another
-identifier explicitly and use multiplication signs.
+identifier explicitly. Exact finite decimals and selected implicit multiplication are supported.
 
 ```console
 mathematishia solveauto '2*x+4=10'
@@ -39,15 +39,11 @@ mathematishia evalexact 'sin(0)+cos(0)'
 - Existing `expand` handles distributive steps, not certified
   positive-power polynomial expansion. It distinguishes
   `distribution_complete` from `polynomial_expansion: not certified`.
-  The full `expandall` command depends on Worker 8's kernel integration.
+  The complete polynomial expansion kernel is implemented, but a separate CLI command to expose it is still pending.
 
-The parser accepts exact integers/rationals and explicit multiplication;
-decimal literals, implicit multiplication and inequality syntax await the
-separate frontend work. The kernel enforces checked expression, scalar,
+The parser accepts exact integers, rational numbers, finite decimals, and supported implicit multiplication such as `2x`, `2(x+1)` and `(x+1)(x-1)`. Inequalities, `sqrt`, `abs`, and ambiguous identifier juxtaposition are not yet supported. The kernel enforces checked expression, scalar,
 degree and work-unit admission limits. Verification records are checked
 before the CLI presents results. Conditions are unproved obligations,
 not facts established by this tool.
 
-Machine-readable `--json` output waits for Worker 17's typed result
-contract. Worker 7's input improvements and Workers 8–14's bounded
-kernel APIs will be exposed in later increments after integration.
+The Rust kernel now exposes a typed problem-result contract, but the CLI has not yet wired it into `--json` output. Full polynomial expansion and broader problem categories remain separate frontend increments.

@@ -19,6 +19,7 @@ mod domain_operations;
 mod elementary_integration;
 mod exact_matrix;
 mod extended_gcd;
+mod expand_polynomial;
 mod extension_minimal;
 mod finite_field;
 mod finite_field_factorization;
@@ -91,6 +92,10 @@ pub use elementary_integration::{
 pub use exact_matrix::{
     ExactMatrix, LinearSystemSolution, MatrixError, ReducedMatrix, verify_linear_system_vector,
     verify_matrix_inverse,
+};
+pub use expand_polynomial::{
+    PolynomialExpansion, PolynomialExpansionError, PolynomialExpansionOutcome, expand_polynomial,
+    verify_polynomial_expansion,
 };
 pub use extended_gcd::{
     EuclideanStep, ExtendedGcdResult, ExtendedGcdVerificationError, verify_extended_gcd,

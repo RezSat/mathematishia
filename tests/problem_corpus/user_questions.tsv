@@ -115,7 +115,7 @@ id	category	question	outcome	exit	error_kind	arguments	semantic_lines	conditions
 111	rational_domains	Refuse a multivariate equation in one variable	unsupported	2	Unsupported	solveauto¦x+y=1¦x	error:*	-	none	multivariate_equation_unavailable	cycle4
 112	trigonometry	Evaluate sin(0) with the exact adapter	solved	0	-	evalexact¦sin(0)	status: exact¦value: 0¦verified: true	conditions: none	rules=1	exact	cycle4
 113	trigonometry	Evaluate cos(0)	solved	0	-	evalexact¦cos(0)	status: exact¦value: 1¦verified: true	conditions: none	rules=1	exact	cycle4
-114	trigonometry	Evaluate tan(0)	solved	0	-	evalexact¦tan(0)	status: exact¦value: 0¦verified: true	conditions: none	rules=1	exact	cycle4
+114	trigonometry	Evaluate tan(0)	solved	0	-	evalexact¦tan(0)	status: exact¦value: 0¦verified: true	required: cos(0) != 0	rules=1	exact	cycle4
 115	trigonometry	Evaluate exp(0)	solved	0	-	evalexact¦exp(0)	status: exact¦value: 1¦verified: true	conditions: none	rules=1	exact	cycle4
 116	trigonometry	Evaluate log(1)	solved	0	-	evalexact¦log(1)	status: exact¦value: 0¦verified: true	conditions: none	rules=1	exact	cycle4
 117	trigonometry	Evaluate sin(0)+cos(0)	solved	0	-	evalexact¦sin(0)+cos(0)	status: exact¦value: 1¦verified: true	conditions: none	rules=2	exact	cycle4

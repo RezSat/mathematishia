@@ -305,15 +305,20 @@ fn check_question(question: &Question<'_>) {
 fn compiled_cli_answers_or_honestly_refuses_student_questions() {
     let corpus = questions();
     let mut counts = BTreeMap::<(&str, &str, &str), usize>::new();
+    let mut failures = Vec::new();
     for question in &corpus {
-        check_question(question);
-        *counts
-            .entry((question.category, question.outcome, question.reason))
-            .or_default() += 1;
+        if std::panic::catch_unwind(|| check_question(question)).is_err() {
+            failures.push(question.id);
+        } else {
+            *counts
+                .entry((question.category, question.outcome, question.reason))
+                .or_default() += 1;
+        }
     }
     println!("compiled_cli_corpus_total={}", corpus.len());
     println!("category\toutcome\treason\tcount");
     for ((category, outcome, reason), count) in counts {
         println!("{category}\t{outcome}\t{reason}\t{count}");
     }
+    assert!(failures.is_empty(), "failed question ids: {failures:?}");
 }

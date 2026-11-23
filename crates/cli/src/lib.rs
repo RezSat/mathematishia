@@ -387,14 +387,13 @@ fn show_equation(equation: &Equation) -> String {
 pub fn run(args: &[&str]) -> Result<String, CliError> {
     match args {
         [] | ["--help" | "-h" | "help"] => Ok(HELP.to_owned()),
-        ["expandall" | "solveauto" | "roots" | "integrate" | "evalexact", ..]
-            if args.contains(&"--json") =>
-        {
-            Err(problem_error(
-                CliErrorKind::Unsupported,
-                "JSON output awaits the verified typed result contract",
-            ))
-        }
+        [
+            "expandall" | "solveauto" | "roots" | "integrate" | "evalexact",
+            ..,
+        ] if args.contains(&"--json") => Err(problem_error(
+            CliErrorKind::Unsupported,
+            "JSON output awaits the verified typed result contract",
+        )),
         ["expr", input] => Ok(format!("expression: {}", expression(input)?)),
         ["expandall", input, variables @ ..] => user_solve::expand_all(input, variables),
         ["solveauto", input] => user_solve::solve_auto(input, "x"),

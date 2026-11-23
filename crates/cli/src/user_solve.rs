@@ -11,9 +11,8 @@ use mathematishia_kernel::{
     AnalyticConstantLimits, AnalyticConstantOutcome, EvaluationContext, EvaluationError,
     ExactQuadraticRoot, IntegrationDispatchError, IntegrationError, LinearSolution,
     MultivariateLimits, PartialPolynomialRootError, PolynomialExpansionOutcome, PolynomialZeroSet,
-    RationalPolynomial, RationalQuadraticRoots, expand_polynomial,
-    rewrite_analytic_constant_once, verify_analytic_constant_rewrite,
-    verify_partial_polynomial_roots, verify_polynomial_expansion,
+    RationalPolynomial, RationalQuadraticRoots, expand_polynomial, rewrite_analytic_constant_once,
+    verify_analytic_constant_rewrite, verify_partial_polynomial_roots, verify_polynomial_expansion,
     verify_rational_quadratic_equation,
 };
 
@@ -300,7 +299,9 @@ pub(super) fn expand_all(input: &str, variable_names: &[&str]) -> Result<String,
     let proof = match outcome {
         PolynomialExpansionOutcome::Exact(proof) => proof,
         PolynomialExpansionOutcome::Unsupported(reason) => {
-            return Err(unsupported(format!("polynomial expansion unsupported: {reason}")));
+            return Err(unsupported(format!(
+                "polynomial expansion unsupported: {reason}"
+            )));
         }
         PolynomialExpansionOutcome::ResourceLimited(reason) => {
             return Err(problem_error(CliErrorKind::Resource, reason.to_string()));
@@ -309,7 +310,9 @@ pub(super) fn expand_all(input: &str, variable_names: &[&str]) -> Result<String,
     if !verify_polynomial_expansion(&source, &proof, &variables, limits)
         .map_err(|error| verification(error.to_string()))?
     {
-        return Err(verification("polynomial expansion certificate failed verification"));
+        return Err(verification(
+            "polynomial expansion certificate failed verification",
+        ));
     }
     let names = proof
         .variables()
@@ -367,9 +370,7 @@ fn integration_error(error: IntegrationDispatchError) -> CliError {
         IntegrationDispatchError::SourceMismatch
         | IntegrationDispatchError::IncorrectEvidence
         | IntegrationDispatchError::IncorrectPrimitive
-        | IntegrationDispatchError::IncorrectConditions => {
-            verification(error.to_string())
-        }
+        | IntegrationDispatchError::IncorrectConditions => verification(error.to_string()),
         _ => unsupported(error.to_string()),
     }
 }
@@ -444,8 +445,12 @@ pub(super) fn integrate(
             )
             .expect("writing to String is infallible");
         } else {
-            write!(&mut output, "\nterm {}: exact polynomial primitive", index + 1)
-                .expect("writing to String is infallible");
+            write!(
+                &mut output,
+                "\nterm {}: exact polynomial primitive",
+                index + 1
+            )
+            .expect("writing to String is infallible");
         }
     }
     append_required_conditions(&mut output, proof.conditions());

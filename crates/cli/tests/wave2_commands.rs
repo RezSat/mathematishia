@@ -52,7 +52,10 @@ fn explicit_rings_are_canonical_and_incomplete_rings_fail() {
     let undeclared = run(&["expandall", "x+y", "x"]).unwrap_err();
     assert_eq!(undeclared.kind(), CliErrorKind::Unsupported);
     assert!(undeclared.to_string().contains("undeclared variable"));
-    assert_eq!(run(&["expandall", "1", "1"]).unwrap_err().kind(), CliErrorKind::InvalidInput);
+    assert_eq!(
+        run(&["expandall", "1", "1"]).unwrap_err().kind(),
+        CliErrorKind::InvalidInput
+    );
 }
 
 #[test]
@@ -79,7 +82,11 @@ fn expansion_preserves_historical_exclusions_and_explicit_status() {
 fn polynomial_expansion_refuses_unsupported_and_resource_limited_inputs() {
     for input in ["sin(x)", "log(x)", "x^0", "x^-1"] {
         let refusal = run(&["expandall", input]).unwrap_err();
-        assert_eq!(refusal.kind(), CliErrorKind::Unsupported, "{input}: {refusal}");
+        assert_eq!(
+            refusal.kind(),
+            CliErrorKind::Unsupported,
+            "{input}: {refusal}"
+        );
     }
 
     assert_eq!(
@@ -91,9 +98,7 @@ fn polynomial_expansion_refuses_unsupported_and_resource_limited_inputs() {
         CliErrorKind::Domain
     );
 
-    let too_many_variables = (0..17)
-        .map(|i| format!("v{i}"))
-        .collect::<Vec<_>>();
+    let too_many_variables = (0..17).map(|i| format!("v{i}")).collect::<Vec<_>>();
     let mut arguments = vec!["expandall", "1"];
     arguments.extend(too_many_variables.iter().map(String::as_str));
     assert_eq!(run(&arguments).unwrap_err().kind(), CliErrorKind::Resource);
@@ -116,12 +121,16 @@ fn integrates_polynomial_and_affine_analytic_sums_with_checked_term_evidence() {
     assert!(mixed.contains("conditions: none"));
     assert!(mixed.contains("verified: true"));
 
-    assert!(run(&["integrate", "x^2", "x", "0", "2"])
-        .unwrap()
-        .contains("integral: 8/3"));
-    assert!(run(&["integrate", "x^2+1", "x", "0", "2"])
-        .unwrap()
-        .contains("integral: 14/3"));
+    assert!(
+        run(&["integrate", "x^2", "x", "0", "2"])
+            .unwrap()
+            .contains("integral: 8/3")
+    );
+    assert!(
+        run(&["integrate", "x^2+1", "x", "0", "2"])
+            .unwrap()
+            .contains("integral: 14/3")
+    );
 }
 
 #[test]
@@ -163,7 +172,11 @@ fn integration_rejects_unsupported_forms_and_budgets_without_false_results() {
         "2*(sin(x)+cos(x))",
     ] {
         let error = run(&["integrate", expression]).unwrap_err();
-        assert_eq!(error.kind(), CliErrorKind::Unsupported, "{expression}: {error}");
+        assert_eq!(
+            error.kind(),
+            CliErrorKind::Unsupported,
+            "{expression}: {error}"
+        );
     }
     assert_eq!(
         run(&["integrate", "x^33"]).unwrap_err().kind(),
@@ -198,9 +211,7 @@ fn new_commands_are_deterministic_and_do_not_change_legacy_expansion() {
     assert!(legacy.contains("polynomial_expansion: not certified"));
     assert!(!legacy.contains("\ncomplete: true"));
     assert_eq!(
-        run(&["expandall", "(x+1)^2", "--json"])
-            .unwrap_err()
-            .kind(),
+        run(&["expandall", "(x+1)^2", "--json"]).unwrap_err().kind(),
         CliErrorKind::Unsupported
     );
     assert_eq!(

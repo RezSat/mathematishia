@@ -25,6 +25,7 @@ mod finite_field;
 mod finite_field_factorization;
 mod guarded_rewrite;
 mod hensel_lift;
+mod inequalities;
 mod integration;
 mod integration_dispatch;
 mod linear_system_expr;
@@ -114,6 +115,10 @@ pub use guarded_rewrite::{
 };
 pub use hensel_lift::{
     HenselError, HenselPair, IntegerPolynomial, hensel_lift_pair, verify_hensel_pair,
+};
+pub use inequalities::{
+    ComparisonOperator, InequalityCriticalPoint, InequalityError, InequalityResult, RealBound,
+    RealInterval, solve_rational_inequality, verify_inequality_result,
 };
 pub use integration::{DefinitePolynomialIntegral, IntegrationError, PolynomialPrimitive};
 pub use integration_dispatch::{

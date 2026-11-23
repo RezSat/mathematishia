@@ -27,8 +27,8 @@ mod guarded_rewrite;
 mod hensel_lift;
 mod integration;
 mod integration_dispatch;
-mod linear_system_expr;
 mod limits;
+mod linear_system_expr;
 mod modular_irreducibility;
 mod modular_reconstruction;
 mod multivariate_derivation;
@@ -121,13 +121,13 @@ pub use integration_dispatch::{
     DispatchedAntiderivative, DispatchedDefiniteIntegral, IntegrationDispatchError,
     IntegrationTermEvidence,
 };
-pub use linear_system_expr::{
-    ExpressionLinearSystemSet, ExpressionLinearSystemSolution, LinearSystemExprError,
-    solve_linear_system_expr, verify_linear_system_expr,
-};
 pub use limits::{
     LimitDirection, LimitError, LimitFactor, LimitValue, LimitVerificationError, RationalLimit,
     verify_rational_limit,
+};
+pub use linear_system_expr::{
+    ExpressionLinearSystemSet, ExpressionLinearSystemSolution, LinearSystemExprError,
+    solve_linear_system_expr, verify_linear_system_expr,
 };
 pub use mathema::{DefinednessError, DomainExpression, definedness_obligations};
 pub use modular_irreducibility::{

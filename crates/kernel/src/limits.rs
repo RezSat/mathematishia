@@ -281,9 +281,7 @@ impl EvaluationContext {
 
         let value = classify(
             &mut work,
-            numerator_factor
-                .as_ref()
-                .zip(numerator_value.as_ref()),
+            numerator_factor.as_ref().zip(numerator_value.as_ref()),
             (&denominator_factor, &denominator_value),
             direction,
         )?;
@@ -334,12 +332,7 @@ pub fn verify_rational_limit(
     work.charge(1)?;
     let numerator_value = match (&claimed.numerator_factor, source.numerator().is_zero()) {
         (None, true) => None,
-        (Some(factor), false) => Some(verify_factor(
-            &mut work,
-            source.numerator(),
-            at,
-            factor,
-        )?),
+        (Some(factor), false) => Some(verify_factor(&mut work, source.numerator(), at, factor)?),
         _ => return Err(LimitVerificationError::InvalidCertificate),
     };
     let denominator_value = verify_factor(
@@ -391,7 +384,9 @@ mod adversarial_tests {
     #[test]
     fn forged_factors_domain_claims_and_answers_are_rejected() {
         let ctx = EvaluationContext::default();
-        let source = ctx.rational_function(&p(&[-1, 0, 1]), &p(&[-1, 1])).unwrap();
+        let source = ctx
+            .rational_function(&p(&[-1, 0, 1]), &p(&[-1, 1]))
+            .unwrap();
         let at = r(1);
         let good = ctx
             .rational_limit(&source, &at, LimitDirection::TwoSided)

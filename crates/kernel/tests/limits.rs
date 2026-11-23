@@ -26,7 +26,9 @@ fn certified(
     expected: LimitValue,
     excluded: bool,
 ) {
-    let source = ctx.rational_function(&p(numerator), &p(denominator)).unwrap();
+    let source = ctx
+        .rational_function(&p(numerator), &p(denominator))
+        .unwrap();
     let result = ctx.rational_limit(&source, &at, direction).unwrap();
     assert_eq!(result.value(), &expected);
     assert_eq!(result.direction(), direction);
@@ -45,19 +47,75 @@ fn user_questions_with_exact_finite_answers_and_removable_holes() {
     let ctx = EvaluationContext::default();
     let two = LimitDirection::TwoSided;
     // lim_(x->1) (x^2-1)/(x-1) = 2, but the original function is undefined at 1.
-    certified(&ctx, &[-1, 0, 1], &[-1, 1], r(1), two, LimitValue::Finite(r(2)), true);
+    certified(
+        &ctx,
+        &[-1, 0, 1],
+        &[-1, 1],
+        r(1),
+        two,
+        LimitValue::Finite(r(2)),
+        true,
+    );
     // lim_(x->2) (x^2-4)/(x-2) = 4.
-    certified(&ctx, &[-4, 0, 1], &[-2, 1], r(2), two, LimitValue::Finite(r(4)), true);
+    certified(
+        &ctx,
+        &[-4, 0, 1],
+        &[-2, 1],
+        r(2),
+        two,
+        LimitValue::Finite(r(4)),
+        true,
+    );
     // lim_(x->1) (x-1)/(x-1) = 1.
-    certified(&ctx, &[-1, 1], &[-1, 1], r(1), two, LimitValue::Finite(r(1)), true);
+    certified(
+        &ctx,
+        &[-1, 1],
+        &[-1, 1],
+        r(1),
+        two,
+        LimitValue::Finite(r(1)),
+        true,
+    );
     // lim_(x->0) x^3/x = 0, without filling the original hole.
-    certified(&ctx, &[0, 0, 0, 1], &[0, 1], r(0), two, LimitValue::Finite(r(0)), true);
+    certified(
+        &ctx,
+        &[0, 0, 0, 1],
+        &[0, 1],
+        r(0),
+        two,
+        LimitValue::Finite(r(0)),
+        true,
+    );
     // lim_(x->2) (3x^2-2x+4) = 12.
-    certified(&ctx, &[4, -2, 3], &[1], r(2), two, LimitValue::Finite(r(12)), false);
+    certified(
+        &ctx,
+        &[4, -2, 3],
+        &[1],
+        r(2),
+        two,
+        LimitValue::Finite(r(12)),
+        false,
+    );
     // lim_(x->1/2) (2x+1)/(x+2) = 4/5.
-    certified(&ctx, &[1, 2], &[2, 1], q(1, 2), two, LimitValue::Finite(q(4, 5)), false);
+    certified(
+        &ctx,
+        &[1, 2],
+        &[2, 1],
+        q(1, 2),
+        two,
+        LimitValue::Finite(q(4, 5)),
+        false,
+    );
     // lim_(x->1) 0/(x-1) = 0 despite the source hole.
-    certified(&ctx, &[], &[-1, 1], r(1), two, LimitValue::Finite(r(0)), true);
+    certified(
+        &ctx,
+        &[],
+        &[-1, 1],
+        r(1),
+        two,
+        LimitValue::Finite(r(0)),
+        true,
+    );
 }
 
 #[test]
@@ -73,19 +131,75 @@ fn two_sided_poles_and_both_one_sided_signs() {
 
     // lim_(x->0) 1/x^2 = +infinity from either side.
     for direction in [Left, Right, TwoSided] {
-        certified(&ctx, &[1], &[0, 0, 1], r(0), direction, PositiveInfinity, true);
+        certified(
+            &ctx,
+            &[1],
+            &[0, 0, 1],
+            r(0),
+            direction,
+            PositiveInfinity,
+            true,
+        );
     }
 
     // lim_(x->0) -2/x^3 changes sign across the pole.
-    certified(&ctx, &[-2], &[0, 0, 0, 1], r(0), Left, PositiveInfinity, true);
-    certified(&ctx, &[-2], &[0, 0, 0, 1], r(0), Right, NegativeInfinity, true);
-    certified(&ctx, &[-2], &[0, 0, 0, 1], r(0), TwoSided, DoesNotExist, true);
+    certified(
+        &ctx,
+        &[-2],
+        &[0, 0, 0, 1],
+        r(0),
+        Left,
+        PositiveInfinity,
+        true,
+    );
+    certified(
+        &ctx,
+        &[-2],
+        &[0, 0, 0, 1],
+        r(0),
+        Right,
+        NegativeInfinity,
+        true,
+    );
+    certified(
+        &ctx,
+        &[-2],
+        &[0, 0, 0, 1],
+        r(0),
+        TwoSided,
+        DoesNotExist,
+        true,
+    );
 
     // lim_(x->1) (x^2+1)/(x-1), numerator is strictly positive nearby.
-    certified(&ctx, &[1, 0, 1], &[-1, 1], r(1), Left, NegativeInfinity, true);
-    certified(&ctx, &[1, 0, 1], &[-1, 1], r(1), Right, PositiveInfinity, true);
+    certified(
+        &ctx,
+        &[1, 0, 1],
+        &[-1, 1],
+        r(1),
+        Left,
+        NegativeInfinity,
+        true,
+    );
+    certified(
+        &ctx,
+        &[1, 0, 1],
+        &[-1, 1],
+        r(1),
+        Right,
+        PositiveInfinity,
+        true,
+    );
     // lim_(x->0) -1/x^2 is -infinity from both sides.
-    certified(&ctx, &[-1], &[0, 0, 1], r(0), TwoSided, NegativeInfinity, true);
+    certified(
+        &ctx,
+        &[-1],
+        &[0, 0, 1],
+        r(0),
+        TwoSided,
+        NegativeInfinity,
+        true,
+    );
 }
 
 #[test]
@@ -96,11 +210,8 @@ fn original_domain_history_survives_conversion_and_limit() {
         128,
     )
     .unwrap();
-    let denominator = DomainExpression::from_expr(
-        Expr::add([x.clone(), (-1).into()]),
-        128,
-    )
-    .unwrap();
+    let denominator =
+        DomainExpression::from_expr(Expr::add([x.clone(), (-1).into()]), 128).unwrap();
     let source = numerator.divide(denominator, 16).unwrap();
     let ctx = EvaluationContext::default();
     let answer = ctx
@@ -125,16 +236,14 @@ fn unsupported_functions_and_other_variables_fail_explicitly() {
     let x = Expr::from(Symbol::new("x").unwrap());
     let y = Expr::from(Symbol::new("y").unwrap());
     let variable = Symbol::new("x").unwrap();
-    let sine = DomainExpression::from_expr_in_domain(
-        Expr::sin(x.clone()),
-        ScalarDomain::Real,
-        128,
-        16,
-    )
-    .unwrap();
+    let sine =
+        DomainExpression::from_expr_in_domain(Expr::sin(x.clone()), ScalarDomain::Real, 128, 16)
+            .unwrap();
     assert_eq!(
         ctx.rational_expression_limit(&sine, &variable, &r(0), LimitDirection::TwoSided),
-        Err(LimitError::Conversion(RationalExpressionError::UnsupportedFunction))
+        Err(LimitError::Conversion(
+            RationalExpressionError::UnsupportedFunction
+        ))
     );
     let multiple = DomainExpression::from_expr(Expr::add([x, y]), 128).unwrap();
     assert_eq!(
@@ -184,18 +293,29 @@ fn verify_checks_the_supplied_source_point_and_direction() {
 #[test]
 fn resource_limits_fail_closed_without_approximating() {
     let standard = EvaluationContext::default();
-    let source = standard.rational_function(&p(&[1, 0, 1]), &p(&[0, 1])).unwrap();
+    let source = standard
+        .rational_function(&p(&[1, 0, 1]), &p(&[0, 1]))
+        .unwrap();
     for (limits, expected) in [
         (
-            ResourceLimits { max_work_units: 0, ..ResourceLimits::default() },
+            ResourceLimits {
+                max_work_units: 0,
+                ..ResourceLimits::default()
+            },
             ResourceLimitKind::WorkUnits,
         ),
         (
-            ResourceLimits { max_polynomial_degree: 1, ..ResourceLimits::default() },
+            ResourceLimits {
+                max_polynomial_degree: 1,
+                ..ResourceLimits::default()
+            },
             ResourceLimitKind::PolynomialDegree,
         ),
         (
-            ResourceLimits { max_scalar_bits: 1, ..ResourceLimits::default() },
+            ResourceLimits {
+                max_scalar_bits: 1,
+                ..ResourceLimits::default()
+            },
             ResourceLimitKind::ScalarBits,
         ),
     ] {

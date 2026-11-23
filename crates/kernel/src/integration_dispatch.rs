@@ -103,7 +103,7 @@ pub enum IntegrationTermEvidence {
         integrand: Expr,
         certificate: PolynomialPrimitive,
     },
-    Elementary(ElementaryAntiderivative),
+    Elementary(Box<ElementaryAntiderivative>),
 }
 
 impl IntegrationTermEvidence {
@@ -270,9 +270,9 @@ fn dispatch_term(
         }),
         Err(EvaluationError::Polynomial(PolynomialConversionError::UnsupportedFunction)) => {
             let term_source = make_term_source(context, source, term, domain)?;
-            Ok(IntegrationTermEvidence::Elementary(
+            Ok(IntegrationTermEvidence::Elementary(Box::new(
                 context.integrate_elementary_affine(&term_source, variable, domain)?,
-            ))
+            )))
         }
         Err(EvaluationError::Polynomial(reason)) => {
             Err(IntegrationError::UnsupportedIntegrand(reason).into())

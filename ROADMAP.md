@@ -8,14 +8,16 @@ This file tracks implemented areas and the next domain extensions. See [CAPABILI
 - Unevaluated sine, cosine, tangent, exponential and logarithm nodes; nested real/complex domain-aware parsing and condition propagation.
 - Verified analytic chain rules for sine, cosine, exponential, tangent and real logarithm, with explicit prerequisites.
 - Five checked exact analytic constant identities with inherited domain restrictions and fixed rule provenance.
-- Bounded expression/equation parser and Rust CLI.
+- Bounded expression/equation parser and Rust CLI, with exact decimal literals and selected implicit multiplication.
 - Univariate rational-polynomial arithmetic, long division, GCD, differentiation and verified square-free decomposition.
 - Canonical bounded sparse multivariate polynomial arithmetic, partial differentiation, substitution and evaluation.
 - Exact bounded conversion between `Expr` / `DomainExpression` and multivariate Q-polynomials in an explicit ambient ring, retaining historical domain conditions.
+- Independently verified bounded expansion of supported multivariate sums, products and positive integer powers.
 - Ordered exact multivariate division with independently verified quotient/remainder; no Gröbner normal-form claim.
 - Bounded proof-checked final-result explanations for ordered multivariate division, without fabricated intermediate traces.
 - Exact polynomial antiderivatives and definite integrals at rational endpoints, with independent verification.
 - Verified exact rational-multiple primitives for sine, cosine and exponential of nonconstant rational-affine arguments.
+- Checked integration dispatch for bounded polynomial and supported affine analytic sums, with exact polynomial definite integrals at rational bounds.
 - Extended Euclidean algorithm with verified polynomial Bézout certificates and modular inverses in Q[x].
 - Canonical quotient-ring arithmetic in Q[x]/(m), including nonunits and signed powers.
 - Exact rational matrices, rank, RREF, determinant, inverse and linear systems including affine solution families.
@@ -34,6 +36,8 @@ This file tracks implemented areas and the next domain extensions. See [CAPABILI
 - Typed scalar conditions, guarded reciprocal cancellation and composite definedness obligations.
 - Proof graph for expression-equality steps, multiple condition dependencies and independent rule checks.
 - Checked structured derivation rendering for supported proof graphs, linear equations and symbolic derivatives.
+- Public typed problem results distinguishing solved, conditional, partial, unsupported, undefined and resource refusal outcomes.
+- CLI automatic equation dispatch, checked root sets, selected integration and exact constant evaluation; Python typed roots, certified root counts, integrals and analytic identities.
 - Experimental Python bindings, platform wheel tests and source-distribution rebuild.
 
 ## In progress / next
@@ -45,6 +49,6 @@ This file tracks implemented areas and the next domain extensions. See [CAPABILI
 5. Extend the current affine sin/cos/exp antiderivative rules to broader elementary integration; implement limits and series with explicit supported domains and unresolved results.
 6. Expand rational factorization beyond the bounded reconstruction path; improve algebraic embeddings and general arithmetic.
 7. Add exact linear-algebra extensions, comprehensive real-root isolation and targeted symbolic matrix operations.
-8. Stabilize the computation API, benchmark coverage and package releases for multiple frontends.
+8. Wire the verified polynomial expansion and shared result contract consistently through the CLI and Python APIs; stabilize benchmarks and package releases.
 
 The implemented proof graph checks dependencies and supported rule evidence; it is not a general theorem prover.

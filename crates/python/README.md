@@ -242,7 +242,7 @@ complex roots**, with multiplicities and explicit `complete` and
 `unresolved_cofactor` fields. A partial result must not be interpreted as a
 complete root set. `solve` remains the existing rational-linear solver;
 `solve_polynomial_equation` is the new separate polynomial-equality entrypoint
-until the shared operation contract is integrated. Source-domain exclusions
+until the Python adapter consumes the now-public shared kernel result contract. Source-domain exclusions
 cannot be silently discarded; use `rational_solve` for supported rational
 equations.
 

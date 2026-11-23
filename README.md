@@ -19,6 +19,11 @@ cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 
 ```sh
 cargo run -p mathematishia-cli -- expr '1/2+1/3'
+cargo run -p mathematishia-cli -- expr '0.25+0.5'
+cargo run -p mathematishia-cli -- solveauto 'x^2-5*x+6=0'
+cargo run -p mathematishia-cli -- roots 'x^3-2' x
+cargo run -p mathematishia-cli -- integrate 'x^2' x
+cargo run -p mathematishia-cli -- evalexact 'sin(0)+cos(0)'
 cargo run -p mathematishia-cli -- rsimplify '(x^2-1)/(x-1)' x
 cargo run -p mathematishia-cli -- rdiff '(x^2-1)/(x-1)' x
 cargo run -p mathematishia-cli -- rsolve '(x^2-1)/(x-1)=3' x
@@ -85,7 +90,7 @@ See [the Python API notes](crates/python/README.md) for supported operations.
 | `mathematishia-cli` | Command-line interface |
 | `mathematishia` (Python) | Native bindings to the Rust kernel |
 
-The parser supports exact scalar and symbolic division with explicit multiplication.
+The parser supports exact scalar and symbolic division, finite decimal literals, and selected implicit multiplication such as `2x` and `2(x+1)`.
 The `rsimplify`, `rdiff`, `reval`, and `rsolve` commands handle univariate
 rational expressions over Q, preserving excluded denominator zeros after
 cancellation. Solving currently returns admissible rational roots when the
@@ -108,7 +113,7 @@ They do not select real or complex embeddings. The `qvalue` interface handles
 embedded quadratic arithmetic separately. Cross-field arithmetic and analytic numerical evaluation are not implemented.
 Checked derivatives cover selected analytic functions with domain conditions.
 
-Additional checked Rust kernel APIs now support exact multivariate expression conversion, Sturm interval root counting, partial complex polynomial root sets, five analytic constant identities, rational-affine sine/cosine/exponential primitives, and final-result explanations for ordered multivariate division. These additions do not yet have matching CLI or Python commands; consult [CAPABILITIES.md](CAPABILITIES.md) for their exact mathematical domains and limits.
+The kernel also provides checked multivariate expansion, integration dispatch, typed mathematical results and domain-aware exact operations. The CLI now exposes `solveauto`, `roots`, `integrate`, and `evalexact`; Python exposes certified polynomial roots, Sturm root counts, selected exact integrals and analytic constants. These are bounded operations, not general-purpose analytic solving. Full polynomial expansion is currently a Rust kernel API and is not yet exposed by the CLI `expand` command. See [CAPABILITIES.md](CAPABILITIES.md) for supported mathematical domains and limits.
 
 Resource limits bound selected algebraic operations; they are not process
 memory or execution-time limits.

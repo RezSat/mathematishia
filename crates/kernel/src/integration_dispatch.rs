@@ -249,8 +249,7 @@ fn make_term_source(
         limits.max_expression_nodes,
         limits.max_rational_conditions,
     )?;
-    let result =
-        DomainExpression::multiply([history, term], limits.max_rational_conditions)?;
+    let result = DomainExpression::multiply([history, term], limits.max_rational_conditions)?;
     if result.conditions() != source.conditions() {
         return Err(IntegrationDispatchError::IncorrectConditions);
     }
@@ -378,7 +377,12 @@ fn definite_polynomial(
     variable: &Symbol,
     domain: ScalarDomain,
 ) -> Result<crate::RationalPolynomial, IntegrationDispatchError> {
-    check_source(context, source, domain, &mut WorkBudget::new(context.limits()))?;
+    check_source(
+        context,
+        source,
+        domain,
+        &mut WorkBudget::new(context.limits()),
+    )?;
     if !source.conditions().is_empty() {
         return Err(IntegrationDispatchError::RestrictedDefiniteDomain);
     }
@@ -468,9 +472,7 @@ impl EvaluationContext {
             domain,
             certificate,
         };
-        self.verify_dispatched_definite_integral(
-            source, variable, domain, lower, upper, &result,
-        )?;
+        self.verify_dispatched_definite_integral(source, variable, domain, lower, upper, &result)?;
         Ok(result)
     }
 
@@ -523,25 +525,27 @@ mod adversarial_tests {
             .unwrap();
 
         let mut wrong_primitive = certified.clone();
-        wrong_primitive.primitive = DomainExpression::from_expr_in_domain(
-            x.clone(), ScalarDomain::Real, 256, 32,
-        )
-        .unwrap();
+        wrong_primitive.primitive =
+            DomainExpression::from_expr_in_domain(x.clone(), ScalarDomain::Real, 256, 32).unwrap();
         assert_eq!(
             ctx.verify_dispatched_antiderivative(
-                &source, &variable, ScalarDomain::Real, &wrong_primitive,
+                &source,
+                &variable,
+                ScalarDomain::Real,
+                &wrong_primitive,
             ),
             Err(IntegrationDispatchError::IncorrectPrimitive),
         );
 
         let mut wrong_source = certified.clone();
-        wrong_source.source = DomainExpression::from_expr_in_domain(
-            x, ScalarDomain::Real, 256, 32,
-        )
-        .unwrap();
+        wrong_source.source =
+            DomainExpression::from_expr_in_domain(x, ScalarDomain::Real, 256, 32).unwrap();
         assert_eq!(
             ctx.verify_dispatched_antiderivative(
-                &source, &variable, ScalarDomain::Real, &wrong_source,
+                &source,
+                &variable,
+                ScalarDomain::Real,
+                &wrong_source,
             ),
             Err(IntegrationDispatchError::SourceMismatch),
         );
@@ -550,7 +554,10 @@ mod adversarial_tests {
         wrong_proofs.terms.swap(0, 1);
         assert_eq!(
             ctx.verify_dispatched_antiderivative(
-                &source, &variable, ScalarDomain::Real, &wrong_proofs,
+                &source,
+                &variable,
+                ScalarDomain::Real,
+                &wrong_proofs,
             ),
             Err(IntegrationDispatchError::IncorrectEvidence),
         );

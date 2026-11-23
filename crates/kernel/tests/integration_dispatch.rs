@@ -1,6 +1,4 @@
-use mathema::{
-    Condition, DomainExpression, Expr, Integer, Rational, ScalarDomain, Symbol,
-};
+use mathema::{Condition, DomainExpression, Expr, Integer, Rational, ScalarDomain, Symbol};
 use mathematishia_kernel::{
     ElementaryIntegrationError, EvaluationContext, EvaluationError, IntegrationDispatchError as E,
     IntegrationError, PolynomialConversionError, ResourceLimitKind, ResourceLimits,
@@ -51,14 +49,14 @@ fn integrates_x_squared_to_one_third_x_cubed() {
     let result = checked(&ctx, &input, ScalarDomain::Real);
     assert_eq!(
         result.primitive().expression(),
-        &Expr::mul([
-            Expr::from(q(1, 3)),
-            Expr::pow(x(), Expr::from(3)),
-        ])
+        &Expr::mul([Expr::from(q(1, 3)), Expr::pow(x(), Expr::from(3)),])
     );
     assert_eq!(result.terms().len(), 1);
     let polynomial = result.terms()[0].polynomial_certificate().unwrap();
-    assert_eq!(polynomial.primitive().differentiate(), *polynomial.integrand());
+    assert_eq!(
+        polynomial.primitive().differentiate(),
+        *polynomial.integrand()
+    );
 }
 
 #[test]
@@ -87,20 +85,14 @@ fn integrates_exp_x_and_scaled_cosine() {
     );
 
     let cos = source(
-        Expr::mul([
-            Expr::from(q(5, 3)),
-            Expr::cos(affine(q(-2, 1), q(3, 1))),
-        ]),
+        Expr::mul([Expr::from(q(5, 3)), Expr::cos(affine(q(-2, 1), q(3, 1)))]),
         ScalarDomain::Real,
     );
     assert_eq!(
         checked(&ctx, &cos, ScalarDomain::Real)
             .primitive()
             .expression(),
-        &Expr::mul([
-            Expr::from(q(-5, 6)),
-            Expr::sin(affine(q(-2, 1), q(3, 1))),
-        ])
+        &Expr::mul([Expr::from(q(-5, 6)), Expr::sin(affine(q(-2, 1), q(3, 1))),])
     );
 }
 
@@ -114,7 +106,11 @@ fn integrates_mixed_polynomial_and_affine_function_sum() {
         Expr::cos(x()),
         Expr::exp(x()),
     ]);
-    let result = checked(&ctx, &source(integrand, ScalarDomain::Real), ScalarDomain::Real);
+    let result = checked(
+        &ctx,
+        &source(integrand, ScalarDomain::Real),
+        ScalarDomain::Real,
+    );
     let expected = Expr::add([
         Expr::mul([Expr::from(q(7, 4)), x()]),
         Expr::mul([Expr::from(q(1, 3)), Expr::pow(x(), Expr::from(3))]),
@@ -145,10 +141,7 @@ fn integrates_zero_constant_and_rational_polynomial() {
         &Expr::from(0)
     );
     let input = source(
-        Expr::add([
-            Expr::from(q(-3, 7)),
-            Expr::mul([Expr::from(q(2, 5)), x()]),
-        ]),
+        Expr::add([Expr::from(q(-3, 7)), Expr::mul([Expr::from(q(2, 5)), x()])]),
         ScalarDomain::Rational,
     );
     assert_eq!(
@@ -177,14 +170,8 @@ fn entire_affine_terms_support_complex_scalar_domain() {
     assert_eq!(
         result.primitive().expression(),
         &Expr::add([
-            Expr::mul([
-                Expr::from(q(-2, 3)),
-                Expr::exp(affine(q(-3, 2), q(7, 4))),
-            ]),
-            Expr::mul([
-                Expr::from(q(3, 2)),
-                Expr::sin(affine(q(2, 3), q(1, 2))),
-            ]),
+            Expr::mul([Expr::from(q(-2, 3)), Expr::exp(affine(q(-3, 2), q(7, 4))),]),
+            Expr::mul([Expr::from(q(3, 2)), Expr::sin(affine(q(2, 3), q(1, 2))),]),
         ])
     );
 }
@@ -196,10 +183,8 @@ fn retains_unproved_historical_domain_conditions() {
         Condition::NonZero(x()),
         Condition::Positive(Expr::add([x(), Expr::from(5)])),
     ];
-    let historical = DomainExpression::with_conditions(
-        Expr::from(0), history.clone(), 4096, 128,
-    )
-    .unwrap();
+    let historical =
+        DomainExpression::with_conditions(Expr::from(0), history.clone(), 4096, 128).unwrap();
     let analytic = source(
         Expr::add([Expr::sin(x()), Expr::pow(x(), Expr::from(2))]),
         ScalarDomain::Real,
@@ -227,26 +212,25 @@ fn definite_polynomial_path_checks_directed_exact_values() {
     let low = q(0, 1);
     let high = q(2, 1);
     let result = ctx
-        .integrate_expression_dispatch_between(
-            &input, &variable(), ScalarDomain::Real, &low, &high,
-        )
+        .integrate_expression_dispatch_between(&input, &variable(), ScalarDomain::Real, &low, &high)
         .unwrap();
     assert_eq!(result.certificate().value(), &q(14, 3));
     ctx.verify_dispatched_definite_integral(
-        &input, &variable(), ScalarDomain::Real, &low, &high, &result,
+        &input,
+        &variable(),
+        ScalarDomain::Real,
+        &low,
+        &high,
+        &result,
     )
     .unwrap();
 
     let reverse = ctx
-        .integrate_expression_dispatch_between(
-            &input, &variable(), ScalarDomain::Real, &high, &low,
-        )
+        .integrate_expression_dispatch_between(&input, &variable(), ScalarDomain::Real, &high, &low)
         .unwrap();
     assert_eq!(reverse.certificate().value(), &q(-14, 3));
     let same = ctx
-        .integrate_expression_dispatch_between(
-            &input, &variable(), ScalarDomain::Real, &low, &low,
-        )
+        .integrate_expression_dispatch_between(&input, &variable(), ScalarDomain::Real, &low, &low)
         .unwrap();
     assert_eq!(same.certificate().value(), &q(0, 1));
 }
@@ -274,13 +258,12 @@ fn rejects_unsupported_analytic_rules_arguments_and_other_symbols() {
         let input = source(expression, ScalarDomain::Real);
         assert_eq!(
             ctx.integrate_expression_dispatch(&input, &variable(), ScalarDomain::Real),
-            Err(E::Elementary(ElementaryIntegrationError::UnsupportedFunction))
+            Err(E::Elementary(
+                ElementaryIntegrationError::UnsupportedFunction
+            ))
         );
     }
-    let nonlinear = source(
-        Expr::sin(Expr::pow(x(), Expr::from(2))),
-        ScalarDomain::Real,
-    );
+    let nonlinear = source(Expr::sin(Expr::pow(x(), Expr::from(2))), ScalarDomain::Real);
     assert_eq!(
         ctx.integrate_expression_dispatch(&nonlinear, &variable(), ScalarDomain::Real),
         Err(E::Elementary(ElementaryIntegrationError::NonAffineArgument))
@@ -319,7 +302,11 @@ fn definite_integrals_refuse_analytic_endpoints_and_historical_holes() {
     let analytic = source(Expr::exp(x()), ScalarDomain::Real);
     assert_eq!(
         ctx.integrate_expression_dispatch_between(
-            &analytic, &variable(), ScalarDomain::Real, &q(0, 1), &q(1, 1),
+            &analytic,
+            &variable(),
+            ScalarDomain::Real,
+            &q(0, 1),
+            &q(1, 1),
         ),
         Err(E::UnsupportedAnalyticDefiniteIntegral)
     );
@@ -333,7 +320,11 @@ fn definite_integrals_refuse_analytic_endpoints_and_historical_holes() {
     .unwrap();
     assert_eq!(
         ctx.integrate_expression_dispatch_between(
-            &inherited, &variable(), ScalarDomain::Real, &q(1, 1), &q(3, 1),
+            &inherited,
+            &variable(),
+            ScalarDomain::Real,
+            &q(1, 1),
+            &q(3, 1),
         ),
         Err(E::RestrictedDefiniteDomain)
     );
@@ -348,7 +339,9 @@ fn rejects_exhausted_work_node_degree_and_term_budgets() {
     });
     assert_eq!(
         work.integrate_expression_dispatch(&input, &variable(), ScalarDomain::Real),
-        Err(E::Evaluation(EvaluationError::Limit(ResourceLimitKind::WorkUnits)))
+        Err(E::Evaluation(EvaluationError::Limit(
+            ResourceLimitKind::WorkUnits
+        )))
     );
 
     let nodes = EvaluationContext::new(ResourceLimits {
@@ -357,7 +350,9 @@ fn rejects_exhausted_work_node_degree_and_term_budgets() {
     });
     assert_eq!(
         nodes.integrate_expression_dispatch(&input, &variable(), ScalarDomain::Real),
-        Err(E::Evaluation(EvaluationError::Limit(ResourceLimitKind::ExpressionNodes)))
+        Err(E::Evaluation(EvaluationError::Limit(
+            ResourceLimitKind::ExpressionNodes
+        )))
     );
 
     let degree = EvaluationContext::new(ResourceLimits {
@@ -367,15 +362,13 @@ fn rejects_exhausted_work_node_degree_and_term_budgets() {
     let square = source(Expr::pow(x(), Expr::from(2)), ScalarDomain::Real);
     assert_eq!(
         degree.integrate_expression_dispatch(&square, &variable(), ScalarDomain::Real),
-        Err(E::Polynomial(IntegrationError::Evaluation(EvaluationError::Limit(
-            ResourceLimitKind::PolynomialDegree,
-        ))))
+        Err(E::Polynomial(IntegrationError::Evaluation(
+            EvaluationError::Limit(ResourceLimitKind::PolynomialDegree,)
+        )))
     );
 
     let many_terms = source(
-        Expr::add((0..65).map(|i| {
-            Expr::sin(Expr::add([x(), Expr::from(i)]))
-        })),
+        Expr::add((0..65).map(|i| Expr::sin(Expr::add([x(), Expr::from(i)])))),
         ScalarDomain::Real,
     );
     let generous = EvaluationContext::new(ResourceLimits {
@@ -395,19 +388,33 @@ fn exact_source_and_endpoint_certificate_inputs_are_bound() {
     let input = source(Expr::pow(x(), Expr::from(2)), ScalarDomain::Real);
     let result = ctx
         .integrate_expression_dispatch_between(
-            &input, &variable(), ScalarDomain::Real, &q(0, 1), &q(1, 1),
+            &input,
+            &variable(),
+            ScalarDomain::Real,
+            &q(0, 1),
+            &q(1, 1),
         )
         .unwrap();
     assert_eq!(
         ctx.verify_dispatched_definite_integral(
-            &input, &variable(), ScalarDomain::Real, &q(0, 1), &q(2, 1), &result,
+            &input,
+            &variable(),
+            ScalarDomain::Real,
+            &q(0, 1),
+            &q(2, 1),
+            &result,
         ),
         Err(E::IncorrectEvidence)
     );
     let different = source(x(), ScalarDomain::Real);
     assert_eq!(
         ctx.verify_dispatched_definite_integral(
-            &different, &variable(), ScalarDomain::Real, &q(0, 1), &q(1, 1), &result,
+            &different,
+            &variable(),
+            ScalarDomain::Real,
+            &q(0, 1),
+            &q(1, 1),
+            &result,
         ),
         Err(E::SourceMismatch)
     );

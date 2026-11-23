@@ -676,7 +676,177 @@ def gcd(left: str, right: str, variable: str) -> Polynomial:
     return _poly(_native.gcd(left, right, variable))
 
 
+
+@dataclass(frozen=True)
+class CertifiedPolynomialRoot:
+    kind: Literal["rational", "real_quadratic", "complex_quadratic"]
+    rational: Fraction | None
+    minimal_polynomial: Polynomial | None
+    branch: str | None
+    multiplicity: int
+
+
+@dataclass(frozen=True)
+class PolynomialRootSet:
+    polynomial: Polynomial
+    kind: Literal["finite", "all_complex"]
+    roots: tuple[CertifiedPolynomialRoot, ...]
+    unresolved_cofactor: Polynomial | None
+    complete: bool
+
+
+def _partial_roots(data) -> PolynomialRootSet:
+    polynomial_data, kind, roots, unresolved, complete = data
+    return PolynomialRootSet(
+        _poly(polynomial_data),
+        kind,
+        tuple(
+            CertifiedPolynomialRoot(
+                root_kind, Fraction(rational) if rational is not None else None,
+                _poly(minimal) if minimal is not None else None,
+                branch, multiplicity,
+            )
+            for root_kind, rational, minimal, branch, multiplicity in roots
+        ),
+        _poly(unresolved) if unresolved is not None else None,
+        complete,
+    )
+
+
+def polynomial_roots(source: str, variable: str) -> PolynomialRootSet:
+    """Certified complex roots of Q[x], retaining any unresolved cofactor.
+
+    An incomplete result is not a statement that all roots have been found.
+    Original domain restrictions must be absent.
+    """
+    return _partial_roots(_native.polynomial_roots(source, variable))
+
+
+def solve_polynomial_equation(equation: str, variable: str) -> PolynomialRootSet:
+    """Solve a polynomial equality over C with exact, possibly partial evidence.
+
+    Rational expressions with excluded inputs must use a domain-aware solver.
+    """
+    return _partial_roots(_native.solve_polynomial_equation(equation, variable))
+
+
+@dataclass(frozen=True)
+class SturmRootCount:
+    polynomial: Polynomial
+    lower: Fraction
+    upper: Fraction
+    count: int
+    lower_variations: int
+    upper_variations: int
+    sequence: tuple[Polynomial, ...]
+    lower_signs: tuple[Literal["negative", "zero", "positive"], ...]
+    upper_signs: tuple[Literal["negative", "zero", "positive"], ...]
+
+
+def sturm_root_count(
+    source: str, variable: str, lower: str, upper: str
+) -> SturmRootCount:
+    """Count distinct real roots in an open rational interval with a certificate.
+
+    Requires a nonzero square-free polynomial and non-root interval endpoints.
+    """
+    poly, endpoints, counts, chain, signs = _native.sturm_root_count(
+        source, variable, lower, upper
+    )
+    return SturmRootCount(
+        _poly(poly), Fraction(endpoints[0]), Fraction(endpoints[1]),
+        counts[0], counts[1], counts[2],
+        tuple(_poly(term) for term in chain),
+        tuple(signs[0]), tuple(signs[1]),
+    )
+
+
+@dataclass(frozen=True)
+class PolynomialIntegral:
+    integrand: Polynomial
+    primitive: Polynomial
+
+
+def integrate_polynomial(source: str, variable: str) -> PolynomialIntegral:
+    """Exact verified antiderivative of unrestricted Q[x], constant set to zero."""
+    integrand, primitive = _native.integrate_polynomial(source, variable)
+    return PolynomialIntegral(_poly(integrand), _poly(primitive))
+
+
+@dataclass(frozen=True)
+class DefinitePolynomialIntegral:
+    integrand: Polynomial
+    primitive: Polynomial
+    lower: Fraction
+    upper: Fraction
+    value: Fraction
+
+
+def integrate_polynomial_between(
+    source: str, variable: str, lower: str, upper: str
+) -> DefinitePolynomialIntegral:
+    """Evaluate a directed integral at rational endpoints with checked evidence."""
+    integrand, primitive, a, b, value = _native.integrate_polynomial_between(
+        source, variable, lower, upper
+    )
+    return DefinitePolynomialIntegral(
+        _poly(integrand), _poly(primitive),
+        Fraction(a), Fraction(b), Fraction(value),
+    )
+
+
+@dataclass(frozen=True)
+class AnalyticConstant:
+    status: Literal["exact", "unchanged"]
+    expression: str
+    conditions: tuple[str, ...]
+    rule: str | None
+    path: tuple[int, ...]
+
+
+def analytic_constant(
+    source: str, domain: Literal["real", "complex"] = "real"
+) -> AnalyticConstant:
+    """Apply one independently verified zero/one analytic identity, if available.
+
+    An unchanged expression is explicitly not an exact numeric evaluation.
+    Conditions are inherited, not automatically discharged.
+    """
+    status, value, conditions, rule, path = _native.analytic_constant(source, domain)
+    return AnalyticConstant(status, value, tuple(conditions), rule, tuple(path))
+
+
+@dataclass(frozen=True)
+class ElementaryIntegral:
+    integrand: str
+    primitive: str
+    conditions: tuple[str, ...]
+    rule: str
+    input_scale: Fraction
+    slope: Fraction
+    intercept: Fraction
+
+
+def integrate_elementary(
+    source: str, variable: str, domain: Literal["real", "complex"] = "real"
+) -> ElementaryIntegral:
+    """Verify one supported rational multiple of sin, cos or exp of affine input."""
+    original, primitive, conditions, rule, scale, slope, intercept = (
+        _native.integrate_elementary(source, variable, domain)
+    )
+    return ElementaryIntegral(
+        original, primitive, tuple(conditions), rule,
+        Fraction(scale), Fraction(slope), Fraction(intercept),
+    )
+
+
 __all__ = [
+    "CertifiedPolynomialRoot", "PolynomialRootSet", "polynomial_roots",
+    "solve_polynomial_equation", "SturmRootCount", "sturm_root_count",
+    "PolynomialIntegral", "DefinitePolynomialIntegral",
+    "integrate_polynomial", "integrate_polynomial_between",
+    "AnalyticConstant", "analytic_constant",
+    "ElementaryIntegral", "integrate_elementary",
     "DomainExpression", "DomainEquation", "DomainProofNode", "DomainRewrite",
     "domain_expression", "domain_equation", "substitute_domain", "rewrite_domain",
     "MathSyntaxError", "ResourceLimitError", "UnsupportedMathematicsError",

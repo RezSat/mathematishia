@@ -201,3 +201,72 @@ Each condition is a required hypothesis, not a theorem proved by differentiation
 The unrestricted `differentiate_expression` supports sine, cosine and
 exponential chain rules. Tangent and logarithm require the domain-aware interface.
 Complex principal-log differentiation is not included.
+
+## Certified root sets, real root counts, and exact integrals
+
+These entrypoints call the Rust kernel and preserve exact rational values and
+verification outcomes. They return frozen Python dataclasses, not human-formatted
+success messages.
+
+```python
+from fractions import Fraction
+import mathematishia as m
+
+solutions = m.solve_polynomial_equation("x^2-5*x+6=0", "x")
+assert solutions.complete
+assert [root.rational for root in solutions.roots] == [Fraction(2), Fraction(3)]
+
+irrational = m.polynomial_roots("x^2-2", "x")
+assert [root.branch for root in irrational.roots] == ["lower_real", "upper_real"]
+
+count = m.sturm_root_count("x^2-2", "x", "-2", "2")
+assert count.count == 2
+
+primitive = m.integrate_polynomial("x^2", "x")
+assert primitive.primitive.coefficients == (
+    Fraction(0), Fraction(0), Fraction(0), Fraction(1, 3)
+)
+assert m.integrate_polynomial_between("x^2", "x", "0", "3").value == 9
+
+identity = m.analytic_constant("sin(0)")
+assert (identity.status, identity.expression, identity.rule) == (
+    "exact", "0", "analytic.sin_zero"
+)
+
+elementary = m.integrate_elementary("cos(x)", "x")
+assert elementary.rule == "calculus.integrate_affine_cosine"
+```
+
+`polynomial_roots` and `solve_polynomial_equation` return **certified
+complex roots**, with multiplicities and explicit `complete` and
+`unresolved_cofactor` fields. A partial result must not be interpreted as a
+complete root set. `solve` remains the existing rational-linear solver;
+`solve_polynomial_equation` is the new separate polynomial-equality entrypoint
+until the shared operation contract is integrated. Source-domain exclusions
+cannot be silently discarded; use `rational_solve` for supported rational
+equations.
+
+`sturm_root_count` counts distinct real roots strictly between two rational
+endpoints and includes the exact Sturm sequence, endpoint signs and variation
+counts. It rejects zero or nonsquare-free polynomials, reversed intervals, and
+root endpoints. It does not isolate roots or approximate their positions.
+
+`integrate_polynomial` returns the canonical antiderivative with zero integration
+constant; `integrate_polynomial_between` returns an exact directed value.
+Both reject source-domain exclusions. `integrate_elementary` supports only
+one rational multiple of `sin`, `cos`, or `exp` of a nonconstant rational-affine
+argument; the primitive has no represented additive constant, and retained
+conditions are not automatically proven. General integration, limits, real
+inequalities, and generic math-question dispatch await their kernel and shared
+result contracts. The API does not infer unsupported mathematical results.
+
+`analytic_constant` applies at most one deterministic, verified rewrite:
+`sin(0)`, `cos(0)`, `tan(0)`, `exp(0)` or `log(1)`. It returns
+`status="unchanged"` for nonmatching input and raises a stable exception for
+unsupported domain or undefined inputs; it is not a general analytic evaluator.
+
+All these operations use the kernel's default fixed resource budgets.
+`MathSyntaxError`, `UnsupportedMathematicsError`, `ResourceLimitError`,
+`UndefinedAtPointError` and `VerificationFailure` distinguish the principal
+error categories. Numeric inputs are exact rational **strings** rather than
+binary floats. API object fields are immutable.

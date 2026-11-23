@@ -8,9 +8,7 @@ use std::fmt;
 
 use mathema::{DomainExpression, Expr, Symbol};
 
-use crate::{
-    MultivariateError, MultivariateExprError, MultivariateLimits, MultivariatePolynomial,
-};
+use crate::{MultivariateError, MultivariateExprError, MultivariateLimits, MultivariatePolynomial};
 
 /// A complete expansion retains its source, inherited conditions and ring.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -101,8 +99,7 @@ pub fn expand_polynomial(
     variables: &[Symbol],
     limits: MultivariateLimits,
 ) -> PolynomialExpansionOutcome {
-    let converted =
-        MultivariatePolynomial::try_from_domain_expression(source, variables, limits);
+    let converted = MultivariatePolynomial::try_from_domain_expression(source, variables, limits);
     let converted = match converted {
         Ok(value) => value,
         Err(error) if resource_refusal(error) => {
@@ -137,20 +134,15 @@ pub fn verify_polynomial_expansion(
     variables: &[Symbol],
     limits: MultivariateLimits,
 ) -> Result<bool, PolynomialExpansionError> {
-    if source != candidate.source()
-        || source.conditions() != candidate.expanded().conditions()
-    {
+    if source != candidate.source() || source.conditions() != candidate.expanded().conditions() {
         return Ok(false);
     }
 
-    let original = MultivariatePolynomial::try_from_domain_expression(
-        source, variables, limits,
-    )
-    .map_err(PolynomialExpansionError::Conversion)?;
-    let output = MultivariatePolynomial::try_from_domain_expression(
-        candidate.expanded(), variables, limits,
-    )
-    .map_err(PolynomialExpansionError::Conversion)?;
+    let original = MultivariatePolynomial::try_from_domain_expression(source, variables, limits)
+        .map_err(PolynomialExpansionError::Conversion)?;
+    let output =
+        MultivariatePolynomial::try_from_domain_expression(candidate.expanded(), variables, limits)
+            .map_err(PolynomialExpansionError::Conversion)?;
     if original.polynomial().variables() != candidate.variables()
         || output.polynomial().variables() != candidate.variables()
     {
@@ -188,16 +180,18 @@ mod tests {
             panic!("expected expansion");
         };
         let mut false_coefficient = good.clone();
-        false_coefficient.polynomial =
-            MultivariatePolynomial::try_from_expr(
-                &Expr::add([Expr::pow(x.clone(), Expr::from(2)), Expr::from(1)]),
-                &ring,
-                MultivariateLimits::default(),
-            )
-            .unwrap();
+        false_coefficient.polynomial = MultivariatePolynomial::try_from_expr(
+            &Expr::add([Expr::pow(x.clone(), Expr::from(2)), Expr::from(1)]),
+            &ring,
+            MultivariateLimits::default(),
+        )
+        .unwrap();
         assert_eq!(
             verify_polynomial_expansion(
-                &source, &false_coefficient, &ring, MultivariateLimits::default()
+                &source,
+                &false_coefficient,
+                &ring,
+                MultivariateLimits::default()
             ),
             Ok(false)
         );
@@ -206,7 +200,10 @@ mod tests {
         forged_output.expanded = DomainExpression::from_expr(Expr::from(42), 128).unwrap();
         assert_eq!(
             verify_polynomial_expansion(
-                &source, &forged_output, &ring, MultivariateLimits::default()
+                &source,
+                &forged_output,
+                &ring,
+                MultivariateLimits::default()
             ),
             Ok(false)
         );
@@ -221,7 +218,10 @@ mod tests {
         .unwrap();
         assert_eq!(
             verify_polynomial_expansion(
-                &source, &erased_hole, &ring, MultivariateLimits::default()
+                &source,
+                &erased_hole,
+                &ring,
+                MultivariateLimits::default()
             ),
             Ok(false)
         );

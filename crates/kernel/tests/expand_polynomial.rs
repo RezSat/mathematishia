@@ -1,8 +1,7 @@
 use mathema::{Condition, DomainExpression, Expr, Integer, Rational, Symbol};
 use mathematishia_kernel::{
-    expand_polynomial, verify_polynomial_expansion, MultivariateError as M,
-    MultivariateExprError as E, MultivariateLimits as L,
-    PolynomialExpansionOutcome as Outcome,
+    MultivariateError as M, MultivariateExprError as E, MultivariateLimits as L,
+    PolynomialExpansionOutcome as Outcome, expand_polynomial, verify_polynomial_expansion,
 };
 
 fn s(value: &str) -> Symbol {
@@ -69,10 +68,7 @@ fn expands_five_normal_school_algebra_questions_exactly() {
     coefficient(&r, &[1, 0], 2, 1);
     coefficient(&r, &[0, 0], 6, 1);
 
-    let cube = input(Expr::pow(
-        Expr::add([x(), Expr::mul([n(-1), y()])]),
-        n(3),
-    ));
+    let cube = input(Expr::pow(Expr::add([x(), Expr::mul([n(-1), y()])]), n(3)));
     let r = exact(&cube, &ring, L::default());
     coefficient(&r, &[3, 0], 1, 1);
     coefficient(&r, &[2, 1], -3, 1);
@@ -127,10 +123,17 @@ fn structural_identity_is_not_confused_with_algebraic_equality() {
     let source = input(Expr::add([x(), n(2)]));
     let result = exact(&source, &[s("x")], L::default());
     // The expanded canonical AST may normalize to a different structural form.
-    assert_eq!(result.syntactically_unchanged(),
-        source.expression() == result.expanded().expression());
     assert_eq!(
-        verify_polynomial_expansion(&input(Expr::add([x(), n(3)])), &result, &[s("x")], L::default()),
+        result.syntactically_unchanged(),
+        source.expression() == result.expanded().expression()
+    );
+    assert_eq!(
+        verify_polynomial_expansion(
+            &input(Expr::add([x(), n(3)])),
+            &result,
+            &[s("x")],
+            L::default()
+        ),
         Ok(false)
     );
     assert_eq!(
@@ -156,13 +159,9 @@ fn unsupported_inputs_never_claim_completion() {
         (Expr::sin(x()), E::UnsupportedAnalyticFunction),
         (Expr::log(x()), E::UnsupportedAnalyticFunction),
     ] {
-        let domain_input = DomainExpression::from_expr_in_domain(
-            expression,
-            mathema::ScalarDomain::Real,
-            128,
-            16,
-        )
-        .unwrap();
+        let domain_input =
+            DomainExpression::from_expr_in_domain(expression, mathema::ScalarDomain::Real, 128, 16)
+                .unwrap();
         assert_eq!(
             expand_polynomial(&domain_input, &vars, L::default()),
             Outcome::Unsupported(expected)
@@ -178,22 +177,33 @@ fn unsupported_inputs_never_claim_completion() {
 fn resource_refusals_are_typed_and_never_partial_success() {
     let vars = [s("x"), s("y")];
     let square = input(Expr::pow(Expr::add([x(), y()]), n(2)));
-    let degree = L { max_total_degree: 1, ..L::default() };
+    let degree = L {
+        max_total_degree: 1,
+        ..L::default()
+    };
     assert!(matches!(
         expand_polynomial(&square, &vars, degree),
         Outcome::ResourceLimited(E::ExponentLimit | E::Polynomial(M::TotalDegreeLimit))
     ));
-    let work = L { max_work_units: 1, ..L::default() };
+    let work = L {
+        max_work_units: 1,
+        ..L::default()
+    };
     assert_eq!(
         expand_polynomial(&square, &vars, work),
         Outcome::ResourceLimited(E::Polynomial(M::WorkLimit))
     );
-    let terms = L { max_terms: 1, ..L::default() };
+    let terms = L {
+        max_terms: 1,
+        ..L::default()
+    };
     assert!(matches!(
         expand_polynomial(&square, &vars, terms),
         Outcome::ResourceLimited(E::Polynomial(M::TermLimit | M::InputTermLimit))
     ));
-    let variables = (0..17).map(|index| s(&format!("v{index}"))).collect::<Vec<_>>();
+    let variables = (0..17)
+        .map(|index| s(&format!("v{index}")))
+        .collect::<Vec<_>>();
     assert_eq!(
         expand_polynomial(&input(n(1)), &variables, L::default()),
         Outcome::ResourceLimited(E::Polynomial(M::VariableLimit))

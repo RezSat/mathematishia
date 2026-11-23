@@ -339,12 +339,7 @@ fn sign_chart_matches_direct_exact_rational_evaluation() {
                     let numerator = p(&[a * b, -a - b, 1]);
                     let denominator = p(&[c * d, -c - d, 1]);
                     let function = context.rational_function(&numerator, &denominator).unwrap();
-                    for operator in [
-                        Op::Less,
-                        Op::LessOrEqual,
-                        Op::Greater,
-                        Op::GreaterOrEqual,
-                    ] {
+                    for operator in [Op::Less, Op::LessOrEqual, Op::Greater, Op::GreaterOrEqual] {
                         let answer = context
                             .solve_rational_inequality(&function, operator)
                             .unwrap();

@@ -475,9 +475,8 @@ pub fn verify_inequality_result(
 
     let numerator = proposed.function.numerator();
     let denominator = proposed.function.denominator();
-    let leading_sign = |polynomial: &RationalPolynomial| {
-        polynomial.coefficients().last().map_or(0, sign)
-    };
+    let leading_sign =
+        |polynomial: &RationalPolynomial| polynomial.coefficients().last().map_or(0, sign);
     let mut right_sign = leading_sign(numerator) * leading_sign(denominator);
     let mut segment_signs = vec![right_sign];
     for point in certified.critical_points.iter().rev() {

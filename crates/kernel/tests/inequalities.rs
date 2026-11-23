@@ -170,9 +170,38 @@ fn irrational_quadratic_boundaries_are_ordered_without_floats() {
         .rational_function(&p(&[-2, 0, 1]), &denominator)
         .unwrap();
     let answer = ctx.solve_rational_inequality(&f, Op::Greater).unwrap();
-    assert_eq!(answer.intervals().len(), 3);
-    assert!(matches!(answer.intervals()[0].lower, Neg));
-    assert!(matches!(answer.intervals()[2].upper, Pos));
+    let numerator_roots = ctx.algebraic_roots(&p(&[-2, 0, 1])).unwrap();
+    let denominator_roots = ctx.algebraic_roots(&denominator).unwrap();
+    let (
+        mathematishia_kernel::AlgebraicRootSet::Finite(numerator_values),
+        mathematishia_kernel::AlgebraicRootSet::Finite(denominator_values),
+    ) = (numerator_roots.roots(), denominator_roots.roots())
+    else {
+        panic!("expected real roots");
+    };
+    assert_eq!(
+        answer.intervals(),
+        &[
+            interval(
+                Neg,
+                RealBound::Finite(denominator_values[0].clone()),
+                false,
+                false,
+            ),
+            interval(
+                RealBound::Finite(numerator_values[0].clone()),
+                RealBound::Finite(numerator_values[1].clone()),
+                false,
+                false,
+            ),
+            interval(
+                RealBound::Finite(denominator_values[1].clone()),
+                Pos,
+                false,
+                false,
+            ),
+        ]
+    );
     assert_eq!(verify_inequality_result(&ctx, &answer), Ok(true));
 }
 
@@ -281,4 +310,62 @@ fn constant_nonzero_denominators_preserve_sign() {
         solve(&[-1, 1], &[-1], Op::LessOrEqual),
         vec![interval(finite(1), Pos, true, false)]
     );
+}
+
+#[test]
+fn sign_chart_matches_direct_exact_rational_evaluation() {
+    let context = EvaluationContext::default();
+    let contains = |interval: &RealInterval, x: &Rational| {
+        let left = match &interval.lower {
+            RealBound::NegativeInfinity => true,
+            RealBound::Finite(ExactQuadraticRoot::Rational(value)) => {
+                x > value || (interval.lower_closed && x == value)
+            }
+            _ => panic!("expected rational lower boundary"),
+        };
+        let right = match &interval.upper {
+            RealBound::PositiveInfinity => true,
+            RealBound::Finite(ExactQuadraticRoot::Rational(value)) => {
+                x < value || (interval.upper_closed && x == value)
+            }
+            _ => panic!("expected rational upper boundary"),
+        };
+        left && right
+    };
+    for a in -1..=1 {
+        for b in -1..=1 {
+            for c in -1..=1 {
+                for d in -1..=1 {
+                    let numerator = p(&[a * b, -a - b, 1]);
+                    let denominator = p(&[c * d, -c - d, 1]);
+                    let function = context.rational_function(&numerator, &denominator).unwrap();
+                    for operator in [
+                        Op::Less,
+                        Op::LessOrEqual,
+                        Op::Greater,
+                        Op::GreaterOrEqual,
+                    ] {
+                        let answer = context
+                            .solve_rational_inequality(&function, operator)
+                            .unwrap();
+                        for sample in -3..=3 {
+                            let x = q(sample, 1);
+                            let actual = function.evaluate(&x);
+                            let expected = actual.is_ok_and(|value| match operator {
+                                Op::Less => value < q(0, 1),
+                                Op::LessOrEqual => value <= q(0, 1),
+                                Op::Greater => value > q(0, 1),
+                                Op::GreaterOrEqual => value >= q(0, 1),
+                            });
+                            assert_eq!(
+                                answer.intervals().iter().any(|item| contains(item, &x)),
+                                expected,
+                                "n={numerator:?}, d={denominator:?}, x={sample}, op={operator:?}"
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

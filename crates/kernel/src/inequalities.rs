@@ -143,7 +143,6 @@ fn zero() -> Rational {
     Rational::from(Integer::zero())
 }
 
-
 fn sign(value: &Rational) -> i8 {
     match value.cmp(&zero()) {
         Ordering::Less => -1,
@@ -469,8 +468,71 @@ pub fn verify_inequality_result(
     context: &EvaluationContext,
     proposed: &InequalityResult,
 ) -> Result<bool, InequalityError> {
-    let expected = build(context, &proposed.function, proposed.comparison)?;
-    Ok(expected == *proposed)
+    let certified = build(context, &proposed.function, proposed.comparison)?;
+    if certified.critical_points != proposed.critical_points {
+        return Ok(false);
+    }
+
+    let numerator = proposed.function.numerator();
+    let denominator = proposed.function.denominator();
+    let leading_sign = |polynomial: &RationalPolynomial| {
+        polynomial.coefficients().last().map_or(0, sign)
+    };
+    let mut right_sign = leading_sign(numerator) * leading_sign(denominator);
+    let mut segment_signs = vec![right_sign];
+    for point in certified.critical_points.iter().rev() {
+        if (point.numerator_multiplicity + point.denominator_multiplicity) % 2 == 1 {
+            right_sign = -right_sign;
+        }
+        segment_signs.push(right_sign);
+    }
+    segment_signs.reverse();
+
+    let mut checked_intervals = Vec::new();
+    let points = &certified.critical_points;
+    for (index, &segment_sign) in segment_signs.iter().enumerate() {
+        let lower = if index == 0 {
+            RealBound::NegativeInfinity
+        } else {
+            RealBound::Finite(points[index - 1].root.clone())
+        };
+        let upper = if index == points.len() {
+            RealBound::PositiveInfinity
+        } else {
+            RealBound::Finite(points[index].root.clone())
+        };
+        if proposed.comparison.accepts(segment_sign) {
+            append_interval(
+                &mut checked_intervals,
+                RealInterval {
+                    lower,
+                    upper,
+                    lower_closed: false,
+                    upper_closed: false,
+                },
+            );
+        }
+        if let Some(point) = points.get(index) {
+            let point_sign = if point.numerator_multiplicity > 0 {
+                0
+            } else {
+                segment_sign
+            };
+            if !point.excluded && proposed.comparison.accepts(point_sign) {
+                let bound = RealBound::Finite(point.root.clone());
+                append_interval(
+                    &mut checked_intervals,
+                    RealInterval {
+                        lower: bound.clone(),
+                        upper: bound,
+                        lower_closed: true,
+                        upper_closed: true,
+                    },
+                );
+            }
+        }
+    }
+    Ok(checked_intervals == proposed.intervals)
 }
 
 /// Solve a checked univariate rational function compared with zero over R.

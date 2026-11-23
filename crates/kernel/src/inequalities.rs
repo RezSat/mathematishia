@@ -143,9 +143,6 @@ fn zero() -> Rational {
     Rational::from(Integer::zero())
 }
 
-fn coefficient(poly: &RationalPolynomial, degree: usize) -> Rational {
-    poly.coefficients().get(degree).cloned().unwrap_or_else(zero)
-}
 
 fn sign(value: &Rational) -> i8 {
     match value.cmp(&zero()) {
@@ -278,9 +275,7 @@ fn compare_roots(
     let value_sign = quadratic_sign_at_root(minimal_polynomial, left, work)?;
     Ok(match (branch, value_sign) {
         (_, 0) => Ordering::Equal,
-        (QuadraticBranch::LowerReal, 1) | (QuadraticBranch::UpperReal, -1) => {
-            Ordering::Less
-        }
+        (QuadraticBranch::LowerReal, 1) | (QuadraticBranch::UpperReal, -1) => Ordering::Less,
         _ => Ordering::Greater,
     })
 }
@@ -373,7 +368,10 @@ fn negative_infinity_sign(polynomial: &RationalPolynomial) -> i8 {
     let Some(degree) = polynomial.degree() else {
         return 0;
     };
-    let leading = polynomial.coefficients().last().expect("nonzero polynomial");
+    let leading = polynomial
+        .coefficients()
+        .last()
+        .expect("nonzero polynomial");
     sign(leading) * if degree % 2 == 0 { 1 } else { -1 }
 }
 
@@ -507,15 +505,22 @@ mod certificate_tests {
 
     fn polynomial(values: &[i64]) -> RationalPolynomial {
         RationalPolynomial::new(
-            values.iter().map(|&value| Rational::from(Integer::from(value))).collect(),
+            values
+                .iter()
+                .map(|&value| Rational::from(Integer::from(value)))
+                .collect(),
         )
     }
 
     #[test]
     fn forged_interval_and_missing_exclusion_fail_verification() {
         let ctx = EvaluationContext::default();
-        let f = ctx.rational_function(&polynomial(&[-1, 1]), &polynomial(&[2, 1])).unwrap();
-        let result = ctx.solve_rational_inequality(&f, ComparisonOperator::LessOrEqual).unwrap();
+        let f = ctx
+            .rational_function(&polynomial(&[-1, 1]), &polynomial(&[2, 1]))
+            .unwrap();
+        let result = ctx
+            .solve_rational_inequality(&f, ComparisonOperator::LessOrEqual)
+            .unwrap();
         let mut changed = result.clone();
         changed.intervals[0].lower_closed = true;
         assert_eq!(verify_inequality_result(&ctx, &changed), Ok(false));

@@ -7,7 +7,10 @@ use mathematishia_kernel::{
 
 fn p(values: &[i64]) -> RationalPolynomial {
     RationalPolynomial::new(
-        values.iter().map(|&value| Rational::from(Integer::from(value))).collect(),
+        values
+            .iter()
+            .map(|&value| Rational::from(Integer::from(value)))
+            .collect(),
     )
 }
 
@@ -31,10 +34,14 @@ fn interval(lower: RealBound, upper: RealBound, left: bool, right: bool) -> Real
 fn solve(n: &[i64], d: &[i64], operator: Op) -> Vec<RealInterval> {
     let context = EvaluationContext::default();
     let function = context.rational_function(&p(n), &p(d)).unwrap();
-    let result = context.solve_rational_inequality(&function, operator).unwrap();
+    let result = context
+        .solve_rational_inequality(&function, operator)
+        .unwrap();
     assert_eq!(verify_inequality_result(&context, &result), Ok(true));
     assert_eq!(
-        context.solve_rational_inequality(&function, operator).unwrap(),
+        context
+            .solve_rational_inequality(&function, operator)
+            .unwrap(),
         result
     );
     result.intervals().to_vec()
@@ -75,10 +82,7 @@ fn equality_boundaries_and_real_domain_are_exact() {
         solve(&[0, 0, 1], &[1], Op::GreaterOrEqual),
         vec![interval(Neg, Pos, false, false)],
     );
-    assert_eq!(
-        solve(&[1, 0, 1], &[1], Op::LessOrEqual),
-        vec![],
-    );
+    assert_eq!(solve(&[1, 0, 1], &[1], Op::LessOrEqual), vec![],);
     assert_eq!(
         solve(&[1, 0, 1], &[1], Op::Greater),
         vec![interval(Neg, Pos, false, false)],
@@ -88,10 +92,7 @@ fn equality_boundaries_and_real_domain_are_exact() {
         vec![interval(Neg, Pos, false, false)],
     );
     assert_eq!(solve(&[0], &[1], Op::Greater), vec![]);
-    assert_eq!(
-        solve(&[1], &[1], Op::Less),
-        vec![],
-    );
+    assert_eq!(solve(&[1], &[1], Op::Less), vec![],);
 }
 
 #[test]
@@ -165,11 +166,13 @@ fn irrational_quadratic_boundaries_are_ordered_without_floats() {
     assert_eq!(bound.lower, RealBound::Finite(values[0].clone()));
     assert_eq!(bound.upper, RealBound::Finite(values[1].clone()));
     let denominator = p(&[-3, 0, 1]);
-    let f = ctx.rational_function(&p(&[-2, 0, 1]), &denominator).unwrap();
+    let f = ctx
+        .rational_function(&p(&[-2, 0, 1]), &denominator)
+        .unwrap();
     let answer = ctx.solve_rational_inequality(&f, Op::Greater).unwrap();
-    assert_eq!(answer.intervals().len(), 2);
+    assert_eq!(answer.intervals().len(), 3);
     assert!(matches!(answer.intervals()[0].lower, Neg));
-    assert!(matches!(answer.intervals()[1].upper, Pos));
+    assert!(matches!(answer.intervals()[2].upper, Pos));
     assert_eq!(verify_inequality_result(&ctx, &answer), Ok(true));
 }
 
@@ -177,10 +180,17 @@ fn irrational_quadratic_boundaries_are_ordered_without_floats() {
 fn shared_algebraic_zeros_are_deduplicated_and_excluded() {
     use RealBound::{NegativeInfinity as Neg, PositiveInfinity as Pos};
     let ctx = EvaluationContext::default();
-    let f = ctx.rational_function(&p(&[-2, 0, 1]), &p(&[-2, 0, 1])).unwrap();
+    let f = ctx
+        .rational_function(&p(&[-2, 0, 1]), &p(&[-2, 0, 1]))
+        .unwrap();
     let result = ctx.solve_rational_inequality(&f, Op::Greater).unwrap();
     assert_eq!(result.critical_points().len(), 2);
-    assert!(result.critical_points().iter().all(|item| item.is_excluded()));
+    assert!(
+        result
+            .critical_points()
+            .iter()
+            .all(|item| item.is_excluded())
+    );
     assert_eq!(result.intervals().len(), 3);
     assert!(matches!(result.intervals()[0].lower, Neg));
     assert!(matches!(result.intervals()[2].upper, Pos));
@@ -222,10 +232,8 @@ fn unsupported_and_resource_exhaustion_are_typed() {
         ..ResourceLimits::default()
     });
     assert_eq!(
-        small.solve_rational_inequality(
-            &RationalFunction::from_polynomial(p(&[1, 0, 1])),
-            Op::Less
-        ),
+        small
+            .solve_rational_inequality(&RationalFunction::from_polynomial(p(&[1, 0, 1])), Op::Less),
         Err(InequalityError::Evaluation(EvaluationError::Limit(
             ResourceLimitKind::PolynomialDegree
         ))),

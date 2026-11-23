@@ -90,8 +90,9 @@ class CertifiedDeliveryAPITests(unittest.TestCase):
             m.sturm_root_count("x^2-1", "x", "1", "2")
         with self.assertRaises(m.UnsupportedMathematicsError):
             m.sturm_root_count("x^-1", "x", "-2", "2")
+        self.assertEqual(m.sturm_root_count("x^2-2", "x", "0.0", "2").count, 1)
         with self.assertRaises(m.MathSyntaxError):
-            m.sturm_root_count("x^2-2", "x", "0.0", "2")
+            m.sturm_root_count("x^2-2", "x", "0..0", "2")
 
     def test_checked_indefinite_and_directed_polynomial_integrals(self):
         primitive = m.integrate_polynomial("x^2", "x")

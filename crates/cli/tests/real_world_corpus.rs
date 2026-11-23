@@ -41,7 +41,11 @@ fn questions() -> Vec<Question<'static>> {
         let columns: Vec<_> = line.split('\t').collect();
         assert_eq!(columns.len(), 12, "fixture line {}", index + 1);
         let arguments = fields(columns[6]);
-        assert!(!arguments.is_empty(), "fixture {} has no command", columns[0]);
+        assert!(
+            !arguments.is_empty(),
+            "fixture {} has no command",
+            columns[0]
+        );
         assert!(
             ids.insert(columns[0]),
             "duplicate question id {}",
@@ -124,7 +128,12 @@ fn check_proof(question: &Question<'_>, output: &str) {
             "{}: unexpected claimed proof in {output:?}",
             question.id
         );
-        assert_eq!(parts.count(), 0, "{}: invalid proof specification", question.id);
+        assert_eq!(
+            parts.count(),
+            0,
+            "{}: invalid proof specification",
+            question.id
+        );
         return;
     }
     let (kind, count) = specification
@@ -153,7 +162,10 @@ fn check_proof(question: &Question<'_>, output: &str) {
         }
         "rules" => {
             assert_eq!(
-                lines.iter().filter(|line| line.starts_with("rule: ")).count(),
+                lines
+                    .iter()
+                    .filter(|line| line.starts_with("rule: "))
+                    .count(),
                 expected,
                 "{}: unexpected analytic rewrite count",
                 question.id
@@ -164,8 +176,7 @@ fn check_proof(question: &Question<'_>, output: &str) {
     for rule in parts {
         assert!(
             lines.iter().any(|line| {
-                line.contains(&format!("[{rule}"))
-                    || *line == format!("rule: {rule}")
+                line.contains(&format!("[{rule}")) || *line == format!("rule: {rule}")
             }),
             "{}: missing required proof rule {rule} in {output:?}",
             question.id
@@ -199,11 +210,23 @@ fn check_question(question: &Question<'_>) {
     let stdout = String::from_utf8(output.stdout).expect("CLI output must be UTF-8");
     let stderr = String::from_utf8(output.stderr).expect("CLI error must be UTF-8");
     let displayed = if question.expected_exit == 0 {
-        assert!(stderr.is_empty(), "{}: unexpected stderr: {stderr}", question.id);
-        assert_eq!(question.error_kind, "-", "{}: success has error kind", question.id);
+        assert!(
+            stderr.is_empty(),
+            "{}: unexpected stderr: {stderr}",
+            question.id
+        );
+        assert_eq!(
+            question.error_kind, "-",
+            "{}: success has error kind",
+            question.id
+        );
         &stdout
     } else {
-        assert!(stdout.is_empty(), "{}: failure emitted stdout: {stdout}", question.id);
+        assert!(
+            stdout.is_empty(),
+            "{}: failure emitted stdout: {stdout}",
+            question.id
+        );
         assert!(
             stderr.starts_with("error: ") && stderr.trim().len() > "error: ".len(),
             "{}: no typed error text: {stderr:?}",
@@ -218,14 +241,23 @@ fn check_question(question: &Question<'_>) {
             "Verification" => CliErrorKind::Verification,
             kind => panic!("{}: unknown error kind {kind}", question.id),
         };
-        assert_eq!(error.kind(), expected, "{}: incorrect typed error", question.id);
+        assert_eq!(
+            error.kind(),
+            expected,
+            "{}: incorrect typed error",
+            question.id
+        );
         &stderr
     };
 
     let actual: Vec<_> = displayed.lines().collect();
     for expected in &question.semantic_lines {
         if *expected == "error:*" {
-            assert_eq!(question.expected_exit, 2, "{}: wildcard is for errors", question.id);
+            assert_eq!(
+                question.expected_exit, 2,
+                "{}: wildcard is for errors",
+                question.id
+            );
             continue;
         }
         assert!(
@@ -235,7 +267,10 @@ fn check_question(question: &Question<'_>) {
             question.question
         );
     }
-    let actual_conditions: Vec<_> = actual.into_iter().filter(|line| condition_line(line)).collect();
+    let actual_conditions: Vec<_> = actual
+        .into_iter()
+        .filter(|line| condition_line(line))
+        .collect();
     assert_eq!(
         actual_conditions, question.conditions,
         "{}: domain conditions changed unexpectedly: {displayed:?}",
@@ -244,7 +279,11 @@ fn check_question(question: &Question<'_>) {
     check_proof(question, displayed);
     match question.outcome {
         "solved" | "partial" => {
-            assert_eq!(question.expected_exit, 0, "{}: success needs exit 0", question.id);
+            assert_eq!(
+                question.expected_exit, 0,
+                "{}: success needs exit 0",
+                question.id
+            );
         }
         "unsupported" => assert!(
             question.expected_exit == 0 || question.expected_exit == 2,
@@ -252,7 +291,11 @@ fn check_question(question: &Question<'_>) {
             question.id
         ),
         "domain" | "invalid" | "resource" => {
-            assert_eq!(question.expected_exit, 2, "{}: refusal needs exit 2", question.id);
+            assert_eq!(
+                question.expected_exit, 2,
+                "{}: refusal needs exit 2",
+                question.id
+            );
         }
         outcome => panic!("{}: unknown outcome {outcome}", question.id),
     }

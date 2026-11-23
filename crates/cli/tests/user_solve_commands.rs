@@ -21,8 +21,16 @@ fn automatic_solve_classifies_linear_quadratic_and_partial_higher_degree_roots()
     assert!(cubic.contains("unresolved_cofactor:"));
     assert!(cubic.contains("verified: true"));
 
-    assert!(run(&["solveauto", "x=x"]).unwrap().contains("all rational values"));
-    assert!(run(&["solveauto", "x+1=x+2"]).unwrap().contains("solution: none"));
+    assert!(
+        run(&["solveauto", "x=x"])
+            .unwrap()
+            .contains("all rational values")
+    );
+    assert!(
+        run(&["solveauto", "x+1=x+2"])
+            .unwrap()
+            .contains("solution: none")
+    );
 }
 
 #[test]
@@ -48,7 +56,11 @@ fn exact_root_sets_preserve_multiplicity_and_unresolved_cofactors() {
     assert!(repeated.contains("status: exact"));
     assert!(repeated.contains("root 1: 2"));
     assert!(repeated.contains("multiplicity: 2"));
-    assert!(run(&["roots", "0"]).unwrap().contains("all complex numbers"));
+    assert!(
+        run(&["roots", "0"])
+            .unwrap()
+            .contains("all complex numbers")
+    );
     assert!(run(&["roots", "5"]).unwrap().contains("roots: 0"));
 
     let partial = run(&["roots", "x^3-2"]).unwrap();
@@ -72,9 +84,11 @@ fn polynomial_and_elementary_integration_are_checked() {
     let sine = run(&["integrate", "sin(2*x+1)"]).unwrap();
     assert!(sine.contains("calculus.integrate_affine_sine"));
     assert!(sine.contains("verified: true"));
-    assert!(run(&["integrate", "exp(x)"])
-        .unwrap()
-        .contains("calculus.integrate_affine_exponential"));
+    assert!(
+        run(&["integrate", "exp(x)"])
+            .unwrap()
+            .contains("calculus.integrate_affine_exponential")
+    );
 }
 
 #[test]
@@ -166,9 +180,15 @@ fn fixed_38_case_cli_smoke_corpus_is_deterministic() {
         (&["integrate", "0"], "primitive: 0"),
         (&["integrate", "x^2", "x", "0", "2"], "integral: 8/3"),
         (&["integrate", "x^2", "x", "2", "0"], "integral: -8/3"),
-        (&["integrate", "sin(2*x+1)"], "calculus.integrate_affine_sine"),
+        (
+            &["integrate", "sin(2*x+1)"],
+            "calculus.integrate_affine_sine",
+        ),
         (&["integrate", "cos(x)"], "calculus.integrate_affine_cosine"),
-        (&["integrate", "exp(x)"], "calculus.integrate_affine_exponential"),
+        (
+            &["integrate", "exp(x)"],
+            "calculus.integrate_affine_exponential",
+        ),
         (&["evalexact", "sin(0)"], "value: 0"),
         (&["evalexact", "cos(0)"], "value: 1"),
         (&["evalexact", "tan(0)"], "value: 0"),
@@ -177,7 +197,10 @@ fn fixed_38_case_cli_smoke_corpus_is_deterministic() {
         (&["evalexact", "sin(0)+cos(0)"], "value: 1"),
         (&["evalexact", "1/2+1/3"], "value: 5/6"),
         (&["evalexact", "sin(x)"], "status: partial"),
-        (&["expand", "(x+1)^2"], "polynomial_expansion: not certified"),
+        (
+            &["expand", "(x+1)^2"],
+            "polynomial_expansion: not certified",
+        ),
         (&["expand", "2*(x+3)"], "distribution_complete: true"),
         (&["poly", "(x+1)^2", "x"], "coefficients: [1, 2, 1]"),
     ];
@@ -188,6 +211,10 @@ fn fixed_38_case_cli_smoke_corpus_is_deterministic() {
             output.contains(expected),
             "{args:?}: expected {expected:?}, got {output:?}"
         );
-        assert_eq!(run(args).unwrap(), output, "nondeterministic output: {args:?}");
+        assert_eq!(
+            run(args).unwrap(),
+            output,
+            "nondeterministic output: {args:?}"
+        );
     }
 }

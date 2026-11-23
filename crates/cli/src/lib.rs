@@ -386,9 +386,7 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
         ["roots", input] => user_solve::roots(input, "x"),
         ["roots", input, name] if *name != "--json" => user_solve::roots(input, name),
         ["integrate", input] => user_solve::integrate(input, "x", None),
-        ["integrate", input, name] if *name != "--json" => {
-            user_solve::integrate(input, name, None)
-        }
+        ["integrate", input, name] if *name != "--json" => user_solve::integrate(input, name, None),
         ["integrate", input, name, lower, upper] => {
             user_solve::integrate(input, name, Some((lower, upper)))
         }

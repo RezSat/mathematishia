@@ -8,13 +8,15 @@ use mathema_frontend::{
 };
 use mathematishia_kernel::{
     AnalyticConstantLimits, AnalyticConstantOutcome, ElementaryIntegrationError, EvaluationContext,
-    EvaluationError, ExactQuadraticRoot, IntegrationError, LinearSolution, PartialPolynomialRootError,
-    PolynomialZeroSet, RationalPolynomial, RationalQuadraticRoots,
+    EvaluationError, ExactQuadraticRoot, IntegrationError, LinearSolution,
+    PartialPolynomialRootError, PolynomialZeroSet, RationalPolynomial, RationalQuadraticRoots,
     rewrite_analytic_constant_once, verify_analytic_constant_rewrite,
     verify_partial_polynomial_roots, verify_rational_quadratic_equation,
 };
 
-use super::{CliError, CliErrorKind, check_domain, condition_text, invalid, problem_error, scalar, variable};
+use super::{
+    CliError, CliErrorKind, check_domain, condition_text, invalid, problem_error, scalar, variable,
+};
 
 fn unsupported(message: impl Into<String>) -> CliError {
     problem_error(CliErrorKind::Unsupported, message)
@@ -93,8 +95,12 @@ fn polynomial_roots(
                 .expect("writing to String is infallible");
             }
             if let Some(cofactor) = unresolved_cofactor {
-                write!(&mut output, "\nunresolved_cofactor: {}", cofactor.to_expr(symbol))
-                    .expect("writing to String is infallible");
+                write!(
+                    &mut output,
+                    "\nunresolved_cofactor: {}",
+                    cofactor.to_expr(symbol)
+                )
+                .expect("writing to String is infallible");
                 output.push_str("\nnote: additional complex roots remain unresolved");
             }
         }
@@ -136,8 +142,7 @@ fn rational_solutions(
     let solved = context
         .solve_rational_quadratic_equation(&left, &right)
         .map_err(evaluation_error)?;
-    verify_rational_quadratic_equation(&solved)
-        .map_err(|error| verification(error.to_string()))?;
+    verify_rational_quadratic_equation(&solved).map_err(|error| verification(error.to_string()))?;
     let mut output = String::from(
         "status: partial over C\nexact_scope: rational solutions in Q; non-rational complex roots not classified",
     );
@@ -152,7 +157,11 @@ fn rational_solutions(
             write!(
                 &mut output,
                 "\nrational roots: {}",
-                values.iter().map(ToString::to_string).collect::<Vec<_>>().join(", ")
+                values
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect::<Vec<_>>()
+                    .join(", ")
             )
             .expect("writing to String is infallible");
         }
@@ -161,8 +170,12 @@ fn rational_solutions(
         output.push_str("\nconditions: none");
     } else {
         for restriction in solved.domain_conditions() {
-            write!(&mut output, "\ncondition: {} != 0", restriction.to_expr(symbol))
-                .expect("writing to String is infallible");
+            write!(
+                &mut output,
+                "\ncondition: {} != 0",
+                restriction.to_expr(symbol)
+            )
+            .expect("writing to String is infallible");
         }
     }
     output.push_str("\nverified: true");
@@ -187,11 +200,11 @@ pub(super) fn solve_auto(input: &str, name: &str) -> Result<String, CliError> {
         match ctx.polynomial(&residual, &symbol) {
             Ok(polynomial) => {
                 if polynomial.degree().is_none_or(|degree| degree <= 1) {
-                    let equation = Equation::new(
-                        left.expression().clone(),
-                        right.expression().clone(),
-                    );
-                    let result = ctx.solve_linear(&equation, &symbol).map_err(evaluation_error)?;
+                    let equation =
+                        Equation::new(left.expression().clone(), right.expression().clone());
+                    let result = ctx
+                        .solve_linear(&equation, &symbol)
+                        .map_err(evaluation_error)?;
                     return Ok(match result.solution() {
                         LinearSolution::Unique(value) => format!(
                             "status: exact\ndomain: Q\nsolution: {symbol} = {value}\nverified: true"
@@ -259,16 +272,15 @@ pub(super) fn integrate(
                     }
                     _ => unsupported(error.to_string()),
                 })?;
-            ctx.verify_elementary_antiderivative(
-                &source,
-                &symbol,
-                ScalarDomain::Real,
-                &result,
-            )
-            .map_err(|error| verification(error.to_string()))?;
+            ctx.verify_elementary_antiderivative(&source, &symbol, ScalarDomain::Real, &result)
+                .map_err(|error| verification(error.to_string()))?;
             let mut output = format!(
                 "status: {}\ndomain: R\nprimitive: {}\nconstant: 0 (canonical choice)\nrule: {}",
-                if result.conditions().is_empty() { "exact" } else { "conditional" },
+                if result.conditions().is_empty() {
+                    "exact"
+                } else {
+                    "conditional"
+                },
                 result.primitive().expression(),
                 result.rule().stable_id()
             );
@@ -298,22 +310,21 @@ pub(super) fn eval_exact(input: &str) -> Result<String, CliError> {
             .map_err(|error| problem_error(CliErrorKind::Domain, error.to_string()))?;
         match outcome {
             AnalyticConstantOutcome::Exact(proof) => {
-                if !verify_analytic_constant_rewrite(
-                    &source,
-                    ScalarDomain::Real,
-                    &proof,
-                    limits,
-                )
-                .map_err(|error| verification(error.to_string()))?
+                if !verify_analytic_constant_rewrite(&source, ScalarDomain::Real, &proof, limits)
+                    .map_err(|error| verification(error.to_string()))?
                 {
-                    return Err(verification("analytic constant identity failed verification"));
+                    return Err(verification(
+                        "analytic constant identity failed verification",
+                    ));
                 }
                 rules.push(proof.rule.stable_id());
                 source = proof.result;
             }
             AnalyticConstantOutcome::NoRule { .. } => break,
             AnalyticConstantOutcome::Unsupported(reason) => {
-                return Err(unsupported(format!("exact evaluation unsupported: {reason:?}")));
+                return Err(unsupported(format!(
+                    "exact evaluation unsupported: {reason:?}"
+                )));
             }
         }
     }

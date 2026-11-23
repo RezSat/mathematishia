@@ -14,6 +14,7 @@ use mathema::{
 const MAX_INPUT_BYTES: usize = 32_768;
 const MAX_TOKENS: usize = 4_096;
 const MAX_PARSE_DEPTH: usize = 256;
+const MAX_DECIMAL_DIGITS: usize = 256;
 
 /// A supported Mathema statement after lowering to semantic values.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -51,6 +52,9 @@ pub enum ParseErrorKind {
     UnexpectedToken,
     ExpectedClosingParenthesis,
     InvalidInteger,
+    InvalidDecimal,
+    DecimalDigitLimitExceeded,
+    UnsupportedScientificNotation,
     ZeroDenominator,
     ExpectedExpression,
     UnknownFunction(String),
@@ -68,6 +72,13 @@ impl fmt::Display for ParseError {
             ParseErrorKind::UnexpectedToken => "unexpected token".to_owned(),
             ParseErrorKind::ExpectedClosingParenthesis => "expected ')'".to_owned(),
             ParseErrorKind::InvalidInteger => "invalid integer literal".to_owned(),
+            ParseErrorKind::InvalidDecimal => "invalid decimal literal".to_owned(),
+            ParseErrorKind::DecimalDigitLimitExceeded => {
+                "decimal literal digit limit exceeded".to_owned()
+            }
+            ParseErrorKind::UnsupportedScientificNotation => {
+                "scientific notation is unsupported".to_owned()
+            }
             ParseErrorKind::ZeroDenominator => "rational denominator must not be zero".to_owned(),
             ParseErrorKind::ExpectedExpression => {
                 "expected an expression, not an equation".to_owned()
@@ -89,6 +100,7 @@ impl Error for ParseError {}
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum TokenKind<'a> {
     Integer(&'a str),
+    Decimal(&'a str),
     Identifier(&'a str),
     Plus,
     Minus,
@@ -121,12 +133,56 @@ fn tokenize(input: &str) -> Result<Vec<Token<'_>>, ParseError> {
             offset += c.len_utf8();
             continue;
         }
-        let kind = if c.is_ascii_digit() {
-            offset += 1;
+        let kind = if c.is_ascii_digit() || c == '.' {
             while offset < input.len() && input.as_bytes()[offset].is_ascii_digit() {
                 offset += 1;
             }
-            TokenKind::Integer(&input[start..offset])
+            let decimal = if input.as_bytes().get(offset) == Some(&b'.') {
+                let point_offset = offset;
+                offset += 1;
+                let fraction_start = offset;
+                while offset < input.len() && input.as_bytes()[offset].is_ascii_digit() {
+                    offset += 1;
+                }
+                if offset == fraction_start {
+                    return Err(ParseError::at(point_offset, ParseErrorKind::InvalidDecimal));
+                }
+                if offset - start - 1 > MAX_DECIMAL_DIGITS {
+                    return Err(ParseError::at(
+                        start,
+                        ParseErrorKind::DecimalDigitLimitExceeded,
+                    ));
+                }
+                true
+            } else {
+                false
+            };
+            if matches!(input.as_bytes().get(offset).copied(), Some(b'e' | b'E')) {
+                let exponent_start = offset + 1;
+                let digit_offset = if matches!(
+                    input.as_bytes().get(exponent_start).copied(),
+                    Some(b'+' | b'-')
+                ) {
+                    exponent_start + 1
+                } else {
+                    exponent_start
+                };
+                if input
+                    .as_bytes()
+                    .get(digit_offset)
+                    .is_some_and(u8::is_ascii_digit)
+                {
+                    return Err(ParseError::at(
+                        offset,
+                        ParseErrorKind::UnsupportedScientificNotation,
+                    ));
+                }
+            }
+            if decimal {
+                TokenKind::Decimal(&input[start..offset])
+            } else {
+                TokenKind::Integer(&input[start..offset])
+            }
         } else if c.is_alphabetic() || c == '_' {
             offset += c.len_utf8();
             while offset < input.len() {
@@ -176,6 +232,7 @@ fn tokenize(input: &str) -> Result<Vec<Token<'_>>, ParseError> {
 // after a complete statement has been parsed successfully.
 enum Syntax<'a> {
     Integer(&'a str, usize),
+    Decimal(&'a str, usize),
     Name(&'a str),
     Function(&'a str, Box<Self>),
     Sum(Box<Self>, Box<Self>),
@@ -215,6 +272,17 @@ impl<'a> Parser<'a> {
         }
     }
 
+    fn has_implicit_product(&self) -> bool {
+        let previous = self.tokens[self.cursor - 1].kind;
+        matches!(
+            (previous, self.current()),
+            (
+                TokenKind::Integer(_) | TokenKind::Decimal(_),
+                TokenKind::Identifier(_) | TokenKind::LeftParen
+            ) | (TokenKind::RightParen, TokenKind::LeftParen)
+        )
+    }
+
     fn check_depth(&self, depth: usize) -> Result<(), ParseError> {
         if depth > MAX_PARSE_DEPTH {
             Err(ParseError::at(
@@ -251,6 +319,8 @@ impl<'a> Parser<'a> {
                 let offset = self.offset();
                 self.advance();
                 left = Syntax::Quotient(Box::new(left), Box::new(self.signed(depth + 1)?), offset);
+            } else if self.has_implicit_product() {
+                left = Syntax::Product(Box::new(left), Box::new(self.signed(depth + 1)?));
             } else {
                 break;
             }
@@ -291,6 +361,10 @@ impl<'a> Parser<'a> {
             TokenKind::Integer(value) => {
                 self.advance();
                 Ok(Syntax::Integer(value, offset))
+            }
+            TokenKind::Decimal(value) => {
+                self.advance();
+                Ok(Syntax::Decimal(value, offset))
             }
             TokenKind::Identifier(name) => {
                 self.advance();
@@ -335,6 +409,21 @@ fn lower(node: Syntax<'_>) -> Result<Expr, ParseError> {
             .parse::<Integer>()
             .map(Expr::from)
             .map_err(|_| ParseError::at(offset, ParseErrorKind::InvalidInteger)),
+        Syntax::Decimal(digits, offset) => {
+            let (whole, fractional) = digits
+                .split_once('.')
+                .expect("decimal tokens contain a point");
+            let numerator = format!("{whole}{fractional}")
+                .parse::<Integer>()
+                .map_err(|_| ParseError::at(offset, ParseErrorKind::InvalidDecimal))?;
+            let denominator = format!("1{}", "0".repeat(fractional.len()))
+                .parse::<Integer>()
+                .map_err(|_| ParseError::at(offset, ParseErrorKind::InvalidDecimal))?;
+            Ok(Expr::from(
+                Rational::new(numerator, denominator)
+                    .expect("a decimal power-of-ten denominator is nonzero"),
+            ))
+        }
         Syntax::Name(name) => Ok(Symbol::new(name)
             .expect("lexer only produces nonempty identifiers")
             .into()),
@@ -458,7 +547,7 @@ fn lower_domain(
             domain,
             MAX_CONDITIONS,
         )?),
-        leaf @ (Syntax::Integer(..) | Syntax::Name(..)) => {
+        leaf @ (Syntax::Integer(..) | Syntax::Decimal(..) | Syntax::Name(..)) => {
             Ok(DomainExpression::from_expr(lower(leaf)?, MAX_TOKENS)?)
         }
         Syntax::Sum(left, right) => Ok(DomainExpression::add(
@@ -543,14 +632,21 @@ pub fn parse_domain_expression_in_domain(
 
 /// Parses a single Mathema expression or equation.
 ///
-/// Grammar: ASCII decimal integers, exact rational literals n/d,
-/// Unicode identifiers, parentheses, +, -, *, ^ and a single top-level =.
-/// Operators are explicit; division shares precedence with multiplication.
-/// Exponentiation associates right, and unary minus binds less tightly than ^.
-/// Unary sin, cos, tan, exp, and natural log use name(expr) calls; other
-/// function calls are rejected. Plain identifiers remain symbols, and explicit
-/// multiplication is still required. There are no assignments, floating point
-/// values or statements separated by semicolons. A syntax tree is parsed before semantic lowering.
+/// Grammar: ASCII integers and finite decimals (including .5), exact rational
+/// literals n/d, Unicode identifiers, parentheses, +, -, *, /, ^ and one =.
+/// A decimal has digits after its point, at most 256 total digits, and lowers
+/// exactly to a rational. Scientific notation and trailing points are rejected.
+/// Multiplication may be written as 2x, 2(x+1), or (x+1)(x-1), including
+/// whitespace between factors. Only numeric-to-name, numeric-to-parenthesis,
+/// and closing-to-opening parenthesis juxtaposition is implicit; other
+/// adjacency remains unsupported. Implicit multiplication shares * and /
+/// precedence and associates left to right, so 1/2x means (1/2)*x.
+/// Exponentiation associates right and binds tighter than unary minus.
+/// sin, cos, tan, exp, and natural log require name(expr) calls. Other
+/// name(expr) calls are rejected rather than interpreted as multiplication.
+/// No inequalities, assignments or statement separators are accepted.
+/// A syntax tree is parsed before semantic lowering. Domain-aware entrypoints
+/// retain restrictions that ordinary Expr normalization can erase.
 pub fn parse_statement(input: &str) -> Result<Statement, ParseError> {
     match parse_syntax(input)? {
         SyntaxStatement::Expression(node) => Ok(Statement::Expression(lower(node)?)),
@@ -658,7 +754,6 @@ mod analytic_tests {
             "cos(x",
             "sin(x))",
             "sin(x)y",
-            "2sin(x)",
         ] {
             assert!(parse_expression(source).is_err(), "{source}");
         }

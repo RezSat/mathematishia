@@ -30,6 +30,7 @@ Usage:
   mathematishia subdomain <EXPRESSION> <SYMBOL> <REPLACEMENT>
   mathematishia rewrite <EXPRESSION> [NONZERO_PREMISE ...]
   mathematishia expand <EXPRESSION> [MAX_STEPS]  (distributive rules only)
+  mathematishia expandall <EXPRESSION> [VARIABLE ...]  (infer variables if omitted)
   mathematishia solve <EQUATION> <VARIABLE>
   mathematishia solveauto <EQUATION> [VARIABLE]  (defaults to x)
   mathematishia roots <POLYNOMIAL> [VARIABLE]
@@ -81,11 +82,14 @@ Examples:
   mathematishia subdomain '0*x^-1' x 0
   mathematishia rewrite '(x+1)*(x+1)^-1' 'x+1'
   mathematishia expand '2*(x+3)' 4
+  mathematishia expandall '(x+1)^2'
+  mathematishia expandall '(x-y)^3' x y
   mathematishia solve '2*x+4=10' x
   mathematishia solveauto 'x^2-2=0'
   mathematishia solveauto '(x^2-1)/(x-1)=3'
   mathematishia roots 'x^3-2'
   mathematishia integrate 'x^2' x 0 2
+  mathematishia integrate 'x^2+sin(2*x)' x
   mathematishia evalexact 'sin(0)'
   mathematishia solveq 'x^2-5*x+6' x
   mathematishia roots2 'x^2-2' x
@@ -115,10 +119,13 @@ Examples:
   mathematishia ratsolveq 'x^2-5*x+6' 'x-2' '0' '1' x
 
 Syntax: integers, exact scalar or symbolic division, identifiers, + - * / ^ ( ) =.
-Use explicit multiplication. Rational-expression operations accept one formula.
+Exact decimals and supported implicit multiplication are accepted.
+Rational-expression operations accept one formula.
 Canceled denominator zeros remain excluded. New operations display partial and unsupported
 status explicitly; polynomial roots are complex, rational-function roots Q-only.
-Exact primitives use the zero-constant convention. JSON awaits typed result integration.";
+Expansion uses Q[variables] and preserves inherited domain conditions.
+Integration sums use independently checked term certificates and a zero constant.
+JSON requires a separately agreed deterministic result schema.";
 
 const MAX_DISTRIBUTION_STEPS: usize = 12;
 
@@ -380,7 +387,16 @@ fn show_equation(equation: &Equation) -> String {
 pub fn run(args: &[&str]) -> Result<String, CliError> {
     match args {
         [] | ["--help" | "-h" | "help"] => Ok(HELP.to_owned()),
+        ["expandall" | "solveauto" | "roots" | "integrate" | "evalexact", ..]
+            if args.contains(&"--json") =>
+        {
+            Err(problem_error(
+                CliErrorKind::Unsupported,
+                "JSON output awaits the verified typed result contract",
+            ))
+        }
         ["expr", input] => Ok(format!("expression: {}", expression(input)?)),
+        ["expandall", input, variables @ ..] => user_solve::expand_all(input, variables),
         ["solveauto", input] => user_solve::solve_auto(input, "x"),
         ["solveauto", input, name] if *name != "--json" => user_solve::solve_auto(input, name),
         ["roots", input] => user_solve::roots(input, "x"),
@@ -391,13 +407,6 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
             user_solve::integrate(input, name, Some((lower, upper)))
         }
         ["evalexact", input] => user_solve::eval_exact(input),
-        ["solveauto" | "roots" | "integrate" | "evalexact", ..] if args.contains(&"--json") => {
-            Err(problem_error(
-                CliErrorKind::Unsupported,
-                "JSON output awaits the verified typed result contract",
-            ))
-        }
-
         ["domain", input] => {
             let parsed =
                 parse_domain_statement(input).map_err(|error| invalid(error.to_string()))?;

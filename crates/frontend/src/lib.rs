@@ -110,6 +110,10 @@ enum TokenKind<'a> {
     LeftParen,
     RightParen,
     Equal,
+    Less,
+    LessOrEqual,
+    Greater,
+    GreaterOrEqual,
     End,
 }
 
@@ -120,6 +124,10 @@ struct Token<'a> {
 }
 
 fn tokenize(input: &str) -> Result<Vec<Token<'_>>, ParseError> {
+    tokenize_with_comparisons(input, false)
+}
+
+fn tokenize_with_comparisons(input: &str, comparisons: bool) -> Result<Vec<Token<'_>>, ParseError> {
     if input.len() > MAX_INPUT_BYTES {
         return Err(ParseError::at(0, ParseErrorKind::InputLimitExceeded));
     }
@@ -205,6 +213,24 @@ fn tokenize(input: &str) -> Result<Vec<Token<'_>>, ParseError> {
                 '(' => TokenKind::LeftParen,
                 ')' => TokenKind::RightParen,
                 '=' => TokenKind::Equal,
+                '<' if comparisons => {
+                    if input.as_bytes().get(offset) == Some(&b'=') {
+                        offset += 1;
+                        TokenKind::LessOrEqual
+                    } else {
+                        TokenKind::Less
+                    }
+                }
+                '>' if comparisons => {
+                    if input.as_bytes().get(offset) == Some(&b'=') {
+                        offset += 1;
+                        TokenKind::GreaterOrEqual
+                    } else {
+                        TokenKind::Greater
+                    }
+                }
+                '≤' if comparisons => TokenKind::LessOrEqual,
+                '≥' if comparisons => TokenKind::GreaterOrEqual,
                 _ => {
                     return Err(ParseError::at(
                         start,
@@ -586,6 +612,49 @@ fn lower_domain(
             MAX_CONDITIONS,
         )?),
     }
+}
+
+/// One real comparison between two domain-aware scalar expressions.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RealComparisonOperator {
+    Less,
+    LessOrEqual,
+    Greater,
+    GreaterOrEqual,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RealComparison {
+    pub left: DomainExpression,
+    pub operator: RealComparisonOperator,
+    pub right: DomainExpression,
+}
+
+/// Parses exactly one comparison, preserving each operand's original domain.
+/// Chained comparisons and comparisons nested inside operands are rejected.
+pub fn parse_real_comparison(input: &str) -> Result<RealComparison, DomainParseError> {
+    let tokens = tokenize_with_comparisons(input, true)?;
+    let mut parser = Parser { tokens, cursor: 0 };
+    let left = parser.sum(0)?;
+    let operator = match parser.current() {
+        TokenKind::Less => RealComparisonOperator::Less,
+        TokenKind::LessOrEqual => RealComparisonOperator::LessOrEqual,
+        TokenKind::Greater => RealComparisonOperator::Greater,
+        TokenKind::GreaterOrEqual => RealComparisonOperator::GreaterOrEqual,
+        _ => {
+            return Err(ParseError::at(parser.offset(), ParseErrorKind::UnexpectedToken).into());
+        }
+    };
+    parser.advance();
+    let right = parser.sum(0)?;
+    if parser.current() != TokenKind::End {
+        return Err(ParseError::at(parser.offset(), ParseErrorKind::UnexpectedToken).into());
+    }
+    Ok(RealComparison {
+        left: lower_domain(left, ScalarDomain::Real)?,
+        operator,
+        right: lower_domain(right, ScalarDomain::Real)?,
+    })
 }
 
 /// Parses without discarding restrictions during expression normalization.

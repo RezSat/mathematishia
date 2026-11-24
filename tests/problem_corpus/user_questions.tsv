@@ -19,9 +19,9 @@ id	category	question	outcome	exit	error_kind	arguments	semantic_lines	conditions
 015	rational_domains	Reject evaluating (x^2-1)/(x-1) at x=1	domain	2	InvalidInput	reval¦(x^2-1)/(x-1)¦x¦1	error: rational function is undefined at this point	-	none	excluded_pole	audit-38
 016	trigonometry	Evaluate sin(0) directly through expr	unsupported	0	-	expr¦sin(0)	expression: sin(0)	-	none	unevaluated_function	audit-38
 017	trigonometry	Solve the general sine equation sin(x)=0	unsupported	2	InvalidInput	solve¦sin(x)=0¦x	error: functions are not rational polynomials	-	none	analytic_equation_unavailable	audit-38
-018	limits	Solve x^2-4 > 0	unsupported	2	InvalidInput	solve¦x^2-4>0¦x	error: unexpected character '>' at byte 5	-	none	comparison_syntax_unavailable	audit-38
+018	inequalities	Solve x^2-4 > 0	solved	0	-	solve¦x^2-4>0¦x	status: exact¦intervals: 2¦interval: (-infinity, -2)¦interval: (2, infinity)¦verified: true	conditions: none	none	exact	audit-38
 019	unsupported	Solve abs(x)=3	unsupported	2	InvalidInput	solve¦abs(x)=3¦x	error: unknown function "abs" at byte 0	-	none	absolute_value_unavailable	audit-38
-020	limits	Evaluate lim x->0 sin(x)/x	unsupported	2	InvalidInput	limit¦sin(x)/x¦x¦0	error: invalid command or argument count; use --help	-	none	limit_command_unavailable	audit-38
+020	limits	Evaluate lim x->0 sin(x)/x	unsupported	2	Unsupported	limit¦sin(x)/x¦x¦0	error:*	-	none	transcendental_limit_unavailable	audit-38
 021	integrals	Find an antiderivative of x^2	solved	0	-	integrate¦x^2¦x	status: exact¦primitive: 1/3 * x ^ 3¦constant: 0 (canonical choice)¦verified: true	conditions: none	none	exact	audit-38
 022	integrals	Integrate exp(x)*cos(x)	unsupported	2	Unsupported	integrate¦exp(x)*cos(x)¦x	error:*	-	none	product_integral_unavailable	audit-38
 023	algebra	Parse implicit multiplication 2x+1	solved	0	-	expr¦2x+1	expression: 1 + 2 * x	-	none	exact	audit-38
@@ -90,11 +90,11 @@ id	category	question	outcome	exit	error_kind	arguments	semantic_lines	conditions
 086	integrals	Integrate exp(x)	solved	0	-	integrate¦exp(x)	status: exact¦term 1: calculus.integrate_affine_exponential¦verified: true¦primitive: exp(x)	conditions: none	terms=1	affine_analytic	cycle4
 087	integrals	Reject 1/x as a polynomial primitive	unsupported	2	Unsupported	integrate¦1/x	error:*	-	none	logarithmic_integral_unavailable	cycle4
 088	integrals	Reject x^-1 definite integral over a pole	domain	2	Domain	integrate¦x^-1¦x¦0¦1	error:*	-	none	domain_restricted_integral	cycle4
-089	limits	Evaluate lim x->1 (x^2-1)/(x-1)	unsupported	2	InvalidInput	limit¦(x^2-1)/(x-1)¦x¦1	error: invalid command or argument count; use --help	-	none	limit_command_unavailable	cycle4
-090	limits	Evaluate lim x->infinity 1/x	unsupported	2	InvalidInput	limit¦1/x¦x¦infinity	error: invalid command or argument count; use --help	-	none	limit_command_unavailable	cycle4
-091	limits	Evaluate lim x->2 x^2	unsupported	2	InvalidInput	limit¦x^2¦x¦2	error: invalid command or argument count; use --help	-	none	limit_command_unavailable	cycle4
-092	limits	Solve x^2<=4	unsupported	2	InvalidInput	solve¦x^2<=4¦x	error:*	-	none	comparison_syntax_unavailable	cycle4
-093	limits	Solve x>1	unsupported	2	InvalidInput	solve¦x>1¦x	error:*	-	none	comparison_syntax_unavailable	cycle4
+089	limits	Evaluate lim x->1 (x^2-1)/(x-1)	solved	0	-	limit¦(x^2-1)/(x-1)¦x¦1	status: exact¦limit: 2¦excluded_at_point: true¦verified: true	condition: -1 + x != 0	none	domain_preserved	cycle4
+090	limits	Evaluate lim x->infinity 1/x	unsupported	2	Unsupported	limit¦1/x¦x¦infinity	error: limits at infinity are not supported	-	none	infinite_target_unavailable	cycle4
+091	limits	Evaluate lim x->2 x^2	solved	0	-	limit¦x^2¦x¦2	status: exact¦limit: 4¦excluded_at_point: false¦verified: true	conditions: none	none	exact	cycle4
+092	inequalities	Solve x^2<=4	solved	0	-	solve¦x^2<=4¦x	status: exact¦intervals: 1¦interval: [-2, 2]¦verified: true	conditions: none	none	exact	cycle4
+093	inequalities	Solve x>1	solved	0	-	solve¦x>1¦x	status: exact¦intervals: 1¦interval: (1, infinity)¦verified: true	conditions: none	none	exact	cycle4
 094	matrices	Calculate determinant of a 1x1 matrix	solved	0	-	matdet¦7	determinant: 7	-	none	exact	cycle4
 095	matrices	Calculate a singular determinant	solved	0	-	matdet¦1,2;2,4	determinant: 0	-	none	exact	cycle4
 096	matrices	Calculate a diagonal 3x3 determinant	solved	0	-	matdet¦1,0,0;0,2,0;0,0,3	determinant: 6	-	none	exact	cycle4
@@ -125,9 +125,9 @@ id	category	question	outcome	exit	error_kind	arguments	semantic_lines	conditions
 121	unsupported	Reject malformed decimal 0..0	invalid	2	InvalidInput	expr¦0..0	error:*	-	none	malformed_decimal	cycle4
 122	unsupported	Reject general sqrt(x) parsing	unsupported	2	InvalidInput	expr¦sqrt(x)	error: unknown function "sqrt" at byte 0	-	none	sqrt_unavailable	cycle4
 123	unsupported	Reject absolute value |x| syntax	unsupported	2	InvalidInput	expr¦|x|	error:*	-	none	absolute_value_unavailable	cycle4
-124	unsupported	Reject the limit command without a variable	unsupported	2	InvalidInput	limit¦x^2¦0	error: invalid command or argument count; use --help	-	none	limit_command_unavailable	cycle4
+124	unsupported	Reject the limit command without a variable	invalid	2	InvalidInput	limit¦x^2¦0	error: invalid command or argument count; use --help	-	none	missing_limit_argument	cycle4
 125	unsupported	Reject direct general integration product	unsupported	2	Unsupported	integrate¦sin(x)*exp(x)	error:*	-	none	product_integral_unavailable	cycle4
-126	unsupported	Reject exponential inequality syntax	unsupported	2	InvalidInput	solveauto¦exp(x)>2	error:*	-	none	comparison_syntax_unavailable	cycle4
+126	inequalities	Reject exponential inequality syntax	unsupported	2	Unsupported	solveauto¦exp(x)>2	error:*	-	none	analytic_inequality_unavailable	cycle4
 127	unsupported	Enforce degree budget in root construction	resource	2	Resource	roots¦x^33	error:*	-	none	polynomial_degree_budget	cycle4
 128	unsupported	Reject CLI JSON before wire integration	unsupported	2	Unsupported	solveauto¦x=1¦--json	error: JSON output awaits the verified typed result contract	-	none	json_format_unavailable	cycle4
 129	unsupported	Reject expression instead of an equation	invalid	2	InvalidInput	solve¦x^2-1¦x	error: expected an equation containing '='	-	none	missing_equals	cycle4
@@ -141,3 +141,16 @@ id	category	question	outcome	exit	error_kind	arguments	semantic_lines	conditions
 137	integrals	Integrate a polynomial and affine sine together	solved	0	-	integrate¦x^2+sin(2*x)	status: exact¦primitive: -1/2 * cos(2 * x) + 1/3 * x ^ 3¦verified: true	conditions: none	terms=2;calculus.integrate_affine_sine;exact polynomial primitive	exact	wave2
 138	integrals	Integrate a sine with a historical exclusion	solved	0	-	integrate¦sin(x)+0*x^-1	status: conditional¦primitive: -1 * cos(x)¦verified: true	required: x != 0	terms=1;calculus.integrate_affine_sine	domain_preserved	wave2
 139	algebra	Refuse a nonpolynomial expansion	unsupported	2	Unsupported	expandall¦sin(x)	error:*	-	none	nonpolynomial_expansion	wave2
+140	limits	Left limit at a simple pole	solved	0	-	limit¦1/x¦x¦0¦left	status: exact¦limit: -infinity¦direction: left¦denominator_order: 1¦verified: true	condition: x != 0	none	exact	wave2-parity
+141	limits	Right limit at a simple pole	solved	0	-	limit¦1/x¦x¦0¦right	status: exact¦limit: infinity¦direction: right¦verified: true	condition: x != 0	none	exact	wave2-parity
+142	limits	Two-sided limit at a simple pole	solved	0	-	limit¦1/x¦x¦0	status: exact¦limit: does not exist¦excluded_at_point: true¦verified: true	condition: x != 0	none	exact	wave2-parity
+143	limits	Two-sided limit at an even pole	solved	0	-	limit¦1/x^2¦x¦0	status: exact¦limit: infinity¦denominator_order: 2¦verified: true	condition: x ^ 2 != 0	none	exact	wave2-parity
+144	limits	Finite exact rational target	solved	0	-	limit¦(2*x+1)/(x+2)¦x¦0.5	status: exact¦limit: 4/5¦at: 1/2¦verified: true	condition: 2 + x != 0	none	exact	wave2-parity
+145	inequalities	Solve a rational inequality	solved	0	-	inequality¦(x-1)/(x+2)<=0¦x	status: exact¦intervals: 1¦interval: (-2, 1]¦verified: true	condition: 2 + x != 0	none	exact	wave2-parity
+146	inequalities	Keep exclusions from both sides	solved	0	-	inequality¦0/(x-1)<=0/(x+2)¦x	status: exact¦intervals: 3¦interval: (-infinity, -2)¦interval: (-2, 1)¦interval: (1, infinity)¦verified: true	condition: -1 + x != 0¦condition: 2 + x != 0	none	domain_preserved	wave2-parity
+147	inequalities	Find a single included point	solved	0	-	inequality¦x^2≤0	status: exact¦intervals: 1¦interval: [0, 0]¦verified: true	conditions: none	none	exact	wave2-parity
+148	inequalities	Prove an inequality has no real solution	solved	0	-	inequality¦x^2+1<0	status: exact¦intervals: 0¦verified: true	conditions: none	none	exact	wave2-parity
+149	inequalities	Find irrational exact interval endpoints	solved	0	-	inequality¦x^2<2	status: exact¦intervals: 1¦interval: (lower_real of minimal polynomial -2 + x ^ 2, upper_real of minimal polynomial -2 + x ^ 2)¦verified: true	conditions: none	none	exact	wave2-parity
+150	inequalities	Refuse higher-degree inequality	unsupported	2	Unsupported	inequality¦x^3>0	error:*	-	none	quadratic_degree_limit	wave2-parity
+151	inequalities	Reject a chained comparison	invalid	2	InvalidInput	inequality¦0<x<1	error:*	-	none	comparison_chain_unavailable	wave2-parity
+152	limits	Reject an invalid limit direction	invalid	2	InvalidInput	limit¦x^2¦x¦2¦above	error: direction must be left, right or two-sided	-	none	invalid_direction	wave2-parity

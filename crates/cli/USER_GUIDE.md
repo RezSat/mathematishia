@@ -58,7 +58,7 @@ mathematishia evalexact 'sin(0)+cos(0)'
   `distribution_complete` and `polynomial_expansion: not certified`;
   its behavior is intentionally unchanged.
 
-The parser accepts exact integers, rational numbers, finite decimals, and supported implicit multiplication such as `2x`, `2(x+1)` and `(x+1)(x-1)`. Inequalities, `sqrt`, `abs`, and ambiguous identifier juxtaposition are not yet supported. The kernel enforces checked expression, scalar,
+The parser accepts exact integers, rational numbers, finite decimals, and supported implicit multiplication such as `2x`, `2(x+1)` and `(x+1)(x-1)`. Single real comparisons (`<`, `<=`, `>`, `>=`, `≤`, `≥`) are supported by `inequality`, `solve` and `solveauto`; chained comparisons, `sqrt`, `abs`, and ambiguous identifier juxtaposition remain unsupported. The kernel enforces checked expression, scalar,
 degree and work-unit admission limits. Verification records are checked
 before the CLI presents results. Conditions are unproved obligations,
 not facts established by this tool.
@@ -71,3 +71,16 @@ kernel certificates directly; they do not invent `ProblemResult` evidence or
 ad hoc JSON. `--json` remains unavailable until a separately agreed,
 deterministic schema and adapter support exist. The CLI does not infer
 assumptions or invent algebraic proof steps.
+
+## Real limits and inequalities
+
+```sh
+mathematishia limit '(x^2-1)/(x-1)' x 1
+mathematishia limit '1/x' x 0 left
+mathematishia inequality '(x-1)/(x+2)<=0' x
+mathematishia solveauto 'x^2-4>0'
+```
+
+Limits take an exact finite rational point and optional direction `left`, `right` or `two-sided` (default). Finite values, signed infinities and two-sided nonexistence are explicit; `excluded_at_point` records whether the original function is undefined there. Transcendental expressions and limits at infinity remain unsupported.
+
+Inequalities return an exact ordered real interval union with open/closed endpoints and original denominator exclusions. Numerator, denominator and each inherited restriction must have degree at most two after checked rational conversion. Rational endpoints are exact; irrational quadratic endpoints are represented by a minimal polynomial and root branch. Both original operands are checked before subtraction. Comparisons are not silently interpreted as equations; chained comparisons and higher-degree factors are refused.

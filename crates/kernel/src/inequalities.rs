@@ -8,12 +8,12 @@ use std::cmp::Ordering;
 use std::error::Error;
 use std::fmt;
 
-use mathema::{Integer, Rational};
+use mathema::{DomainExpression, Integer, Rational, Symbol};
 
 use crate::budget::WorkBudget;
 use crate::{
     AlgebraicRootSet, EvaluationContext, EvaluationError, ExactQuadraticRoot, QuadraticBranch,
-    RationalFunction, RationalPolynomial,
+    RationalExpressionError, RationalFunction, RationalPolynomial,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -116,6 +116,7 @@ pub enum InequalityError {
     /// inherited domain restriction.
     UnsupportedDegree,
     Evaluation(EvaluationError),
+    Conversion(RationalExpressionError),
     IncorrectCertificate,
 }
 
@@ -126,6 +127,7 @@ impl fmt::Display for InequalityError {
                 f.write_str("real inequality factor or domain restriction exceeds degree two")
             }
             Self::Evaluation(error) => write!(f, "{error}"),
+            Self::Conversion(error) => write!(f, "{error}"),
             Self::IncorrectCertificate => f.write_str("inequality sign chart failed verification"),
         }
     }
@@ -552,6 +554,50 @@ pub fn solve_rational_inequality(
 }
 
 impl EvaluationContext {
+    fn comparison_residual(
+        &self,
+        left: &DomainExpression,
+        right: &DomainExpression,
+        variable: &Symbol,
+    ) -> Result<RationalFunction, InequalityError> {
+        let left = self
+            .rational_expression(left, variable)
+            .map_err(InequalityError::Conversion)?;
+        let right = self
+            .rational_expression(right, variable)
+            .map_err(InequalityError::Conversion)?;
+        Ok(self.subtract_rational_functions(&left, &right)?)
+    }
+
+    /// Convert both sides before subtracting so cancellation cannot erase either
+    /// operand's original exclusions.
+    pub fn solve_expression_inequality(
+        &self,
+        left: &DomainExpression,
+        right: &DomainExpression,
+        variable: &Symbol,
+        comparison: ComparisonOperator,
+    ) -> Result<InequalityResult, InequalityError> {
+        let residual = self.comparison_residual(left, right, variable)?;
+        self.solve_rational_inequality(&residual, comparison)
+    }
+
+    /// Check a certificate against the original operands and comparison.
+    pub fn verify_expression_inequality(
+        &self,
+        left: &DomainExpression,
+        right: &DomainExpression,
+        variable: &Symbol,
+        comparison: ComparisonOperator,
+        result: &InequalityResult,
+    ) -> Result<bool, InequalityError> {
+        let residual = self.comparison_residual(left, right, variable)?;
+        if result.function() != &residual || result.comparison() != comparison {
+            return Ok(false);
+        }
+        verify_inequality_result(self, result)
+    }
+
     pub fn solve_rational_inequality(
         &self,
         function: &RationalFunction,

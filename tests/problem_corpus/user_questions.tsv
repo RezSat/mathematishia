@@ -89,7 +89,7 @@ id	category	question	outcome	exit	error_kind	arguments	semantic_lines	conditions
 085	integrals	Integrate cos(x)	solved	0	-	integrate¦cos(x)	status: exact¦term 1: calculus.integrate_affine_cosine¦verified: true¦primitive: sin(x)	conditions: none	terms=1	affine_analytic	cycle4
 086	integrals	Integrate exp(x)	solved	0	-	integrate¦exp(x)	status: exact¦term 1: calculus.integrate_affine_exponential¦verified: true¦primitive: exp(x)	conditions: none	terms=1	affine_analytic	cycle4
 087	integrals	Reject 1/x as a polynomial primitive	unsupported	2	Unsupported	integrate¦1/x	error:*	-	none	logarithmic_integral_unavailable	cycle4
-088	integrals	Reject x^-1 definite integral over a pole	unsupported	2	Unsupported	integrate¦x^-1¦x¦0¦1	error:*	-	none	domain_restricted_integral	cycle4
+088	integrals	Reject x^-1 definite integral over a pole	domain	2	Domain	integrate¦x^-1¦x¦0¦1	error:*	-	none	domain_restricted_integral	cycle4
 089	limits	Evaluate lim x->1 (x^2-1)/(x-1)	unsupported	2	InvalidInput	limit¦(x^2-1)/(x-1)¦x¦1	error: invalid command or argument count; use --help	-	none	limit_command_unavailable	cycle4
 090	limits	Evaluate lim x->infinity 1/x	unsupported	2	InvalidInput	limit¦1/x¦x¦infinity	error: invalid command or argument count; use --help	-	none	limit_command_unavailable	cycle4
 091	limits	Evaluate lim x->2 x^2	unsupported	2	InvalidInput	limit¦x^2¦x¦2	error: invalid command or argument count; use --help	-	none	limit_command_unavailable	cycle4

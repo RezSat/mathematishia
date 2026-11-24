@@ -849,7 +849,7 @@ class MultivariateTerm:
 
 @dataclass(frozen=True)
 class PolynomialExpansion:
-    status: Literal["exact"]
+    status: Literal["exact", "conditional"]
     source: DomainExpression
     expanded: DomainExpression
     variables: tuple[str, ...]
@@ -911,7 +911,7 @@ class IntegrationTerm:
 
 @dataclass(frozen=True)
 class DispatchedIntegral:
-    status: Literal["exact"]
+    status: Literal["exact", "conditional"]
     source: DomainExpression
     primitive: DomainExpression
     variable: str

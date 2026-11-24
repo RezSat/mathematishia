@@ -1830,7 +1830,12 @@ fn py_expand_polynomial(
     }
 
     Ok((
-        "exact".to_owned(),
+        if expansion.expanded().conditions().is_empty() {
+            "exact"
+        } else {
+            "conditional"
+        }
+        .to_owned(),
         input.expression().to_string(),
         expansion.expanded().expression().to_string(),
         domain_conditions(&input),
@@ -1975,7 +1980,12 @@ fn py_integrate_expression_dispatch(
         .collect();
 
     Ok((
-        "exact".to_owned(),
+        if result.conditions().is_empty() {
+            "exact"
+        } else {
+            "conditional"
+        }
+        .to_owned(),
         parsed.expression().to_string(),
         result.primitive().expression().to_string(),
         domain.to_owned(),

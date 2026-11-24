@@ -307,13 +307,15 @@ assert answer.primitive.conditions == answer.source.conditions
   `Q[variables]` ring is sorted canonically in the result; each `MultivariateTerm`
   has an exponent tuple aligned with that ring and an exact rational coefficient.
   `source` and `expanded` are domain-aware objects with original conditions.
-  `status="exact"` and `complete=True` mean *all* supported polynomial
-  terms were expanded, not merely one distributive step. The older
+  `complete=True` means *all* supported polynomial terms were expanded,
+  not merely one distributive step. `status="conditional"` retains unproved
+  obligations; `status="exact"` has no retained conditions. The older
   `expand(source, max_steps)` remains the stepwise distribution API.
 - `integrate(source, variable, domain="real")` and
   `integrate_expression_dispatch(...)` return a `DispatchedIntegral`
   with an exact zero-additive-constant primitive, retained unproved
-  conditions, and checked `IntegrationTerm` evidence. A polynomial term
+  conditions, and checked `IntegrationTerm` evidence. The status is
+  `"conditional"` when obligations remain and `"exact"` otherwise. A polynomial term
   exposes an exact polynomial-primitive certificate; a sine/cosine/exponential
   term exposes its affine scale/slope/intercept, rule ID and derivative
   verification rules. Domains `"rational"`, `"real"`, and `"complex"` are

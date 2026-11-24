@@ -62,6 +62,7 @@ class WaveTwoPythonParityTests(unittest.TestCase):
 
     def test_expansion_preserves_original_undefined_domain_even_when_zero(self):
         result = m.expandall("0*x^-1", ["x"])
+        self.assertEqual(result.status, "conditional")
         self.assertEqual(result.source.expression, "0")
         self.assertEqual(result.expanded.expression, "0")
         self.assertEqual(result.source.conditions, ("x != 0",))
@@ -145,7 +146,7 @@ class WaveTwoPythonParityTests(unittest.TestCase):
 
     def test_dispatch_preserves_history_restrictions(self):
         result = m.integrate("0*x^-1+sin(x)", "x")
-        self.assertEqual(result.status, "exact")
+        self.assertEqual(result.status, "conditional")
         self.assertEqual(result.source.conditions, ("x != 0",))
         self.assertEqual(result.primitive.conditions, ("x != 0",))
         self.assertEqual(len(result.terms), 1)

@@ -256,9 +256,9 @@ constant; `integrate_polynomial_between` returns an exact directed value.
 Both reject source-domain exclusions. `integrate_elementary` supports only
 one rational multiple of `sin`, `cos`, or `exp` of a nonconstant rational-affine
 argument; the primitive has no represented additive constant, and retained
-conditions are not automatically proven. General integration, limits, real
-inequalities, and generic math-question dispatch await their kernel and shared
-result contracts. The API does not infer unsupported mathematical results.
+conditions are not automatically proven. General integration and generic math-question dispatch remain limited.
+Checked finite-point rational-function limits and real inequalities exist in
+Rust; Python adapters for those operations are still pending. The API does not infer unsupported mathematical results.
 
 `analytic_constant` applies at most one deterministic, verified rewrite:
 `sin(0)`, `cos(0)`, `tan(0)`, `exp(0)` or `log(1)`. It returns

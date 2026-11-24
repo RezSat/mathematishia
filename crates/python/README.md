@@ -271,7 +271,7 @@ error categories. Numeric inputs are exact rational **strings** rather than
 binary floats. API object fields are immutable.
 
 
-## Wave 2: complete polynomial expansion and combined integration
+## Polynomial expansion and combined integration
 
 These Python interfaces call the same certified Rust kernel operations as the
 corresponding CLI commands. They return frozen, typed results with exact

@@ -7,15 +7,19 @@ use mathema_frontend::{
 };
 use mathematishia_kernel::{
     ComparisonOperator, EvaluationContext, EvaluationError, ExactQuadraticRoot, InequalityError,
-    LimitDirection, LimitError, LimitValue, LimitVerificationError, RationalExpressionError,
-    RationalFunction, RationalFunctionError, RealBound, RealInterval, verify_rational_limit,
+    LimitDirection, LimitError, LimitValue, LimitVerificationError, PolynomialConversionError,
+    RationalExpressionError, RationalFunction, RationalFunctionError, RealBound, RealInterval,
+    SturmCountError, SturmSign, SturmVerificationError, verify_rational_limit, verify_sturm_count,
 };
 
 use super::{CliError, CliErrorKind, invalid, problem_error, variable};
 
-fn evaluation_error(error: EvaluationError) -> CliError {
+pub(super) fn evaluation_error(error: EvaluationError) -> CliError {
     let kind = match error {
-        EvaluationError::Limit(_) => CliErrorKind::Resource,
+        EvaluationError::Limit(_)
+        | EvaluationError::Polynomial(PolynomialConversionError::DegreeLimitExceeded) => {
+            CliErrorKind::Resource
+        }
         EvaluationError::RationalFunction(
             RationalFunctionError::ZeroDenominator
             | RationalFunctionError::ZeroDivisor
@@ -30,7 +34,7 @@ fn evaluation_error(error: EvaluationError) -> CliError {
     problem_error(kind, error.to_string())
 }
 
-fn parse_error(error: DomainParseError) -> CliError {
+pub(super) fn parse_error(error: DomainParseError) -> CliError {
     let kind = match &error {
         DomainParseError::Syntax(reason) => match reason.kind() {
             ParseErrorKind::InputLimitExceeded
@@ -236,4 +240,125 @@ pub(super) fn inequality(input: &str, name: &str) -> Result<String, CliError> {
     append_exclusions(&mut output, result.function(), &symbol);
     output.push_str("\nverified: true");
     Ok(output)
+}
+
+pub(super) fn unrestricted_real_expression(
+    ctx: &EvaluationContext,
+    input: &str,
+) -> Result<mathema::DomainExpression, CliError> {
+    let source =
+        parse_domain_expression_in_domain(input, ScalarDomain::Real).map_err(parse_error)?;
+    check_unrestricted(ctx, &source)?;
+    Ok(source)
+}
+
+pub(super) fn check_unrestricted(
+    ctx: &EvaluationContext,
+    source: &mathema::DomainExpression,
+) -> Result<(), CliError> {
+    ctx.check_expression(source.expression())
+        .map_err(evaluation_error)?;
+    for condition in source.conditions() {
+        ctx.check_expression(condition.expression())
+            .map_err(evaluation_error)?;
+    }
+    if !source.conditions().is_empty() {
+        return Err(problem_error(
+            CliErrorKind::Domain,
+            "operation cannot discard source-domain restrictions",
+        ));
+    }
+    Ok(())
+}
+
+pub(super) fn exact_real_scalar(
+    ctx: &EvaluationContext,
+    input: &str,
+) -> Result<Rational, CliError> {
+    let source = unrestricted_real_expression(ctx, input)?;
+    match source.expression().view() {
+        ExprView::Integer(value) => Ok(Rational::from(value.clone())),
+        ExprView::Rational(value) => Ok(value.clone()),
+        _ => Err(problem_error(
+            CliErrorKind::Unsupported,
+            "expected a finite exact rational endpoint",
+        )),
+    }
+}
+
+fn sturm_verification_error(error: SturmVerificationError) -> CliError {
+    match error {
+        SturmVerificationError::Evaluation(reason) => evaluation_error(reason),
+        _ => problem_error(CliErrorKind::Verification, error.to_string()),
+    }
+}
+
+fn sturm_error(error: SturmCountError) -> CliError {
+    match error {
+        SturmCountError::Evaluation(reason) => evaluation_error(reason),
+        SturmCountError::Verification(reason) => sturm_verification_error(reason),
+        SturmCountError::RootAtEndpoint => problem_error(CliErrorKind::Domain, error.to_string()),
+        _ => problem_error(CliErrorKind::Unsupported, error.to_string()),
+    }
+}
+
+fn sign_text(sign: &SturmSign) -> &'static str {
+    match sign {
+        SturmSign::Negative => "negative",
+        SturmSign::Zero => "zero",
+        SturmSign::Positive => "positive",
+    }
+}
+
+pub(super) fn sturm(input: &str, name: &str, lower: &str, upper: &str) -> Result<String, CliError> {
+    let ctx = EvaluationContext::default();
+    let symbol = strict_variable(&ctx, name)?;
+    let source = unrestricted_real_expression(&ctx, input)?;
+    let polynomial = ctx
+        .polynomial(source.expression(), &symbol)
+        .map_err(evaluation_error)?;
+    let lower = exact_real_scalar(&ctx, lower)?;
+    let upper = exact_real_scalar(&ctx, upper)?;
+    let certificate = ctx
+        .count_real_roots_sturm(&polynomial, &lower, &upper)
+        .map_err(sturm_error)?;
+    verify_sturm_count(&ctx, &polynomial, &lower, &upper, &certificate)
+        .map_err(sturm_verification_error)?;
+    let mut output = format!(
+        "status: exact\ndomain: R\npolynomial: {}\ninterval: ({lower}, {upper})\nroot_count: {}\nlower_variations: {}\nupper_variations: {}",
+        polynomial.to_expr(&symbol),
+        certificate.root_count(),
+        certificate.lower_variations(),
+        certificate.upper_variations(),
+    );
+    for (index, ((term, lower_sign), upper_sign)) in certificate
+        .sequence()
+        .iter()
+        .zip(certificate.lower_signs())
+        .zip(certificate.upper_signs())
+        .enumerate()
+    {
+        write!(
+            output,
+            "\nsturm {}: {} ; lower_sign: {} ; upper_sign: {}",
+            index + 1,
+            term.to_expr(&symbol),
+            sign_text(lower_sign),
+            sign_text(upper_sign)
+        )
+        .expect("writing to String is infallible");
+    }
+    output.push_str("\nconditions: none\nverified: true");
+    Ok(output)
+}
+
+pub(super) fn strict_variable(ctx: &EvaluationContext, name: &str) -> Result<Symbol, CliError> {
+    let selected = unrestricted_real_expression(ctx, name)?;
+    let ExprView::Symbol(symbol) = selected.expression().view() else {
+        return Err(invalid("expected a single variable name"));
+    };
+    if symbol.name() != name.trim() {
+        return Err(invalid("expected a single variable name"));
+    }
+    Ok(symbol.clone())
 }

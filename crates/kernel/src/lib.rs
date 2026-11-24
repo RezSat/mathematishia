@@ -28,6 +28,7 @@ mod hensel_lift;
 mod inequalities;
 mod integration;
 mod integration_dispatch;
+mod limits;
 mod linear_system_expr;
 mod modular_irreducibility;
 mod modular_reconstruction;
@@ -124,6 +125,10 @@ pub use integration::{DefinitePolynomialIntegral, IntegrationError, PolynomialPr
 pub use integration_dispatch::{
     DispatchedAntiderivative, DispatchedDefiniteIntegral, IntegrationDispatchError,
     IntegrationTermEvidence,
+};
+pub use limits::{
+    LimitDirection, LimitError, LimitFactor, LimitValue, LimitVerificationError, RationalLimit,
+    verify_rational_limit,
 };
 pub use linear_system_expr::{
     ExpressionLinearSystemSet, ExpressionLinearSystemSolution, LinearSystemExprError,

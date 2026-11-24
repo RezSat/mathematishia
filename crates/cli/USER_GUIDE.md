@@ -12,6 +12,9 @@ mathematishia roots 'x^3-2' x
 mathematishia integrate 'x^2' x
 mathematishia integrate 'x^2' x 0 2
 mathematishia integrate 'sin(2*x+1)' x
+mathematishia integrate 'x^2+sin(2*x)' x
+mathematishia expandall '(x+1)^2'
+mathematishia expandall '(x-y)^3' x y
 mathematishia evalexact 'sin(0)+cos(0)'
 ```
 
@@ -26,24 +29,45 @@ mathematishia evalexact 'sin(0)+cos(0)'
   A result is complete only when no unresolved polynomial factor remains.
   Domain-restricted expressions are refused rather than simplified into
   unrestricted polynomials.
-- `integrate` returns checked zero-constant primitives of polynomials,
-  signed definite polynomial integrals at rational endpoints, and checked
-  standalone rational multiples of `sin`, `cos` or `exp` with
-  nonzero rational-affine arguments. Mixed analytic products, general
-  elementary primitives and analytic definite integrals are unsupported.
-  No arbitrary integration constant is encoded.
+- `integrate` now delegates to the checked integration dispatcher. It supports
+  full polynomials over Q and top-level sums of polynomial and rational-multiple
+  `sin`, `cos`, `exp` terms with nonzero rational-affine arguments. Every
+  term has its own independently checked primitive certificate. The displayed
+  primitive fixes the additive constant to zero and retains original domain
+  conditions as **unproved requirements**, labeled `conditional`. Exact
+  directed definite integration accepts rational bounds and polynomial
+  integrands without historical restrictions. Analytic definite integrals,
+  mixed-function products, unexpanded multiplied sums, `tan`, `log`,
+  nonlinear analytic arguments and general rational integrals remain unsupported.
+  Resource exhaustion and unsupported mathematical forms have distinct errors.
 - `evalexact` applies up to 16 independently verified analytic
   constant rewrites: `sin(0)`, `cos(0)`, `tan(0)`, `exp(0)`, `log(1)`.
   Rational arithmetic is folded exactly by the expression representation.
   Unresolved expressions return `status: partial`, never an invented value.
-- Existing `expand` handles distributive steps, not certified
-  positive-power polynomial expansion. It distinguishes
-  `distribution_complete` from `polynomial_expansion: not certified`.
-  The complete polynomial expansion kernel is implemented, but a separate CLI command to expose it is still pending.
+- `expandall` uses the checked exact sparse Q[variables] polynomial kernel.
+  It handles nested sums, products, and positive integer powers such as
+  `(x+1)^2` and `(x-y)^3`. Omit variables to infer them from the
+  parsed expression, or provide an explicit ambient ring with
+  `expandall '<EXPRESSION>' x y`. The ring is deterministically sorted.
+  The command displays the canonical expanded expression, any inherited
+  domain conditions, whether its syntax changed, and `complete: true`
+  **only after independent polynomial equality verification**. Nonpolynomial
+  powers, analytic functions, undeclared symbols and exhausted degree/term/work
+  budgets produce typed refusals. Expansion is over exact rational coefficients.
+- Legacy `expand` remains distributive-step-only and continues to report
+  `distribution_complete` and `polynomial_expansion: not certified`;
+  its behavior is intentionally unchanged.
 
 The parser accepts exact integers, rational numbers, finite decimals, and supported implicit multiplication such as `2x`, `2(x+1)` and `(x+1)(x-1)`. Inequalities, `sqrt`, `abs`, and ambiguous identifier juxtaposition are not yet supported. The kernel enforces checked expression, scalar,
 degree and work-unit admission limits. Verification records are checked
 before the CLI presents results. Conditions are unproved obligations,
 not facts established by this tool.
 
-The Rust kernel now exposes a typed problem-result contract, but the CLI has not yet wired it into `--json` output. Full polynomial expansion and broader problem categories remain separate frontend increments.
+The Rust kernel exposes a typed `ProblemResult` contract for currently
+supported solver operations. It does **not** yet have a checked expansion
+outcome, and its `Integrate` adapter is deliberately unsupported. Accordingly,
+`expandall` and combined `integrate` report verified human-readable
+kernel certificates directly; they do not invent `ProblemResult` evidence or
+ad hoc JSON. `--json` remains unavailable until a separately agreed,
+deterministic schema and adapter support exist. The CLI does not infer
+assumptions or invent algebraic proof steps.

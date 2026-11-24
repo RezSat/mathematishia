@@ -102,10 +102,7 @@ fn py_limit(source: &str, variable: &str, at: &str, direction: &str) -> PyResult
             ));
         }
     };
-    if matches!(
-        at,
-        "infinity" | "-infinity" | "inf" | "-inf" | "∞" | "-∞"
-    ) {
+    if matches!(at, "infinity" | "-infinity" | "inf" | "-inf" | "∞" | "-∞") {
         return Err(UnsupportedMathematicsError::new_err(
             "limits at infinity are not supported",
         ));
@@ -120,8 +117,7 @@ fn py_limit(source: &str, variable: &str, at: &str, direction: &str) -> PyResult
     let result = ctx
         .rational_limit(&function, &at, side)
         .map_err(limit_error)?;
-    verify_rational_limit(&ctx, &function, &at, side, &result)
-        .map_err(limit_verification_error)?;
+    verify_rational_limit(&ctx, &function, &at, side, &result).map_err(limit_verification_error)?;
     let (kind, value) = match result.value() {
         LimitValue::Finite(value) => ("finite", Some(value.to_string())),
         LimitValue::PositiveInfinity => ("positive_infinity", None),

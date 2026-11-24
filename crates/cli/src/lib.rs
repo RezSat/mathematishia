@@ -3,6 +3,7 @@
 //! The CLI owns input/output formatting only; mathematical behavior lives in
 //! mathema-frontend and mathematishia-kernel.
 
+mod real_analysis;
 mod user_solve;
 
 use std::fmt;
@@ -34,6 +35,8 @@ Usage:
   mathematishia solve <EQUATION> <VARIABLE>
   mathematishia solveauto <EQUATION> [VARIABLE]  (defaults to x)
   mathematishia roots <POLYNOMIAL> [VARIABLE]
+  mathematishia limit <EXPRESSION> <VARIABLE> <POINT> [left|right|two-sided]
+  mathematishia inequality <COMPARISON> [VARIABLE]
   mathematishia integrate <EXPRESSION> [VARIABLE]
   mathematishia integrate <POLYNOMIAL> <VARIABLE> <LOWER> <UPPER>
   mathematishia evalexact <EXPRESSION>
@@ -91,6 +94,8 @@ Examples:
   mathematishia integrate 'x^2' x 0 2
   mathematishia integrate 'x^2+sin(2*x)' x
   mathematishia evalexact 'sin(0)'
+  mathematishia limit '(x^2-1)/(x-1)' x 1
+  mathematishia inequality 'x^2-4>0' x
   mathematishia solveq 'x^2-5*x+6' x
   mathematishia roots2 'x^2-2' x
   mathematishia qvalue 'x^2-2' upper_real 1 2 x
@@ -120,7 +125,8 @@ Examples:
 
 Syntax: integers, exact scalar or symbolic division, identifiers, + - * / ^ ( ) =.
 Exact decimals and supported implicit multiplication are accepted.
-Rational-expression operations accept one formula.
+Rational-expression operations accept one formula. Real comparisons accept <, <=, >, >=, ≤ and ≥.
+Limits accept finite rational points and explicit one-sided directions.
 Canceled denominator zeros remain excluded. New operations display partial and unsupported
 status explicitly; polynomial roots are complex, rational-function roots Q-only.
 Expansion uses Q[variables] and preserves inherited domain conditions.
@@ -388,7 +394,7 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
     match args {
         [] | ["--help" | "-h" | "help"] => Ok(HELP.to_owned()),
         [
-            "expandall" | "solveauto" | "roots" | "integrate" | "evalexact",
+            "expandall" | "solveauto" | "roots" | "integrate" | "evalexact" | "limit" | "inequality",
             ..,
         ] if args.contains(&"--json") => Err(problem_error(
             CliErrorKind::Unsupported,
@@ -396,6 +402,18 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
         )),
         ["expr", input] => Ok(format!("expression: {}", expression(input)?)),
         ["expandall", input, variables @ ..] => user_solve::expand_all(input, variables),
+        ["solveauto" | "inequality", input] if real_analysis::is_comparison(input) => {
+            real_analysis::inequality(input, "x")
+        }
+        ["solve" | "solveauto" | "inequality", input, name]
+            if real_analysis::is_comparison(input) =>
+        {
+            real_analysis::inequality(input, name)
+        }
+        ["inequality", input] => real_analysis::inequality(input, "x"),
+        ["inequality", input, name] => real_analysis::inequality(input, name),
+        ["limit", input, name, at] => real_analysis::limit(input, name, at, "two-sided"),
+        ["limit", input, name, at, direction] => real_analysis::limit(input, name, at, direction),
         ["solveauto", input] => user_solve::solve_auto(input, "x"),
         ["solveauto", input, name] if *name != "--json" => user_solve::solve_auto(input, name),
         ["roots", input] => user_solve::roots(input, "x"),

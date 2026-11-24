@@ -966,7 +966,102 @@ def integrate(
     return integrate_expression_dispatch(source, variable, domain)
 
 
+@dataclass(frozen=True)
+class LimitFactor:
+    order: int
+    cofactor: Polynomial
+
+
+@dataclass(frozen=True)
+class LimitResult:
+    kind: Literal["finite", "positive_infinity", "negative_infinity", "does_not_exist"]
+    value: Fraction | None
+    at: Fraction
+    direction: Literal["left", "right", "two-sided"]
+    variable: str
+    source: RationalFunction
+    numerator_factor: LimitFactor | None
+    denominator_factor: LimitFactor
+    exclusion_values: tuple[Fraction, ...]
+    excluded_at_point: bool
+
+
+def limit(
+    source: str, variable: str, at: str,
+    direction: Literal["left", "right", "two-sided"] = "two-sided",
+) -> LimitResult:
+    """Checked finite-point rational limit; original excluded points stay excluded."""
+    kind, value, point, rational, numerator, denominator, exclusions, excluded = (
+        _native.limit(source, variable, at, direction)
+    )
+    return LimitResult(
+        kind, Fraction(value) if value is not None else None, Fraction(point),
+        direction, variable, _rational(rational),
+        LimitFactor(numerator[0], _poly(numerator[1])) if numerator is not None else None,
+        LimitFactor(denominator[0], _poly(denominator[1])),
+        tuple(Fraction(v) for v in exclusions), excluded,
+    )
+
+
+@dataclass(frozen=True)
+class RealBound:
+    kind: Literal["negative_infinity", "finite", "positive_infinity"]
+    root: ExactQuadraticRoot | None
+
+
+@dataclass(frozen=True)
+class RealInterval:
+    lower: RealBound
+    upper: RealBound
+    lower_closed: bool
+    upper_closed: bool
+
+
+@dataclass(frozen=True)
+class InequalityCriticalPoint:
+    root: ExactQuadraticRoot
+    numerator_multiplicity: int
+    denominator_multiplicity: int
+    excluded: bool
+
+
+@dataclass(frozen=True)
+class InequalityResult:
+    comparison: Literal["<", "<=", ">", ">="]
+    variable: str
+    residual: RationalFunction
+    intervals: tuple[RealInterval, ...]
+    critical_points: tuple[InequalityCriticalPoint, ...]
+
+
+def _real_root(data) -> ExactQuadraticRoot:
+    kind, rational, polynomial, branch = data
+    return ExactQuadraticRoot(
+        kind, Fraction(rational) if rational is not None else None,
+        _poly(polynomial) if polynomial is not None else None, branch,
+    )
+
+
+def _real_bound(data) -> RealBound:
+    kind, root = data
+    return RealBound(kind, _real_root(root) if root is not None else None)
+
+
+def solve_inequality(source: str, variable: str = "x") -> InequalityResult:
+    """Exact real interval union for a bounded rational comparison."""
+    operator, residual, intervals, points = _native.solve_inequality(source, variable)
+    return InequalityResult(
+        operator, variable, _rational(residual),
+        tuple(RealInterval(_real_bound(lo), _real_bound(hi), lc, hc)
+              for lo, hi, lc, hc in intervals),
+        tuple(InequalityCriticalPoint(_real_root(root), nm, dm, excluded)
+              for root, nm, dm, excluded in points),
+    )
+
+
 __all__ = [
+    "LimitFactor", "LimitResult", "limit", "RealBound", "RealInterval",
+    "InequalityCriticalPoint", "InequalityResult", "solve_inequality",
     "MultivariateTerm", "PolynomialExpansion", "expand_polynomial", "expandall",
     "AffineIntegrationEvidence", "IntegrationTerm", "DispatchedIntegral",
     "integrate_expression_dispatch", "integrate",

@@ -52,10 +52,16 @@ mod rational_factorization;
 mod rational_function;
 mod rational_quadratic;
 mod root_isolation;
+mod solution_certificates;
 mod solve_linear;
 mod square_free;
 mod sturm_count;
 mod verification;
+
+pub use solution_certificates::{
+    CertifiedSolutionSet, SolutionCertificateError, SolutionSetCertificate, certify_solution_set,
+    verify_solution_set,
+};
 
 pub use algebraic::{
     AlgebraicRootEvidence, AlgebraicRootResult, AlgebraicRootRule, AlgebraicRootSet,

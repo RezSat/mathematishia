@@ -15,14 +15,15 @@ use mathematishia_kernel::{
     AlgebraicExtensionError, AlgebraicRootEvidence, AlgebraicRootSet, AnalyticConstantError,
     AnalyticConstantLimits, AnalyticConstantOutcome, Assumptions, CertifiedAlgebraicField,
     DefinednessError, DomainOperationError, DomainRewriteOutcome, ElementaryIntegrationError,
-    EvaluationContext, EvaluationError, ExactMatrix, ExactQuadraticRoot, IntegrationError,
-    LinearSolution, LinearSystemSolution, MatrixError, PartialPolynomialRootError,
-    PolynomialResidue, PolynomialZeroSet, ProofNodeKind, QuadraticBranch, QuadraticElement,
-    QuadraticField, QuadraticFieldError, QuadraticRoots, RationalExpressionError, RationalFunction,
+    EvaluationContext, EvaluationError, ExactMatrix, ExactQuadraticRoot, IntegrationDispatchError,
+    IntegrationError, IntegrationTermEvidence, LinearSolution, LinearSystemSolution, MatrixError,
+    MultivariateLimits, PartialPolynomialRootError, PolynomialExpansionOutcome, PolynomialResidue,
+    PolynomialZeroSet, ProofNodeKind, QuadraticBranch, QuadraticElement, QuadraticField,
+    QuadraticFieldError, QuadraticRoots, RationalExpressionError, RationalFunction,
     RationalFunctionError, RationalPolynomial, RationalQuadraticRoots, ResidueError,
     ResourceLimitKind, SturmCountError, SturmSign, SturmVerificationError, VerifiedCondition,
-    rewrite_domain_once, substitute_domain, verify_analytic_constant_rewrite,
-    verify_partial_polynomial_roots, verify_sturm_count,
+    expand_polynomial, rewrite_domain_once, substitute_domain, verify_analytic_constant_rewrite,
+    verify_partial_polynomial_roots, verify_polynomial_expansion, verify_sturm_count,
 };
 use pyo3::create_exception;
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
@@ -146,9 +147,9 @@ fn map_domain_parse(error: DomainParseError) -> PyErr {
         DomainParseError::Domain(DefinednessError::ZeroDenominator) => {
             UndefinedAtPointError::new_err(error.to_string())
         }
-        DomainParseError::Domain(DefinednessError::UnsupportedExponent) => {
-            UnsupportedMathematicsError::new_err(error.to_string())
-        }
+        DomainParseError::Domain(
+            DefinednessError::UnsupportedExponent | DefinednessError::UnsupportedFunction,
+        ) => UnsupportedMathematicsError::new_err(error.to_string()),
         DomainParseError::Domain(_) => ResourceLimitError::new_err(error.to_string()),
     }
 }
@@ -1779,6 +1780,221 @@ fn py_integrate_elementary(
     ))
 }
 
+fn selected_ambient_variables(names: Vec<String>) -> PyResult<Vec<Symbol>> {
+    if names.len() > MultivariateLimits::HARD_LIMITS.max_variables {
+        return Err(ResourceLimitError::new_err(
+            "ambient ring exceeds the variable limit",
+        ));
+    }
+    names.iter().map(|name| selected_variable(name)).collect()
+}
+
+type PyExpansionTerm = (Vec<u32>, String);
+type PyExactPolynomialExpansion = (
+    String,
+    String,
+    String,
+    Vec<String>,
+    Vec<String>,
+    Vec<String>,
+    Vec<PyExpansionTerm>,
+    bool,
+    bool,
+);
+
+#[pyfunction(name = "expand_polynomial")]
+fn py_expand_polynomial(
+    source: &str,
+    variables: Vec<String>,
+) -> PyResult<PyExactPolynomialExpansion> {
+    let ring = selected_ambient_variables(variables)?;
+    let input = checked_domain(source)?;
+    let limits = MultivariateLimits::default();
+    let expansion = match expand_polynomial(&input, &ring, limits) {
+        PolynomialExpansionOutcome::Exact(expansion) => expansion,
+        PolynomialExpansionOutcome::Unsupported(reason) => {
+            return Err(UnsupportedMathematicsError::new_err(reason.to_string()));
+        }
+        PolynomialExpansionOutcome::ResourceLimited(reason) => {
+            return Err(ResourceLimitError::new_err(reason.to_string()));
+        }
+    };
+    match verify_polynomial_expansion(&input, &expansion, &ring, limits) {
+        Ok(true) => {}
+        Ok(false) => {
+            return Err(VerificationFailure::new_err(
+                "polynomial expansion failed independent verification",
+            ));
+        }
+        Err(error) => return Err(VerificationFailure::new_err(error.to_string())),
+    }
+
+    Ok((
+        if expansion.expanded().conditions().is_empty() {
+            "exact"
+        } else {
+            "conditional"
+        }
+        .to_owned(),
+        input.expression().to_string(),
+        expansion.expanded().expression().to_string(),
+        domain_conditions(&input),
+        domain_conditions(expansion.expanded()),
+        expansion
+            .variables()
+            .iter()
+            .map(ToString::to_string)
+            .collect(),
+        expansion
+            .polynomial()
+            .terms()
+            .iter()
+            .map(|(powers, coefficient)| (powers.clone(), coefficient.to_string()))
+            .collect(),
+        expansion.complete(),
+        expansion.syntactically_unchanged(),
+    ))
+}
+
+fn map_dispatch_integration_error(error: IntegrationDispatchError) -> PyErr {
+    match error {
+        IntegrationDispatchError::Evaluation(reason) => map_evaluation_error(reason),
+        IntegrationDispatchError::Polynomial(reason) => map_integration_error(reason),
+        IntegrationDispatchError::Elementary(reason) => map_elementary_integration_error(reason),
+        IntegrationDispatchError::Definedness(DefinednessError::ZeroDenominator) => {
+            UndefinedAtPointError::new_err(error.to_string())
+        }
+        IntegrationDispatchError::Definedness(
+            DefinednessError::UnsupportedExponent | DefinednessError::UnsupportedFunction,
+        )
+        | IntegrationDispatchError::UnsupportedScalarDomain
+        | IntegrationDispatchError::UnsupportedAnalyticDefiniteIntegral
+        | IntegrationDispatchError::RestrictedDefiniteDomain => {
+            UnsupportedMathematicsError::new_err(error.to_string())
+        }
+        IntegrationDispatchError::Definedness(_) | IntegrationDispatchError::TooManyTerms => {
+            ResourceLimitError::new_err(error.to_string())
+        }
+        IntegrationDispatchError::MissingDomainCondition
+        | IntegrationDispatchError::SourceMismatch
+        | IntegrationDispatchError::IncorrectEvidence
+        | IntegrationDispatchError::IncorrectPrimitive
+        | IntegrationDispatchError::IncorrectConditions => {
+            VerificationFailure::new_err(error.to_string())
+        }
+    }
+}
+
+fn selected_dispatch_domain(domain: &str) -> PyResult<ScalarDomain> {
+    match domain {
+        "rational" => Ok(ScalarDomain::Rational),
+        "real" => Ok(ScalarDomain::Real),
+        "complex" => Ok(ScalarDomain::Complex),
+        _ => Err(UnsupportedMathematicsError::new_err(
+            "domain must be 'rational', 'real' or 'complex'",
+        )),
+    }
+}
+
+type PyIntegrationTerm = (
+    String,
+    String,
+    String,
+    Option<String>,
+    Option<(PyPolynomialData, PyPolynomialData)>,
+    Option<(String, String, String)>,
+    Vec<String>,
+);
+
+type PyIntegrationDispatch = (
+    String,
+    String,
+    String,
+    String,
+    Vec<String>,
+    Vec<String>,
+    Vec<PyIntegrationTerm>,
+);
+
+#[pyfunction(name = "integrate_expression_dispatch", signature = (source, variable, domain="real"))]
+fn py_integrate_expression_dispatch(
+    source: &str,
+    variable: &str,
+    domain: &str,
+) -> PyResult<PyIntegrationDispatch> {
+    let symbol = selected_variable(variable)?;
+    let scalar_domain = selected_dispatch_domain(domain)?;
+    let parsed =
+        parse_domain_expression_in_domain(source, scalar_domain).map_err(map_domain_parse)?;
+    let ctx = EvaluationContext::default();
+    ctx.check_expression(parsed.expression())
+        .map_err(map_evaluation_error)?;
+    for condition in parsed.conditions() {
+        ctx.check_expression(condition.expression())
+            .map_err(map_evaluation_error)?;
+    }
+    let result = ctx
+        .integrate_expression_dispatch(&parsed, &symbol, scalar_domain)
+        .map_err(map_dispatch_integration_error)?;
+    ctx.verify_dispatched_antiderivative(&parsed, &symbol, scalar_domain, &result)
+        .map_err(map_dispatch_integration_error)?;
+
+    let terms = result
+        .terms()
+        .iter()
+        .map(|term| match term {
+            IntegrationTermEvidence::Polynomial {
+                integrand,
+                certificate,
+            } => (
+                "polynomial".to_owned(),
+                integrand.to_string(),
+                certificate.primitive().to_expr(&symbol).to_string(),
+                None,
+                Some((
+                    poly_data(certificate.integrand(), &symbol),
+                    poly_data(certificate.primitive(), &symbol),
+                )),
+                None,
+                Vec::new(),
+            ),
+            IntegrationTermEvidence::Elementary(certificate) => (
+                "elementary".to_owned(),
+                certificate.source().expression().to_string(),
+                certificate.primitive().expression().to_string(),
+                Some(certificate.rule().stable_id().to_owned()),
+                None,
+                Some((
+                    certificate.input_scale().to_string(),
+                    certificate.slope().to_string(),
+                    certificate.intercept().to_string(),
+                )),
+                certificate
+                    .derivative_evidence()
+                    .steps()
+                    .iter()
+                    .map(|step| step.rule().stable_id().to_owned())
+                    .collect(),
+            ),
+        })
+        .collect();
+
+    Ok((
+        if result.conditions().is_empty() {
+            "exact"
+        } else {
+            "conditional"
+        }
+        .to_owned(),
+        parsed.expression().to_string(),
+        result.primitive().expression().to_string(),
+        domain.to_owned(),
+        domain_conditions(&parsed),
+        result.conditions().iter().map(condition_text).collect(),
+        terms,
+    ))
+}
+
 #[pymodule]
 fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(py_expression, m)?)?;
@@ -1832,6 +2048,8 @@ fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(py_integrate_polynomial_between, m)?)?;
     m.add_function(wrap_pyfunction!(py_analytic_constant, m)?)?;
     m.add_function(wrap_pyfunction!(py_integrate_elementary, m)?)?;
+    m.add_function(wrap_pyfunction!(py_expand_polynomial, m)?)?;
+    m.add_function(wrap_pyfunction!(py_integrate_expression_dispatch, m)?)?;
     m.add("MathSyntaxError", m.py().get_type::<MathSyntaxError>())?;
     m.add(
         "UndefinedAtPointError",

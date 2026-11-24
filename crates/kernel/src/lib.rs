@@ -160,8 +160,8 @@ pub use polynomial_solution_set::{
 };
 pub use problem_result::{
     CheckedBy, ExactAnswer, ProblemError, ProblemEvidence, ProblemOperation, ProblemOutcome,
-    ProblemRequest, ProblemRestriction, ProblemResult, ProblemStatement, StepReference,
-    UndefinedReason, UnsupportedReason, adapt_verified_problem, dispatch_problem,
+    ProblemRequest, ProblemRestriction, ProblemResult, ProblemStatement, ProblemWireError,
+    StepReference, UndefinedReason, UnsupportedReason, adapt_verified_problem, dispatch_problem,
 };
 pub use proof_graph::{
     ProofGraph, ProofGraphBuildError, ProofGraphVerificationError, ProofNode, ProofNodeId,

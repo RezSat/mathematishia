@@ -163,7 +163,10 @@ fn check_proof(question: &Question<'_>, output: &str) {
         "terms" => {
             assert!(lines.contains(&format!("terms: {expected}").as_str()));
             assert_eq!(
-                lines.iter().filter(|line| line.starts_with("term ")).count(),
+                lines
+                    .iter()
+                    .filter(|line| line.starts_with("term "))
+                    .count(),
                 expected,
                 "{}: unexpected integration evidence count",
                 question.id

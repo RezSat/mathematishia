@@ -1,17 +1,19 @@
 //! Checked CLI adapters for natural equation solving, roots and calculus.
 
+use std::collections::BTreeSet;
 use std::fmt::Write as _;
 
-use mathema::{DomainExpression, Equation, Expr, ExprView, ScalarDomain, Symbol};
+use mathema::{Condition, DomainExpression, Equation, Expr, ExprView, ScalarDomain, Symbol};
 use mathema_frontend::{
     DomainStatement, parse_domain_expression_in_domain, parse_domain_statement_in_domain,
 };
 use mathematishia_kernel::{
-    AnalyticConstantLimits, AnalyticConstantOutcome, ElementaryIntegrationError, EvaluationContext,
-    EvaluationError, ExactQuadraticRoot, IntegrationError, LinearSolution,
-    PartialPolynomialRootError, PolynomialZeroSet, RationalPolynomial, RationalQuadraticRoots,
-    rewrite_analytic_constant_once, verify_analytic_constant_rewrite,
-    verify_partial_polynomial_roots, verify_rational_quadratic_equation,
+    AnalyticConstantLimits, AnalyticConstantOutcome, EvaluationContext, EvaluationError,
+    ExactQuadraticRoot, IntegrationDispatchError, IntegrationError, LinearSolution,
+    MultivariateLimits, PartialPolynomialRootError, PolynomialExpansionOutcome, PolynomialZeroSet,
+    RationalPolynomial, RationalQuadraticRoots, expand_polynomial, rewrite_analytic_constant_once,
+    verify_analytic_constant_rewrite, verify_partial_polynomial_roots, verify_polynomial_expansion,
+    verify_rational_quadratic_equation,
 };
 
 use super::{
@@ -227,6 +229,152 @@ pub(super) fn solve_auto(input: &str, name: &str) -> Result<String, CliError> {
     rational_solutions(&ctx, &left, &right, &symbol)
 }
 
+fn admit_source(context: &EvaluationContext, source: &DomainExpression) -> Result<(), CliError> {
+    context
+        .check_expression(source.expression())
+        .map_err(evaluation_error)?;
+    if source.conditions().len() > context.limits().max_rational_conditions {
+        return Err(problem_error(
+            CliErrorKind::Resource,
+            "source-domain condition limit exceeded",
+        ));
+    }
+    for condition in source.conditions() {
+        context
+            .check_expression(condition.expression())
+            .map_err(evaluation_error)?;
+    }
+    Ok(())
+}
+
+fn collect_symbols(expression: &Expr, found: &mut BTreeSet<Symbol>) {
+    match expression.view() {
+        ExprView::Symbol(symbol) => {
+            found.insert(symbol.clone());
+        }
+        ExprView::Add(children) | ExprView::Mul(children) => {
+            for child in children {
+                collect_symbols(child, found);
+            }
+        }
+        ExprView::Pow { base, exponent } => {
+            collect_symbols(base, found);
+            collect_symbols(exponent, found);
+        }
+        ExprView::Function { argument, .. } => collect_symbols(argument, found),
+        ExprView::Integer(_) | ExprView::Rational(_) => {}
+    }
+}
+
+pub(super) fn expand_all(input: &str, variable_names: &[&str]) -> Result<String, CliError> {
+    let source = parse_domain_expression_in_domain(input, ScalarDomain::Real)
+        .map_err(|error| problem_error(CliErrorKind::Domain, error.to_string()))?;
+    let context = EvaluationContext::default();
+    admit_source(&context, &source)?;
+
+    let limits = MultivariateLimits::default();
+    if variable_names.len() > limits.max_variables {
+        return Err(problem_error(
+            CliErrorKind::Resource,
+            "ambient polynomial variable limit exceeded",
+        ));
+    }
+    let variables = if variable_names.is_empty() {
+        let mut found = BTreeSet::new();
+        collect_symbols(source.expression(), &mut found);
+        found.into_iter().collect::<Vec<_>>()
+    } else {
+        let variables = variable_names
+            .iter()
+            .map(|name| variable(name))
+            .collect::<Result<Vec<_>, _>>()?;
+        let distinct = variables.iter().cloned().collect::<BTreeSet<_>>();
+        if distinct.len() != variables.len() {
+            return Err(invalid("ambient polynomial variables must be distinct"));
+        }
+        variables
+    };
+
+    let outcome = expand_polynomial(&source, &variables, limits);
+    let proof = match outcome {
+        PolynomialExpansionOutcome::Exact(proof) => proof,
+        PolynomialExpansionOutcome::Unsupported(reason) => {
+            return Err(unsupported(format!(
+                "polynomial expansion unsupported: {reason}"
+            )));
+        }
+        PolynomialExpansionOutcome::ResourceLimited(reason) => {
+            return Err(problem_error(CliErrorKind::Resource, reason.to_string()));
+        }
+    };
+    if !verify_polynomial_expansion(&source, &proof, &variables, limits)
+        .map_err(|error| verification(error.to_string()))?
+    {
+        return Err(verification(
+            "polynomial expansion certificate failed verification",
+        ));
+    }
+    let names = proof
+        .variables()
+        .iter()
+        .map(Symbol::name)
+        .collect::<Vec<_>>()
+        .join(", ");
+    let mut output = format!(
+        "status: {}\ndomain: Q[{}]\nexpanded: {}\ncomplete: true\nsyntactically_unchanged: {}",
+        if proof.expanded().conditions().is_empty() {
+            "exact"
+        } else {
+            "conditional"
+        },
+        names,
+        proof.expanded().expression(),
+        proof.syntactically_unchanged(),
+    );
+    append_required_conditions(&mut output, proof.expanded().conditions());
+    output.push_str("\nverified: true");
+    Ok(output)
+}
+
+fn append_required_conditions(output: &mut String, conditions: &[Condition]) {
+    if conditions.is_empty() {
+        output.push_str("\nconditions: none");
+    } else {
+        for condition in conditions {
+            write!(output, "\nrequired: {}", condition_text(condition))
+                .expect("writing to String is infallible");
+        }
+    }
+}
+
+fn integration_error(error: IntegrationDispatchError) -> CliError {
+    match error {
+        IntegrationDispatchError::Evaluation(error)
+        | IntegrationDispatchError::Polynomial(IntegrationError::Evaluation(error))
+        | IntegrationDispatchError::Elementary(
+            mathematishia_kernel::ElementaryIntegrationError::Evaluation(error),
+        ) => evaluation_error(error),
+        IntegrationDispatchError::TooManyTerms
+        | IntegrationDispatchError::Polynomial(IntegrationError::UnsupportedIntegrand(
+            mathematishia_kernel::PolynomialConversionError::DegreeLimitExceeded,
+        )) => problem_error(CliErrorKind::Resource, error.to_string()),
+        IntegrationDispatchError::Definedness(
+            mathematishia_kernel::DefinednessError::NodeLimitExceeded
+            | mathematishia_kernel::DefinednessError::ConditionLimitExceeded,
+        ) => problem_error(CliErrorKind::Resource, error.to_string()),
+        IntegrationDispatchError::MissingDomainCondition
+        | IntegrationDispatchError::RestrictedDefiniteDomain
+        | IntegrationDispatchError::Definedness(_) => {
+            problem_error(CliErrorKind::Domain, error.to_string())
+        }
+        IntegrationDispatchError::SourceMismatch
+        | IntegrationDispatchError::IncorrectEvidence
+        | IntegrationDispatchError::IncorrectPrimitive
+        | IntegrationDispatchError::IncorrectConditions => verification(error.to_string()),
+        _ => unsupported(error.to_string()),
+    }
+}
+
 pub(super) fn integrate(
     input: &str,
     name: &str,
@@ -234,72 +382,80 @@ pub(super) fn integrate(
 ) -> Result<String, CliError> {
     let symbol = variable(name)?;
     let source = parse_domain_expression_in_domain(input, ScalarDomain::Real)
-        .map_err(|error| invalid(error.to_string()))?;
-    check_domain(&source)?;
-    let ctx = EvaluationContext::default();
+        .map_err(|error| problem_error(CliErrorKind::Domain, error.to_string()))?;
+    let context = EvaluationContext::default();
+    admit_source(&context, &source)?;
+
     if let Some((lower, upper)) = bounds {
         let lower = scalar(lower)?;
         let upper = scalar(upper)?;
-        let result = ctx
-            .integrate_domain_expression_between(&source, &symbol, &lower, &upper)
-            .map_err(|error| unsupported(error.to_string()))?;
-        ctx.verify_definite_polynomial_integral(&result)
+        let proof = context
+            .integrate_expression_dispatch_between(
+                &source,
+                &symbol,
+                ScalarDomain::Real,
+                &lower,
+                &upper,
+            )
+            .map_err(integration_error)?;
+        context
+            .verify_dispatched_definite_integral(
+                &source,
+                &symbol,
+                ScalarDomain::Real,
+                &lower,
+                &upper,
+                &proof,
+            )
             .map_err(|error| verification(error.to_string()))?;
+        let certificate = proof.certificate();
         return Ok(format!(
             "status: exact\ndomain: R\nintegral: {}\nfrom: {}\nto: {}\nprimitive: {}\nconditions: none\nverified: true",
-            result.value(),
-            result.lower(),
-            result.upper(),
-            result.primitive().primitive().to_expr(&symbol)
+            certificate.value(),
+            certificate.lower(),
+            certificate.upper(),
+            certificate.primitive().primitive().to_expr(&symbol)
         ));
     }
-    match ctx.integrate_domain_expression(&source, &symbol) {
-        Ok(result) => {
-            ctx.verify_polynomial_primitive(&result)
-                .map_err(|error| verification(error.to_string()))?;
-            Ok(format!(
-                "status: exact\ndomain: R\nprimitive: {}\nconstant: 0 (canonical choice)\nconditions: none\nverified: true",
-                result.primitive().to_expr(&symbol)
-            ))
+
+    let proof = context
+        .integrate_expression_dispatch(&source, &symbol, ScalarDomain::Real)
+        .map_err(integration_error)?;
+    context
+        .verify_dispatched_antiderivative(&source, &symbol, ScalarDomain::Real, &proof)
+        .map_err(|error| verification(error.to_string()))?;
+
+    let mut output = format!(
+        "status: {}\ndomain: R\nprimitive: {}\nconstant: 0 (canonical choice)\nterms: {}",
+        if proof.conditions().is_empty() {
+            "exact"
+        } else {
+            "conditional"
+        },
+        proof.primitive().expression(),
+        proof.terms().len()
+    );
+    for (index, term) in proof.terms().iter().enumerate() {
+        if let Some(certificate) = term.elementary_certificate() {
+            write!(
+                &mut output,
+                "\nterm {}: {}",
+                index + 1,
+                certificate.rule().stable_id()
+            )
+            .expect("writing to String is infallible");
+        } else {
+            write!(
+                &mut output,
+                "\nterm {}: exact polynomial primitive",
+                index + 1
+            )
+            .expect("writing to String is infallible");
         }
-        Err(IntegrationError::UnsupportedIntegrand(_))
-        | Err(IntegrationError::RestrictedDomain)
-        | Err(IntegrationError::Evaluation(EvaluationError::Polynomial(
-            mathematishia_kernel::PolynomialConversionError::UnsupportedFunction,
-        ))) => {
-            let result = ctx
-                .integrate_elementary_affine(&source, &symbol, ScalarDomain::Real)
-                .map_err(|error| match error {
-                    ElementaryIntegrationError::Evaluation(EvaluationError::Limit(_)) => {
-                        problem_error(CliErrorKind::Resource, error.to_string())
-                    }
-                    _ => unsupported(error.to_string()),
-                })?;
-            ctx.verify_elementary_antiderivative(&source, &symbol, ScalarDomain::Real, &result)
-                .map_err(|error| verification(error.to_string()))?;
-            let mut output = format!(
-                "status: {}\ndomain: R\nprimitive: {}\nconstant: 0 (canonical choice)\nrule: {}",
-                if result.conditions().is_empty() {
-                    "exact"
-                } else {
-                    "conditional"
-                },
-                result.primitive().expression(),
-                result.rule().stable_id()
-            );
-            if result.conditions().is_empty() {
-                output.push_str("\nconditions: none");
-            } else {
-                for condition in result.conditions() {
-                    write!(&mut output, "\nrequired: {}", condition_text(condition))
-                        .expect("writing to String is infallible");
-                }
-            }
-            output.push_str("\nverified: true");
-            Ok(output)
-        }
-        Err(error) => Err(unsupported(error.to_string())),
     }
+    append_required_conditions(&mut output, proof.conditions());
+    output.push_str("\nverified: true");
+    Ok(output)
 }
 
 pub(super) fn eval_exact(input: &str) -> Result<String, CliError> {

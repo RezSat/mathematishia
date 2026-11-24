@@ -160,6 +160,18 @@ fn check_proof(question: &Question<'_>, output: &str) {
                 question.id
             );
         }
+        "terms" => {
+            assert!(lines.contains(&format!("terms: {expected}").as_str()));
+            assert_eq!(
+                lines
+                    .iter()
+                    .filter(|line| line.starts_with("term "))
+                    .count(),
+                expected,
+                "{}: unexpected integration evidence count",
+                question.id
+            );
+        }
         "rules" => {
             assert_eq!(
                 lines
@@ -176,7 +188,9 @@ fn check_proof(question: &Question<'_>, output: &str) {
     for rule in parts {
         assert!(
             lines.iter().any(|line| {
-                line.contains(&format!("[{rule}")) || *line == format!("rule: {rule}")
+                line.contains(&format!("[{rule}"))
+                    || *line == format!("rule: {rule}")
+                    || (line.starts_with("term ") && line.ends_with(&format!(": {rule}")))
             }),
             "{}: missing required proof rule {rule} in {output:?}",
             question.id

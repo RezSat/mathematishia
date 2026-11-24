@@ -25,6 +25,8 @@ cargo run -p mathematishia-cli -- roots 'x^3-2' x
 cargo run -p mathematishia-cli -- integrate 'x^2' x
 cargo run -p mathematishia-cli -- integrate 'x^2+sin(2*x)' x
 cargo run -p mathematishia-cli -- expandall '(x+1)^2'
+cargo run -p mathematishia-cli -- limit '(x^2-1)/(x-1)' x 1
+cargo run -p mathematishia-cli -- inequality 'x^2-4>0' x
 cargo run -p mathematishia-cli -- evalexact 'sin(0)+cos(0)'
 cargo run -p mathematishia-cli -- rsimplify '(x^2-1)/(x-1)' x
 cargo run -p mathematishia-cli -- rdiff '(x^2-1)/(x-1)' x
@@ -115,9 +117,9 @@ They do not select real or complex embeddings. The `qvalue` interface handles
 embedded quadratic arithmetic separately. Cross-field arithmetic and analytic numerical evaluation are not implemented.
 Checked derivatives cover selected analytic functions with domain conditions.
 
-The kernel provides checked multivariate expansion, integration dispatch, typed mathematical results and domain-aware exact operations. The CLI exposes `solveauto`, `roots`, `expandall`, `integrate`, and `evalexact`; Python exposes certified polynomial roots, Sturm counts, full bounded expansion, supported integration sums and analytic constants. Legacy `expand` remains distributive-step-only. Finite rational-point rational-function limits and degree-two-factor real inequalities are implemented in Rust but not yet exposed through the user interfaces. These are bounded operations, not general-purpose analytic solving. See [CAPABILITIES.md](CAPABILITIES.md) for mathematical domains and limits.
+The kernel provides checked multivariate expansion, integration dispatch, typed mathematical results and domain-aware exact operations. The CLI exposes `solveauto`, `roots`, `expandall`, `integrate`, and `evalexact`; Python exposes certified polynomial roots, Sturm counts, full bounded expansion, supported integration sums and analytic constants. Legacy `expand` remains distributive-step-only. Finite rational-point rational-function limits and degree-two-factor real inequalities are available through CLI `limit` and `inequality`, and Python `limit` and `solve_inequality`. These are bounded operations, not general-purpose analytic solving. See [CAPABILITIES.md](CAPABILITIES.md) for mathematical domains and limits.
 
-Run the compiled 139-case student-problem regression corpus with `cargo test -p mathematishia-cli --test real_world_corpus --locked -- --nocapture`. The sample includes 85 solved cases, nine partial results, and explicit unsupported and refusal cases.
+Run the compiled 152-case student-problem regression corpus with `cargo test -p mathematishia-cli --test real_world_corpus --locked -- --nocapture`. The sample includes 100 solved cases, nine partial results, and explicit unsupported and refusal cases.
 
 Resource limits bound selected algebraic operations; they are not process
 memory or execution-time limits.

@@ -18,7 +18,7 @@ This file tracks implemented areas and the next domain extensions. See [CAPABILI
 - Exact polynomial antiderivatives and definite integrals at rational endpoints, with independent verification.
 - Verified exact rational-multiple primitives for sine, cosine and exponential of nonconstant rational-affine arguments.
 - Checked integration dispatch for bounded polynomial and supported affine analytic sums, with exact polynomial definite integrals at rational bounds.
-- Verified finite-point rational-function limits and exact real inequalities with degree-at-most-two factors and source exclusions (kernel APIs).
+- Verified finite-point rational-function limits and exact real inequalities with degree-at-most-two factors and source exclusions, exposed through CLI and Python.
 - Extended Euclidean algorithm with verified polynomial Bézout certificates and modular inverses in Q[x].
 - Canonical quotient-ring arithmetic in Q[x]/(m), including nonunits and signed powers.
 - Exact rational matrices, rank, RREF, determinant, inverse and linear systems including affine solution families.
@@ -39,16 +39,16 @@ This file tracks implemented areas and the next domain extensions. See [CAPABILI
 - Checked structured derivation rendering for supported proof graphs, linear equations and symbolic derivatives.
 - Public typed problem results distinguishing solved, conditional, partial, unsupported, undefined and resource refusal outcomes.
 - CLI automatic equation dispatch, checked root sets, full bounded polynomial expansion, supported integral sums and exact constant evaluation; Python typed roots, Sturm counts, expansion, integral sums and analytic identities.
-- Permanent compiled CLI benchmark (139 cases), independent metamorphic and forged-certificate tests.
+- Permanent compiled CLI benchmark (152 cases), independent metamorphic and forged-certificate tests.
 - Experimental Python bindings, platform wheel tests and source-distribution rebuild.
 
 ## In progress / next
 
 1. Extend the bounded multivariate expression bridge to independently verified Buchberger reductions and Gröbner bases; expand exact algebra simplification without assuming arbitrary generators give unique normal forms.
 2. Extend analytic domain contracts to safe symbolic rewriting, additional derivatives and explicit complex branch handling.
-3. Expose checked real inequalities through domain-aware comparison parsing and CLI/Python adapters; extend nonlinear equations, higher-degree inequalities and non-affine systems. Proceed from Sturm counting toward certified comprehensive root isolation.
+3. Extend nonlinear equations, higher-degree inequalities and non-affine systems. Proceed from Sturm counting toward certified comprehensive root isolation.
 4. Add truthful per-reduction multivariate division traces and additional checked algebra/calculus rendering, then stable frontend-oriented serialization.
-5. Expose finite-point rational limits in CLI/Python, extend limits beyond rational functions, and broaden elementary integration and series with explicit supported domains and unresolved results.
+5. Extend limits beyond finite-point rational functions, and broaden elementary integration and series with explicit supported domains and unresolved results.
 6. Expand rational factorization beyond the bounded reconstruction path; improve algebraic embeddings and general arithmetic.
 7. Add exact linear-algebra extensions, comprehensive real-root isolation and targeted symbolic matrix operations.
 8. Wire the shared result contract consistently through CLI and Python APIs, extend the real-question benchmark with each frontend feature, and stabilize package releases.

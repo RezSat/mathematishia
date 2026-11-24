@@ -257,8 +257,7 @@ Both reject source-domain exclusions. `integrate_elementary` supports only
 one rational multiple of `sin`, `cos`, or `exp` of a nonconstant rational-affine
 argument; the primitive has no represented additive constant, and retained
 conditions are not automatically proven. General integration and generic math-question dispatch remain limited.
-Checked finite-point rational-function limits and real inequalities exist in
-Rust; Python adapters for those operations are still pending. The API does not infer unsupported mathematical results.
+Checked finite-point rational-function limits and real inequalities are exposed through typed Python adapters. The API does not infer unsupported mathematical results.
 
 `analytic_constant` applies at most one deterministic, verified rewrite:
 `sin(0)`, `cos(0)`, `tan(0)`, `exp(0)` or `log(1)`. It returns
@@ -343,3 +342,21 @@ raises `MathSyntaxError`, and a failed independent Rust certificate check
 raises `VerificationFailure`. Mathematical evidence comes from the
 independently verified kernel, not user-modifiable Python display fields.
 Scalar inputs are exact strings rather than binary floating-point estimates.
+
+## Real limits and inequalities
+
+```python
+from fractions import Fraction
+import mathematishia as m
+
+answer = m.limit("(x^2-1)/(x-1)", "x", "1")
+assert answer.value == Fraction(2) and answer.excluded_at_point
+assert m.limit("1/x", "x", "0", "left").kind == "negative_infinity"
+intervals = m.solve_inequality("x^2-4>0").intervals
+assert len(intervals) == 2
+assert intervals[0].upper.root.rational == Fraction(-2)
+```
+
+`limit(source, variable, at, direction="two-sided")` returns a frozen `LimitResult` with exact finite value or explicit signed infinity/nonexistence, source rational function, factor evidence and retained exclusions. The target is an exact rational string; infinite targets and transcendental limits are unsupported.
+
+`solve_inequality(source, variable="x")` returns a frozen `InequalityResult` with exact real interval endpoints (rational or certified quadratic roots), open/closed flags, original-domain exclusions in the residual, and critical point multiplicities. Only one comparison and rational factors of degree at most two are supported. Both operands' exclusions survive cancellation. Existing equation APIs are unchanged.

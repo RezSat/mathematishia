@@ -1,0 +1,137 @@
+# Originally audited commands 001-038: audit/runtime-cli-problem-samples, run 44036867406.
+# Expected behavior reflects compiled CLI on integrated main 7a18c6ebb9ceb67e59badac877ef60449f6ded10.
+# Arguments and exact required output lines use ¦ as a separator; - means no conditions.
+id	category	question	outcome	exit	error_kind	arguments	semantic_lines	conditions	proof	reason	source
+001	arithmetic	Compute 1/2 + 1/3	solved	0	-	expr¦1/2+1/3	expression: 5/6	-	none	exact	audit-38
+002	algebra	Read (x+1)^2 as a symbolic expression	solved	0	-	expr¦(x+1)^2	expression: (1 + x) ^ 2	-	none	exact	audit-38
+003	algebra	Expand (x+1)^2 completely	unsupported	0	-	expand¦(x+1)^2¦4	result: (1 + x) ^ 2¦polynomial_expansion: not certified	-	steps=0	power_not_expanded	audit-38
+004	equations	Solve 2x+4=10	solved	0	-	solve¦2*x+4=10¦x	solution: x = 3	-	steps=3;equation.divide_by_nonzero_coefficient	exact	audit-38
+005	equations	Solve x^2-5x+6=0 over rational numbers	solved	0	-	solveq¦x^2-5*x+6¦x	rational roots: 2, 3	-	none	exact	audit-38
+006	equations	Find exact irrational roots of x^2-2	solved	0	-	roots2¦x^2-2¦x	roots: 2¦root 1: lower_real of minimal polynomial -2 + x ^ 2¦root 2: upper_real of minimal polynomial -2 + x ^ 2	-	evidence=3;roots.quadratic.discriminant	exact	audit-38
+007	algebra	Factor x^4-1 over Q	solved	0	-	factor¦x^4-1¦x	status: complete¦factor: -1 + x ; multiplicity: 1¦factor: 1 + x ; multiplicity: 1¦factor: 1 + x ^ 2 ; multiplicity: 1	-	none	exact	audit-38
+008	rational_domains	Simplify (x^2-1)/(x-1), retaining the hole	solved	0	-	rsimplify¦(x^2-1)/(x-1)¦x	numerator: 1 + x¦denominator: 1	condition: -1 + x != 0	none	exact	audit-38
+009	rational_domains	Solve (x^2-1)/(x-1)=3, retaining x!=1	partial	0	-	rsolve¦(x^2-1)/(x-1)=3¦x	rational roots: 2	condition: -1 + x != 0	none	rational_only	audit-38
+010	derivatives	Differentiate sin(x^2)	solved	0	-	diffexpr¦sin(x^2)¦x	derivative: 2 * x * cos(x ^ 2)	-	steps=3;calculus.sin_chain	exact	audit-38
+011	derivatives	Differentiate tan(log(x)) over R	solved	0	-	diffreal¦tan(log(x))¦x	derivative: x ^ (-1) * cos(log(x)) ^ (-2)	conditions: 2¦required: x > 0¦required: cos(log(x)) != 0	steps=3;calculus.tan_chain	exact	audit-38
+012	matrices	Find det [[2,1],[5,3]]	solved	0	-	matdet¦2,1;5,3	determinant: 1	-	none	exact	audit-38
+013	matrices	Solve [[2,1],[5,3]]u=[5,13]	solved	0	-	matsolve¦2,1;5,3¦5,13	solution: unique¦value: 2,1	-	none	exact	audit-38
+014	arithmetic	Evaluate x^2+1/2 at x=1/2	solved	0	-	eval¦x^2+1/2¦x¦1/2	value: 3/4	-	none	exact	audit-38
+015	rational_domains	Reject evaluating (x^2-1)/(x-1) at x=1	domain	2	InvalidInput	reval¦(x^2-1)/(x-1)¦x¦1	error: rational function is undefined at this point	-	none	excluded_pole	audit-38
+016	trigonometry	Evaluate sin(0) directly through expr	unsupported	0	-	expr¦sin(0)	expression: sin(0)	-	none	unevaluated_function	audit-38
+017	trigonometry	Solve the general sine equation sin(x)=0	unsupported	2	InvalidInput	solve¦sin(x)=0¦x	error: functions are not rational polynomials	-	none	analytic_equation_unavailable	audit-38
+018	limits	Solve x^2-4 > 0	unsupported	2	InvalidInput	solve¦x^2-4>0¦x	error: unexpected character '>' at byte 5	-	none	comparison_syntax_unavailable	audit-38
+019	unsupported	Solve abs(x)=3	unsupported	2	InvalidInput	solve¦abs(x)=3¦x	error: unknown function "abs" at byte 0	-	none	absolute_value_unavailable	audit-38
+020	limits	Evaluate lim x->0 sin(x)/x	unsupported	2	InvalidInput	limit¦sin(x)/x¦x¦0	error: invalid command or argument count; use --help	-	none	limit_command_unavailable	audit-38
+021	integrals	Find an antiderivative of x^2	solved	0	-	integrate¦x^2¦x	status: exact¦primitive: 1/3 * x ^ 3¦constant: 0 (canonical choice)¦verified: true	conditions: none	none	exact	audit-38
+022	integrals	Integrate exp(x)*cos(x)	unsupported	2	Unsupported	integrate¦exp(x)*cos(x)¦x	error:*	-	none	product_integral_unavailable	audit-38
+023	algebra	Parse implicit multiplication 2x+1	solved	0	-	expr¦2x+1	expression: 1 + 2 * x	-	none	exact	audit-38
+024	arithmetic	Compute 0.25+0.5 exactly	solved	0	-	expr¦0.25+0.5	expression: 3/4	-	none	exact	audit-38
+025	derivatives	Differentiate x^x	unsupported	2	InvalidInput	diffexpr¦x^x¦x	error: symbolic differentiation requires positive integer exponents	-	none	symbolic_exponent_derivative_unavailable	audit-38
+026	algebra	Convert x^2+y to univariate Q[x]	unsupported	2	InvalidInput	poly¦x^2+y¦x	error: expression contains another symbol	-	none	wrong_polynomial_ring	audit-38
+027	rational_domains	Simplify sin(x)/x as a rational function	unsupported	2	InvalidInput	rsimplify¦sin(x)/x¦x	error: functions are not rational expressions	-	none	nonrational_expression	audit-38
+028	equations	Pass a cubic to the quadratic-only solver	unsupported	2	InvalidInput	solveq¦x^3-1¦x	error: equation has degree greater than two in the selected variable	-	none	quadratic_degree_limit	audit-38
+029	algebra	Factor x^8-1	solved	0	-	factor¦x^8-1¦x	status: complete¦factor: -1 + x ; multiplicity: 1¦factor: 1 + x ; multiplicity: 1¦factor: 1 + x ^ 2 ; multiplicity: 1¦factor: 1 + x ^ 4 ; multiplicity: 1	-	none	exact	audit-38
+030	derivatives	Differentiate xy+(x+1)^3 with respect to x	solved	0	-	diffexpr¦x*y+(x+1)^3¦x	derivative: y + 3 * (1 + x) ^ 2	-	steps=8;calculus.product	exact	audit-38
+031	algebra	Distribute 2(x+3)	solved	0	-	expand¦2*(x+3)¦4	result: 6 + 2 * x¦distribution_complete: true¦polynomial_expansion: not certified	-	steps=1;algebra.distribute_product_over_sum	distributive_only	audit-38
+032	equations	Solve 0*x=1	solved	0	-	solve¦0*x=1¦x	solution: none in Q	-	steps=1;equation.collect_to_zero	exact	audit-38
+033	equations	Solve 0*x=0 over Q	solved	0	-	solve¦0*x=0¦x	solution: all rational values	-	steps=0	exact	audit-38
+034	rational_domains	Solve 1/(x-1)=0 in the rational equation route	partial	0	-	rsolve¦1/(x-1)=0¦x	rational roots: none (other roots may exist)	condition: -1 + x != 0	none	rational_only	audit-38
+035	unsupported	Parse sqrt(2)	unsupported	2	InvalidInput	expr¦sqrt(2)	error: unknown function "sqrt" at byte 0	-	none	sqrt_unavailable	audit-38
+036	trigonometry	Read pi as a named constant	unsupported	0	-	expr¦pi	expression: pi	-	none	pi_is_uninterpreted_symbol	audit-38
+037	rational_domains	Check domain of 0*x^-1	solved	0	-	domain¦0*x^-1	expression: 0	condition: x != 0	none	exact	audit-38
+038	algebra	Factor x^2+1 over Q	solved	0	-	factor¦x^2+1¦x	status: complete¦factor: 1 + x ^ 2 ; multiplicity: 1	-	none	exact	audit-38
+039	arithmetic	Compute 3/4-1/2	solved	0	-	expr¦3/4-1/2	expression: 1/4	-	none	exact	cycle4
+040	arithmetic	Compute -2+7	solved	0	-	expr¦-2+7	expression: 5	-	none	exact	cycle4
+041	arithmetic	Compute 2/3*9/4	solved	0	-	expr¦2/3*9/4	expression: 3/2	-	none	exact	cycle4
+042	arithmetic	Compute 6/(-3)	solved	0	-	expr¦6/(-3)	expression: -2	-	none	exact	cycle4
+043	arithmetic	Compute .5+.25	solved	0	-	expr¦.5+.25	expression: 3/4	-	none	exact	cycle4
+044	arithmetic	Compute 3.50-1.25	solved	0	-	expr¦3.50-1.25	expression: 9/4	-	none	exact	cycle4
+045	arithmetic	Evaluate 3x^2-2 at x=2	solved	0	-	eval¦3*x^2-2¦x¦2	value: 10	-	none	exact	cycle4
+046	arithmetic	Evaluate x^3-x at x=-1	solved	0	-	eval¦x^3-x¦x¦-1	value: 0	-	none	exact	cycle4
+047	arithmetic	Evaluate 2x+3 at x=-2	solved	0	-	eval¦2*x+3¦x¦-2	value: -1	-	none	exact	cycle4
+048	arithmetic	Evaluate x^2 at x=3/2	solved	0	-	eval¦x^2¦x¦3/2	value: 9/4	-	none	exact	cycle4
+049	algebra	Get coefficients of (x+1)^2	solved	0	-	poly¦(x+1)^2¦x	degree: 2¦coefficients: [1, 2, 1]	-	none	exact	cycle4
+050	algebra	Get coefficients of x^3-2x+1	solved	0	-	poly¦x^3-2*x+1¦x	degree: 3¦coefficients: [1, -2, 0, 1]	-	none	exact	cycle4
+051	algebra	Divide x^2-1 by x-1	solved	0	-	divide¦x^2-1¦x-1¦x	quotient: 1 + x¦remainder: 0	-	none	exact	cycle4
+052	algebra	Divide x^2+1 by x+1	solved	0	-	divide¦x^2+1¦x+1¦x	quotient: -1 + x¦remainder: 2	-	none	exact	cycle4
+053	algebra	Evaluate x^2-x-6 at x=3	solved	0	-	eval¦x^2-x-6¦x¦3	value: 0	-	none	exact	cycle4
+054	algebra	Reject univariate conversion of x*y	unsupported	2	InvalidInput	poly¦x*y¦x	error: expression contains another symbol	-	none	wrong_polynomial_ring	cycle4
+055	algebra	Enforce distributive step budget of twelve	resource	2	InvalidInput	expand¦2*(x+1)¦13	error: MAX_STEPS must not exceed 12	-	none	distribution_budget	cycle4
+056	algebra	Reject nonnumeric distribution budget	invalid	2	InvalidInput	expand¦x+1¦many	error: MAX_STEPS must be a nonnegative integer	-	none	invalid_budget	cycle4
+057	equations	Solve x=4	solved	0	-	solveauto¦x=4	status: exact¦domain: Q¦solution: x = 4¦verified: true	-	none	exact	cycle4
+058	equations	Solve 3x=9	solved	0	-	solveauto¦3*x=9	status: exact¦solution: x = 3¦verified: true	-	none	exact	cycle4
+059	equations	Solve x+1=x+2	solved	0	-	solveauto¦x+1=x+2	status: exact¦solution: none¦verified: true	-	none	exact	cycle4
+060	equations	Solve x=x	solved	0	-	solveauto¦x=x	status: exact¦solution: all rational values¦verified: true	-	none	exact	cycle4
+061	equations	Solve x^2-2=0 over C	solved	0	-	solveauto¦x^2-2=0	status: exact¦domain: C¦roots: 2¦verified: true¦root 1: lower_real of minimal polynomial -2 + x ^ 2 ; multiplicity: 1¦root 2: upper_real of minimal polynomial -2 + x ^ 2 ; multiplicity: 1	-	none	exact	cycle4
+062	equations	Solve x^2+1=0 over C	solved	0	-	solveauto¦x^2+1=0	status: exact¦domain: C¦roots: 2¦verified: true¦root 1: negative_imaginary of minimal polynomial 1 + x ^ 2 ; multiplicity: 1¦root 2: positive_imaginary of minimal polynomial 1 + x ^ 2 ; multiplicity: 1	-	none	exact	cycle4
+063	equations	Find repeated root of (x-2)^2	solved	0	-	roots¦x^2-4*x+4	status: exact¦roots: 1¦root 1: 2 ; multiplicity: 2¦verified: true	-	none	exact	cycle4
+064	equations	Find all roots of the zero polynomial	solved	0	-	roots¦0	status: exact¦solution: all complex numbers¦verified: true	-	none	exact	cycle4
+065	equations	Find roots of constant nonzero polynomial	solved	0	-	roots¦5	status: exact¦roots: 0¦verified: true	-	none	exact	cycle4
+066	equations	Find roots of x	solved	0	-	roots¦x	status: exact¦root 1: 0 ; multiplicity: 1¦verified: true	-	none	exact	cycle4
+067	equations	Report unresolved roots of x^3-2	partial	0	-	roots¦x^3-2	status: partial¦unresolved_cofactor: -2 + x ^ 3¦verified: true	-	none	unresolved_complex_roots	cycle4
+068	equations	Report unresolved cubic equation x^3-2=0	partial	0	-	solveauto¦x^3-2=0	status: partial¦unresolved_cofactor: -2 + x ^ 3¦verified: true	-	none	unresolved_complex_roots	cycle4
+069	equations	Reject a statement without equals sign	invalid	2	InvalidInput	solveauto¦x^2-1	error: solveauto expects an equation containing '='	-	none	missing_equals	cycle4
+070	derivatives	Differentiate x^2	solved	0	-	diffexpr¦x^2¦x	derivative: 2 * x	-	steps=2;calculus.positive_integer_power	exact	cycle4
+071	derivatives	Differentiate x	solved	0	-	diffexpr¦x¦x	derivative: 1	-	steps=1;calculus.selected_symbol	exact	cycle4
+072	derivatives	Differentiate sin(x)	solved	0	-	diffexpr¦sin(x)¦x	derivative: cos(x)	-	steps=2;calculus.sin_chain	exact	cycle4
+073	derivatives	Differentiate exp(x)	solved	0	-	diffexpr¦exp(x)¦x	derivative: exp(x)	-	steps=2;calculus.exp_chain	exact	cycle4
+074	derivatives	Differentiate x^3 as a polynomial	solved	0	-	diff¦x^3¦x	derivative: 3 * x ^ 2	-	none	exact	cycle4
+075	derivatives	Differentiate 5x as a polynomial	solved	0	-	diff¦5*x¦x	derivative: 5	-	none	exact	cycle4
+076	derivatives	Differentiate x*y with respect to x	solved	0	-	diffexpr¦x*y¦x	derivative: y	-	steps=3;calculus.product	exact	cycle4
+077	derivatives	Reject unsupported derivative of x^-1	unsupported	2	InvalidInput	diffexpr¦x^-1¦x	error: symbolic differentiation requires positive integer exponents	-	none	negative_power_derivative	cycle4
+078	integrals	Integrate x^2 on [0,2]	solved	0	-	integrate¦x^2¦x¦0¦2	status: exact¦integral: 8/3¦from: 0¦to: 2¦verified: true	conditions: none	none	exact	cycle4
+079	integrals	Integrate x^2 on [2,0]	solved	0	-	integrate¦x^2¦x¦2¦0	status: exact¦integral: -8/3¦from: 2¦to: 0¦verified: true	conditions: none	none	exact	cycle4
+080	integrals	Integrate x^2+1 on [0,2]	solved	0	-	integrate¦x^2+1¦x¦0¦2	status: exact¦integral: 14/3¦verified: true	conditions: none	none	exact	cycle4
+081	integrals	Integrate 0	solved	0	-	integrate¦0	status: exact¦primitive: 0¦verified: true	conditions: none	none	exact	cycle4
+082	integrals	Integrate 5	solved	0	-	integrate¦5	status: exact¦primitive: 5 * x¦verified: true	conditions: none	none	exact	cycle4
+083	integrals	Integrate x	solved	0	-	integrate¦x	status: exact¦primitive: 1/2 * x ^ 2¦verified: true	conditions: none	none	exact	cycle4
+084	integrals	Integrate sin(2x+1)	solved	0	-	integrate¦sin(2*x+1)	status: exact¦rule: calculus.integrate_affine_sine¦verified: true¦primitive: -1/2 * cos(1 + 2 * x)	conditions: none	rules=1	affine_analytic	cycle4
+085	integrals	Integrate cos(x)	solved	0	-	integrate¦cos(x)	status: exact¦rule: calculus.integrate_affine_cosine¦verified: true¦primitive: sin(x)	conditions: none	rules=1	affine_analytic	cycle4
+086	integrals	Integrate exp(x)	solved	0	-	integrate¦exp(x)	status: exact¦rule: calculus.integrate_affine_exponential¦verified: true¦primitive: exp(x)	conditions: none	rules=1	affine_analytic	cycle4
+087	integrals	Reject 1/x as a polynomial primitive	unsupported	2	Unsupported	integrate¦1/x	error:*	-	none	logarithmic_integral_unavailable	cycle4
+088	integrals	Reject x^-1 definite integral over a pole	unsupported	2	Unsupported	integrate¦x^-1¦x¦0¦1	error:*	-	none	domain_restricted_integral	cycle4
+089	limits	Evaluate lim x->1 (x^2-1)/(x-1)	unsupported	2	InvalidInput	limit¦(x^2-1)/(x-1)¦x¦1	error: invalid command or argument count; use --help	-	none	limit_command_unavailable	cycle4
+090	limits	Evaluate lim x->infinity 1/x	unsupported	2	InvalidInput	limit¦1/x¦x¦infinity	error: invalid command or argument count; use --help	-	none	limit_command_unavailable	cycle4
+091	limits	Evaluate lim x->2 x^2	unsupported	2	InvalidInput	limit¦x^2¦x¦2	error: invalid command or argument count; use --help	-	none	limit_command_unavailable	cycle4
+092	limits	Solve x^2<=4	unsupported	2	InvalidInput	solve¦x^2<=4¦x	error:*	-	none	comparison_syntax_unavailable	cycle4
+093	limits	Solve x>1	unsupported	2	InvalidInput	solve¦x>1¦x	error:*	-	none	comparison_syntax_unavailable	cycle4
+094	matrices	Calculate determinant of a 1x1 matrix	solved	0	-	matdet¦7	determinant: 7	-	none	exact	cycle4
+095	matrices	Calculate a singular determinant	solved	0	-	matdet¦1,2;2,4	determinant: 0	-	none	exact	cycle4
+096	matrices	Calculate a diagonal 3x3 determinant	solved	0	-	matdet¦1,0,0;0,2,0;0,0,3	determinant: 6	-	none	exact	cycle4
+097	matrices	Invert a unimodular 2x2 matrix	solved	0	-	matinv¦2,1;5,3	inverse: 3,-1;-5,2	-	none	exact	cycle4
+098	matrices	Report a singular inverse	solved	0	-	matinv¦1,2;2,4	inverse: none (singular)	-	none	exact	cycle4
+099	matrices	Reduce a rank-one matrix	solved	0	-	matrref¦1,2;2,4	rref: 1,2;0,0¦rank: 1	-	none	exact	cycle4
+100	matrices	Multiply two exact matrices	solved	0	-	matmul¦1,2;3,4¦2,0;1,2	product: 4,4;10,8	-	none	exact	cycle4
+101	matrices	Solve an inconsistent matrix system	solved	0	-	matsolve¦1,1;1,1¦2,3	solution: inconsistent	-	none	exact	cycle4
+102	matrices	Solve a 1x1 system	solved	0	-	matsolve¦3¦6	solution: unique¦value: 2	-	none	exact	cycle4
+103	rational_domains	Evaluate canceled quotient at allowed point x=2	solved	0	-	reval¦(x^2-1)/(x-1)¦x¦2	value: 3	-	none	exact	cycle4
+104	rational_domains	Evaluate quotient using explicit numerator/denominator	solved	0	-	rateval¦x^2-1¦x-1¦x¦2	value: 3	-	none	exact	cycle4
+105	rational_domains	Reject a canceled pole in explicit quotient	domain	2	InvalidInput	rateval¦x^2-1¦x-1¦x¦1	error: rational function is undefined at this point	-	none	excluded_pole	cycle4
+106	rational_domains	Solve rational equation via auto-dispatch	partial	0	-	solveauto¦(x^2-1)/(x-1)=3	status: partial over C¦rational roots: 2¦verified: true	condition: -1 + x != 0	none	rational_only	cycle4
+107	rational_domains	Reject canceled root at x=1 in equation	partial	0	-	solveauto¦(x^2-1)/(x-1)=2	status: partial over C¦rational roots: none¦verified: true	condition: -1 + x != 0	none	rational_only	cycle4
+108	rational_domains	Keep x!=0 even when 0*x^-1 simplifies to zero	partial	0	-	solveauto¦0*x^-1=0	status: partial over C¦solution: all admissible rational values¦verified: true	condition: x != 0	none	rational_only	cycle4
+109	rational_domains	Refuse polynomial root solving on x^-1	domain	2	Domain	roots¦x^-1	error: polynomial root solving cannot discard source-domain exclusions	-	none	source_domain_exclusion	cycle4
+110	rational_domains	Refuse a nonrational analytic equation	unsupported	2	Unsupported	solveauto¦sin(x)=0	error:*	-	none	analytic_equation_unavailable	cycle4
+111	rational_domains	Refuse a multivariate equation in one variable	unsupported	2	Unsupported	solveauto¦x+y=1¦x	error:*	-	none	multivariate_equation_unavailable	cycle4
+112	trigonometry	Evaluate sin(0) with the exact adapter	solved	0	-	evalexact¦sin(0)	status: exact¦value: 0¦verified: true	conditions: none	rules=1	exact	cycle4
+113	trigonometry	Evaluate cos(0)	solved	0	-	evalexact¦cos(0)	status: exact¦value: 1¦verified: true	conditions: none	rules=1	exact	cycle4
+114	trigonometry	Evaluate tan(0)	solved	0	-	evalexact¦tan(0)	status: exact¦value: 0¦verified: true	required: cos(0) != 0	rules=1	exact	cycle4
+115	trigonometry	Evaluate exp(0)	solved	0	-	evalexact¦exp(0)	status: exact¦value: 1¦verified: true	conditions: none	rules=1	exact	cycle4
+116	trigonometry	Evaluate log(1)	solved	0	-	evalexact¦log(1)	status: exact¦value: 0¦verified: true	required: 1 > 0	rules=1	exact	cycle4
+117	trigonometry	Evaluate sin(0)+cos(0)	solved	0	-	evalexact¦sin(0)+cos(0)	status: exact¦value: 1¦verified: true	conditions: none	rules=2	exact	cycle4
+118	trigonometry	Return a partial evaluation of sin(x)	partial	0	-	evalexact¦sin(x)	status: partial¦expression: sin(x)¦verified: true	conditions: none	none	symbolic_analytic_unresolved	cycle4
+119	trigonometry	Return a partial evaluation of cos(1)	partial	0	-	evalexact¦cos(1)	status: partial¦expression: cos(1)¦verified: true	conditions: none	none	symbolic_analytic_unresolved	cycle4
+120	trigonometry	Reject real log(-1)	domain	2	Domain	evalexact¦log(-1)	error:*	-	none	invalid_real_log_domain	cycle4
+121	unsupported	Reject malformed decimal 0..0	invalid	2	InvalidInput	expr¦0..0	error:*	-	none	malformed_decimal	cycle4
+122	unsupported	Reject general sqrt(x) parsing	unsupported	2	InvalidInput	expr¦sqrt(x)	error: unknown function "sqrt" at byte 0	-	none	sqrt_unavailable	cycle4
+123	unsupported	Reject absolute value |x| syntax	unsupported	2	InvalidInput	expr¦|x|	error:*	-	none	absolute_value_unavailable	cycle4
+124	unsupported	Reject the limit command without a variable	unsupported	2	InvalidInput	limit¦x^2¦0	error: invalid command or argument count; use --help	-	none	limit_command_unavailable	cycle4
+125	unsupported	Reject direct general integration product	unsupported	2	Unsupported	integrate¦sin(x)*exp(x)	error:*	-	none	product_integral_unavailable	cycle4
+126	unsupported	Reject exponential inequality syntax	unsupported	2	InvalidInput	solveauto¦exp(x)>2	error:*	-	none	comparison_syntax_unavailable	cycle4
+127	unsupported	Enforce degree budget in root construction	resource	2	Resource	roots¦x^33	error:*	-	none	polynomial_degree_budget	cycle4
+128	unsupported	Reject CLI JSON before wire integration	unsupported	2	Unsupported	solveauto¦x=1¦--json	error: JSON output awaits the verified typed result contract	-	none	json_format_unavailable	cycle4
+129	unsupported	Reject expression instead of an equation	invalid	2	InvalidInput	solve¦x^2-1¦x	error: expected an equation containing '='	-	none	missing_equals	cycle4
+130	unsupported	Reject a non-symbol solving variable	invalid	2	InvalidInput	solveauto¦x=2¦2	error: expected a single variable name	-	none	invalid_variable	cycle4
+131	unsupported	Reject a composite root variable	invalid	2	InvalidInput	roots¦x^2¦x+y	error: expected a single variable name	-	none	invalid_variable	cycle4
+132	unsupported	Reject too-large degree for quadratic-only API	unsupported	2	InvalidInput	roots2¦x^3-1¦x	error:*	-	none	quadratic_degree_limit	cycle4
+133	unsupported	Reject unknown CLI operation	unsupported	2	InvalidInput	integral¦x^2¦x	error: invalid command or argument count; use --help	-	none	unexposed_command	cycle4

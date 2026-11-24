@@ -394,7 +394,8 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
     match args {
         [] | ["--help" | "-h" | "help"] => Ok(HELP.to_owned()),
         [
-            "expandall" | "solveauto" | "roots" | "integrate" | "evalexact" | "limit" | "inequality",
+            "expandall" | "solveauto" | "roots" | "integrate" | "evalexact" | "limit"
+            | "inequality",
             ..,
         ] if args.contains(&"--json") => Err(problem_error(
             CliErrorKind::Unsupported,

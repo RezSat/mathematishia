@@ -127,10 +127,7 @@ fn tokenize(input: &str) -> Result<Vec<Token<'_>>, ParseError> {
     tokenize_with_comparisons(input, false)
 }
 
-fn tokenize_with_comparisons(
-    input: &str,
-    comparisons: bool,
-) -> Result<Vec<Token<'_>>, ParseError> {
+fn tokenize_with_comparisons(input: &str, comparisons: bool) -> Result<Vec<Token<'_>>, ParseError> {
     if input.len() > MAX_INPUT_BYTES {
         return Err(ParseError::at(0, ParseErrorKind::InputLimitExceeded));
     }

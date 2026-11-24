@@ -554,6 +554,21 @@ pub fn solve_rational_inequality(
 }
 
 impl EvaluationContext {
+    fn comparison_residual(
+        &self,
+        left: &DomainExpression,
+        right: &DomainExpression,
+        variable: &Symbol,
+    ) -> Result<RationalFunction, InequalityError> {
+        let left = self
+            .rational_expression(left, variable)
+            .map_err(InequalityError::Conversion)?;
+        let right = self
+            .rational_expression(right, variable)
+            .map_err(InequalityError::Conversion)?;
+        Ok(self.subtract_rational_functions(&left, &right)?)
+    }
+
     /// Convert both sides before subtracting so cancellation cannot erase either
     /// operand's original exclusions.
     pub fn solve_expression_inequality(
@@ -563,14 +578,24 @@ impl EvaluationContext {
         variable: &Symbol,
         comparison: ComparisonOperator,
     ) -> Result<InequalityResult, InequalityError> {
-        let left = self
-            .rational_expression(left, variable)
-            .map_err(InequalityError::Conversion)?;
-        let right = self
-            .rational_expression(right, variable)
-            .map_err(InequalityError::Conversion)?;
-        let residual = self.subtract_rational_functions(&left, &right)?;
+        let residual = self.comparison_residual(left, right, variable)?;
         self.solve_rational_inequality(&residual, comparison)
+    }
+
+    /// Check a certificate against the original operands and comparison.
+    pub fn verify_expression_inequality(
+        &self,
+        left: &DomainExpression,
+        right: &DomainExpression,
+        variable: &Symbol,
+        comparison: ComparisonOperator,
+        result: &InequalityResult,
+    ) -> Result<bool, InequalityError> {
+        let residual = self.comparison_residual(left, right, variable)?;
+        if result.function() != &residual || result.comparison() != comparison {
+            return Ok(false);
+        }
+        verify_inequality_result(self, result)
     }
 
     pub fn solve_rational_inequality(

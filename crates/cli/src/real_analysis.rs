@@ -1,18 +1,17 @@
 use std::fmt::Write as _;
 
-use mathema::{DefinednessError, ScalarDomain, Symbol};
+use mathema::{DefinednessError, ExprView, Rational, ScalarDomain, Symbol};
 use mathema_frontend::{
     DomainParseError, ParseErrorKind, RealComparisonOperator, parse_domain_expression_in_domain,
-    parse_real_comparison,
+    parse_expression, parse_real_comparison,
 };
 use mathematishia_kernel::{
     ComparisonOperator, EvaluationContext, EvaluationError, ExactQuadraticRoot, InequalityError,
     LimitDirection, LimitError, LimitValue, LimitVerificationError, RationalExpressionError,
-    RationalFunction, RationalFunctionError, RealBound, RealInterval, verify_inequality_result,
-    verify_rational_limit,
+    RationalFunction, RationalFunctionError, RealBound, RealInterval, verify_rational_limit,
 };
 
-use super::{CliError, CliErrorKind, invalid, problem_error, scalar, variable};
+use super::{CliError, CliErrorKind, invalid, problem_error, variable};
 
 fn evaluation_error(error: EvaluationError) -> CliError {
     let kind = match error {
@@ -117,19 +116,37 @@ pub(super) fn limit(input: &str, name: &str, point: &str, side: &str) -> Result<
         "two-sided" => LimitDirection::TwoSided,
         _ => return Err(invalid("direction must be left, right or two-sided")),
     };
-    if matches!(point, "infinity" | "-infinity" | "inf" | "-inf" | "∞" | "-∞") {
+    if matches!(
+        point,
+        "infinity" | "-infinity" | "inf" | "-inf" | "∞" | "-∞"
+    ) {
         return Err(problem_error(
             CliErrorKind::Unsupported,
             "limits at infinity are not supported",
         ));
     }
-    let at = scalar(point)?;
     let ctx = EvaluationContext::default();
-    let source = parse_domain_expression_in_domain(input, ScalarDomain::Real).map_err(parse_error)?;
+    let target = parse_expression(point).map_err(|error| parse_error(error.into()))?;
+    ctx.check_expression(&target).map_err(evaluation_error)?;
+    let at = match target.view() {
+        ExprView::Integer(value) => Rational::from(value.clone()),
+        ExprView::Rational(value) => value.clone(),
+        _ => {
+            return Err(problem_error(
+                CliErrorKind::Unsupported,
+                "expected a finite rational target",
+            ));
+        }
+    };
+    let source =
+        parse_domain_expression_in_domain(input, ScalarDomain::Real).map_err(parse_error)?;
+    let function = ctx
+        .rational_expression(&source, &symbol)
+        .map_err(conversion_error)?;
     let result = ctx
-        .rational_expression_limit(&source, &symbol, &at, direction)
+        .rational_limit(&function, &at, direction)
         .map_err(limit_error)?;
-    verify_rational_limit(&ctx, result.source(), &at, direction, &result)
+    verify_rational_limit(&ctx, &function, &at, direction, &result)
         .map_err(limit_verification_error)?;
     let value = match result.value() {
         LimitValue::Finite(value) => value.to_string(),
@@ -141,6 +158,16 @@ pub(super) fn limit(input: &str, name: &str, point: &str, side: &str) -> Result<
         "status: exact\ndomain: R\nlimit: {value}\nat: {at}\ndirection: {side}\nexcluded_at_point: {}",
         result.excluded_at_point()
     );
+    let numerator_order = result.numerator_factor().map_or_else(
+        || "zero polynomial".to_owned(),
+        |factor| factor.order().to_string(),
+    );
+    write!(
+        output,
+        "\nnumerator_order: {numerator_order}\ndenominator_order: {}",
+        result.denominator_factor().order()
+    )
+    .expect("writing to String is infallible");
     append_exclusions(&mut output, result.source(), &symbol);
     output.push_str("\nverified: true");
     Ok(output)
@@ -189,13 +216,19 @@ pub(super) fn inequality(input: &str, name: &str) -> Result<String, CliError> {
     let result = ctx
         .solve_expression_inequality(&parsed.left, &parsed.right, &symbol, comparison)
         .map_err(inequality_error)?;
-    if !verify_inequality_result(&ctx, &result).map_err(inequality_error)? {
+    if !ctx
+        .verify_expression_inequality(&parsed.left, &parsed.right, &symbol, comparison, &result)
+        .map_err(inequality_error)?
+    {
         return Err(problem_error(
             CliErrorKind::Verification,
             "inequality certificate failed verification",
         ));
     }
-    let mut output = format!("status: exact\ndomain: R\nintervals: {}", result.intervals().len());
+    let mut output = format!(
+        "status: exact\ndomain: R\nintervals: {}",
+        result.intervals().len()
+    );
     for interval in result.intervals() {
         write!(output, "\ninterval: {}", interval_text(interval, &symbol))
             .expect("writing to String is infallible");

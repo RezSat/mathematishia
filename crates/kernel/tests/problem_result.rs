@@ -616,7 +616,7 @@ fn automatic_equation_dispatch_never_promotes_rational_completeness_to_complex()
     let left = DomainExpression::with_conditions(x.clone(), [condition.clone()], 128, 8).unwrap();
     let statement = ProblemStatement::SourceEquation {
         left,
-        right: source(Expr::from(1)),
+        right: DomainExpression::from_expr(Expr::from(1), 128).unwrap(),
     };
     let req = request(
         ProblemOperation::SolveAuto,
@@ -647,8 +647,12 @@ fn automatic_equation_dispatch_never_promotes_rational_completeness_to_complex()
     );
     let unrestricted = ProblemRequest {
         statement: ProblemStatement::SourceEquation {
-            left: source(Expr::add([Expr::pow(x, Expr::from(2)), Expr::from(1)])),
-            right: source(Expr::from(0)),
+            left: DomainExpression::from_expr(
+                Expr::add([Expr::pow(x, Expr::from(2)), Expr::from(1)]),
+                128,
+            )
+            .unwrap(),
+            right: DomainExpression::from_expr(Expr::from(0), 128).unwrap(),
         },
         ..complex
     };

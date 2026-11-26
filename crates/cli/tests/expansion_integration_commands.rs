@@ -210,9 +210,10 @@ fn new_commands_are_deterministic_and_do_not_change_legacy_expansion() {
     let legacy = run(&["expand", "(x+1)^2"]).unwrap();
     assert!(legacy.contains("polynomial_expansion: not certified"));
     assert!(!legacy.contains("\ncomplete: true"));
-    assert_eq!(
-        run(&["expandall", "(x+1)^2", "--json"]).unwrap_err().kind(),
-        CliErrorKind::Unsupported
+    assert!(
+        run(&["expandall", "(x+1)^2", "--json"])
+            .unwrap()
+            .contains(r#""status":"complete""#)
     );
     assert_eq!(
         run(&["integrate", "x^2", "x", "0", "1", "--json"])

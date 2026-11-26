@@ -3,6 +3,7 @@
 //! The CLI owns input/output formatting only; mathematical behavior lives in
 //! mathema-frontend and mathematishia-kernel.
 
+mod checked_results;
 mod legacy_operations;
 mod real_analysis;
 mod user_solve;
@@ -33,6 +34,7 @@ Usage:
   mathematishia rewrite <EXPRESSION> [NONZERO_PREMISE ...]
   mathematishia expand <EXPRESSION> [MAX_STEPS]  (distributive rules only)
   mathematishia expandall <EXPRESSION> [VARIABLE ...]  (infer variables if omitted)
+  mathematishia isolate <POLYNOMIAL> <VARIABLE> <WIDTH>
   mathematishia solve <EQUATION> <VARIABLE>
   mathematishia solveauto <EQUATION> [VARIABLE]  (defaults to x)
   mathematishia roots <POLYNOMIAL> [VARIABLE]
@@ -140,7 +142,8 @@ Canceled denominator zeros remain excluded. New operations display partial and u
 status explicitly; polynomial roots are complex, rational-function roots Q-only.
 Expansion uses Q[variables] and preserves inherited domain conditions.
 Integration sums use independently checked term certificates and a zero constant.
-JSON requires a separately agreed deterministic result schema.";
+Append --json to solveauto, roots, expandall, integrate (indefinite), limit, inequality,
+evalexact, diffreal or diffexpr for the shared versioned result.";
 
 const MAX_DISTRIBUTION_STEPS: usize = 12;
 
@@ -402,14 +405,9 @@ fn show_equation(equation: &Equation) -> String {
 pub fn run(args: &[&str]) -> Result<String, CliError> {
     match args {
         [] | ["--help" | "-h" | "help"] => Ok(HELP.to_owned()),
-        [
-            "expandall" | "solveauto" | "roots" | "integrate" | "evalexact" | "limit"
-            | "inequality" | "sturm" | "rootbracket" | "linsystem" | "mvdivide",
-            ..,
-        ] if args.contains(&"--json") => Err(problem_error(
-            CliErrorKind::Unsupported,
-            "JSON output awaits the verified typed result contract",
-        )),
+        [commands @ .., "--json"] => checked_results::json(commands),
+        [..] if args.contains(&"--json") => Err(invalid("--json must be the final argument")),
+        ["isolate", input, name, width] => checked_results::isolate(input, name, width),
         ["expr", input] => Ok(format!("expression: {}", expression(input)?)),
         ["expandall", input, variables @ ..] => user_solve::expand_all(input, variables),
         ["solveauto" | "inequality", input] if real_analysis::is_comparison(input) => {

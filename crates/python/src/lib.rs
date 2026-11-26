@@ -3,6 +3,7 @@
 //! Python performs representation and presentation only. All algebraic work
 //! is delegated to the checked core, never reimplemented using Python floats.
 
+mod checked_results;
 mod legacy_parity;
 mod real_analysis;
 
@@ -2077,6 +2078,7 @@ fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(py_integrate_elementary, m)?)?;
     m.add_function(wrap_pyfunction!(py_expand_polynomial, m)?)?;
     m.add_function(wrap_pyfunction!(py_integrate_expression_dispatch, m)?)?;
+    checked_results::register(m)?;
     legacy_parity::register(m)?;
     real_analysis::register(m)?;
     m.add("MathSyntaxError", m.py().get_type::<MathSyntaxError>())?;

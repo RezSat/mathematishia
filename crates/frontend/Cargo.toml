@@ -8,3 +8,4 @@ description = "Minimal exact Mathema textual parsing and semantic lowering"
 
 [dependencies]
 mathema = { path = "../mathema" }
+mathematishia-kernel = { path = "../kernel" }

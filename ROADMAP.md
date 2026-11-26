@@ -30,7 +30,8 @@ This file tracks implemented areas and the next domain extensions. See [CAPABILI
 - Exact rational-linear, selected quadratic and rational-equation solving with domain exclusions.
 - Exact multivariable affine equation systems with verified empty, unique and affine solution sets.
 - Certified bounded rational real-root bracketing and independent endpoint verification.
-- Exact bounded Sturm counts of distinct real roots in rational non-root intervals for square-free polynomials, with independently checked sign/Euclidean evidence.
+- Exact bounded Sturm counts and complete certified dyadic isolation of distinct real roots for unrestricted nonzero square-free Q[x].
+- Source-bound rational equation solution certificates and bounded real/complex semantic precondition reports.
 - Exact partial complex polynomial zero sets, retaining unresolved higher-degree cofactors.
 - Exact representation and verification of quadratic real irrational and complex roots.
 - Formal symbolic derivatives for sums, products and positive integer powers.
@@ -39,18 +40,19 @@ This file tracks implemented areas and the next domain extensions. See [CAPABILI
 - Checked structured derivation rendering for supported proof graphs, linear equations and symbolic derivatives.
 - Public typed problem results distinguishing solved, conditional, partial, unsupported, undefined and resource refusal outcomes.
 - CLI automatic equation dispatch, checked root sets, full bounded polynomial expansion, supported integral sums and exact constant evaluation; Python typed roots, Sturm counts, expansion, integral sums and analytic identities.
-- Permanent compiled CLI benchmark (152 cases), independent metamorphic and forged-certificate tests.
+- Shared versioned result adapter in the CLI and Python, with matched affine-system, ordered multivariate division, Sturm and root-refinement interfaces.
+- Permanent compiled CLI benchmark (159 cases), independent metamorphic and forged-certificate tests.
 - Experimental Python bindings, platform wheel tests and source-distribution rebuild.
 
 ## In progress / next
 
 1. Extend the bounded multivariate expression bridge to independently verified Buchberger reductions and Gröbner bases; expand exact algebra simplification without assuming arbitrary generators give unique normal forms.
 2. Extend analytic domain contracts to safe symbolic rewriting, additional derivatives and explicit complex branch handling.
-3. Extend nonlinear equations, higher-degree inequalities and non-affine systems. Proceed from Sturm counting toward certified comprehensive root isolation.
+3. Extend nonlinear equations, higher-degree inequalities and non-affine systems. Extend certified root isolation to repeated factors and source-restricted equations.
 4. Add truthful per-reduction multivariate division traces and additional checked algebra/calculus rendering, then stable frontend-oriented serialization.
 5. Extend limits beyond finite-point rational functions, and broaden elementary integration and series with explicit supported domains and unresolved results.
 6. Expand rational factorization beyond the bounded reconstruction path; improve algebraic embeddings and general arithmetic.
-7. Add exact linear-algebra extensions, comprehensive real-root isolation and targeted symbolic matrix operations.
-8. Wire the shared result contract consistently through CLI and Python APIs, extend the real-question benchmark with each frontend feature, and stabilize package releases.
+7. Add exact linear-algebra extensions, targeted symbolic matrix operations and certified algebraic root representations beyond quadratic factors.
+8. Extend schema v1 to additional mathematical operations, extend the real-question benchmark with each frontend feature, and stabilize package releases.
 
 The implemented proof graph checks dependencies and supported rule evidence; it is not a general theorem prover.

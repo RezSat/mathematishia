@@ -63,14 +63,14 @@ degree and work-unit admission limits. Verification records are checked
 before the CLI presents results. Conditions are unproved obligations,
 not facts established by this tool.
 
-The Rust kernel exposes a typed `ProblemResult` contract for currently
-supported solver operations. It does **not** yet have a checked expansion
-outcome, and its `Integrate` adapter is deliberately unsupported. Accordingly,
-`expandall` and combined `integrate` report verified human-readable
-kernel certificates directly; they do not invent `ProblemResult` evidence or
-ad hoc JSON. `--json` remains unavailable until a separately agreed,
-deterministic schema and adapter support exist. The CLI does not infer
-assumptions or invent algebraic proof steps.
+Append `--json` to `solveauto`, `roots`, `expandall`, `integrate`
+(indefinite), `limit`, `inequality`, `evalexact`, `diffreal` or `diffexpr`
+to receive the kernel's versioned checked result. Exact rational values use
+numerator and denominator strings; partial and refusal outcomes have explicit
+status fields. Invalid syntax and unsupported request shapes remain typed
+CLI errors. A valid mathematical refusal in the JSON result is not a solved
+answer. Legacy text output retains its existing format and scope. See the
+[schema](../kernel/src/problem_result/README.md).
 
 ## Real limits and inequalities
 
@@ -137,3 +137,17 @@ them, enforce checked kernel resource bounds, and independently verify their
 results. They do not use a separate mathematical algorithm or wire schema.
 
 See [CLI and Python capability parity](PARITY.md) for the operation-by-operation scope.
+
+## Certified real-root isolation
+
+```sh
+mathematishia isolate 'x^2-2' x 1/32
+mathematishia solveauto 'x^2-2=0' --json
+```
+
+Isolation returns every distinct real root of an unrestricted nonzero
+square-free rational polynomial as an open dyadic interval of at most the
+requested rational width. Each interval contains exactly one root; the
+midpoint and error bound are exact rational numbers. Repeated factors and
+source-domain restrictions are refused. This is stronger than a sign-change
+bracket, which certifies existence only.

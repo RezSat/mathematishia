@@ -1287,6 +1287,7 @@ fn solve_auto(
             ProblemOutcome::Undefined(UndefinedReason::ContradictedDomainCondition),
         ));
     }
+    let (original_left, original_right) = (left, right);
     let left = match context.rational_expression(left, variable) {
         Ok(value) => value,
         Err(error) => return conversion_failure(request, error),
@@ -1330,6 +1331,64 @@ fn solve_auto(
         || checked.right() != &right
         || verify_rational_quadratic_equation(&checked).is_err()
     {
+        return Err(ProblemError::InvalidEvidence);
+    }
+    // Check the rational solution set against both original operands, not only
+    // the reduced numerator. A complex request still has only rational scope
+    // on this fallback path.
+    use crate::{
+        CertifiedSolutionSet, SolutionCertificateError, certify_solution_set, verify_solution_set,
+    };
+    let certificate = match certify_solution_set(
+        context,
+        original_left,
+        original_right,
+        variable,
+        ScalarDomain::Rational,
+        &[],
+    ) {
+        Ok(value) => value,
+        Err(SolutionCertificateError::Evaluation(error)) => {
+            return handle_evaluation_error(request, error);
+        }
+        Err(SolutionCertificateError::Expression(error)) => {
+            return conversion_failure(request, error);
+        }
+        Err(_) => return Err(ProblemError::InvalidEvidence),
+    };
+    match verify_solution_set(
+        context,
+        original_left,
+        original_right,
+        variable,
+        ScalarDomain::Rational,
+        &certificate,
+    ) {
+        Ok(true) => {}
+        Ok(false) => return Err(ProblemError::InvalidEvidence),
+        Err(SolutionCertificateError::Evaluation(error)) => {
+            return handle_evaluation_error(request, error);
+        }
+        Err(SolutionCertificateError::Expression(error)) => {
+            return conversion_failure(request, error);
+        }
+        Err(_) => return Err(ProblemError::InvalidEvidence),
+    }
+    let agrees = match (&certificate.solutions, checked.roots()) {
+        (CertifiedSolutionSet::None, RationalQuadraticRoots::Finite(values)) => values.is_empty(),
+        (CertifiedSolutionSet::Finite(roots), RationalQuadraticRoots::Finite(values)) => {
+            roots.len() == values.len()
+                && roots.iter().all(|root| match root.root() {
+                    crate::ExactQuadraticRoot::Rational(value) => values.contains(value),
+                    _ => false,
+                })
+        }
+        (CertifiedSolutionSet::AllAdmissible, RationalQuadraticRoots::AllAdmissibleRationals) => {
+            true
+        }
+        _ => false,
+    };
+    if !agrees {
         return Err(ProblemError::InvalidEvidence);
     }
     let outcome = match checked.roots() {

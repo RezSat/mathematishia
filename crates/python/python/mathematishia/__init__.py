@@ -1132,7 +1132,59 @@ def refine_real_root_bracket(
     )
 
 
+@dataclass(frozen=True)
+class ProblemResult:
+    """Versioned checked result. The JSON is data, not a reusable certificate."""
+    json: str
+
+    def to_json(self) -> str:
+        return self.json
+
+    def as_dict(self) -> dict:
+        import json
+        return json.loads(self.json)
+
+    @property
+    def status(self) -> str:
+        return self.as_dict()["outcome"]["status"]
+
+    @property
+    def result_domain(self) -> str:
+        return self.as_dict()["result_domain"]
+
+
+def problem(*args: str) -> ProblemResult:
+    """Use the same checked request and versioned result as CLI --json."""
+    return ProblemResult(_native.problem_json(list(args)))
+
+
+def solveauto(source: str, variable: str = "x") -> ProblemResult:
+    """Automatic checked equation dispatch (complex request, explicit result domain)."""
+    return problem("solveauto", source, variable)
+
+
+def evalexact(source: str) -> ProblemResult:
+    """Evaluate the supported exact analytic constants."""
+    return problem("evalexact", source)
+
+
+@dataclass(frozen=True)
+class IsolatedRealRoot:
+    lower: Fraction
+    upper: Fraction
+    midpoint: Fraction
+    error_bound: Fraction
+
+
+def isolate_real_roots(source: str, variable: str, target_width: str) -> tuple[IsolatedRealRoot, ...]:
+    """Complete disjoint root brackets for nonzero square-free unrestricted Q[x]."""
+    return tuple(IsolatedRealRoot(*map(Fraction, row)) for row in
+                 _native.isolate_real_roots(source, variable, target_width))
+
+
 __all__ = [
+    "ProblemResult", "problem", "solveauto", "evalexact",
+    "IsolatedRealRoot", "isolate_real_roots",
     "AffineSystemResult", "solve_linear_system", "MultivariateDivisionResult",
     "divide_multivariate", "RootBracketResult", "refine_real_root_bracket",
     "LimitFactor", "LimitResult", "limit", "RealBound", "RealInterval",

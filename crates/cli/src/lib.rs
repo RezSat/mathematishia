@@ -3,6 +3,7 @@
 //! The CLI owns input/output formatting only; mathematical behavior lives in
 //! mathema-frontend and mathematishia-kernel.
 
+mod advanced_operations;
 mod checked_results;
 mod legacy_operations;
 mod real_analysis;
@@ -35,6 +36,13 @@ Usage:
   mathematishia expand <EXPRESSION> [MAX_STEPS]  (distributive rules only)
   mathematishia expandall <EXPRESSION> [VARIABLE ...]  (infer variables if omitted)
   mathematishia isolate <POLYNOMIAL> <VARIABLE> <WIDTH>
+  mathematishia rootsfield <POLYNOMIAL> <VARIABLE> <Q|R|C> [--json]
+  mathematishia groebner <VARIABLES_CSV> <GENERATOR> ...
+  mathematishia idealmember <VARIABLES_CSV> <TARGET> <GENERATOR> ...
+  mathematishia trig <sin|cos|tan> <PI_COEFFICIENT>
+  mathematishia abssolve <EQUATION> [VARIABLE]
+  mathematishia checkcalculus <identity|derivative> <SOURCE> <CANDIDATE> <VARIABLE>
+  mathematishia steps <linear|derivative> <SOURCE> <VARIABLE>
   mathematishia solve <EQUATION> <VARIABLE>
   mathematishia solveauto <EQUATION> [VARIABLE]  (defaults to x)
   mathematishia roots <POLYNOMIAL> [VARIABLE]
@@ -408,6 +416,14 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
         [commands @ .., "--json"] => checked_results::json(commands),
         [..] if args.contains(&"--json") => Err(invalid("--json must be the final argument")),
         ["isolate", input, name, width] => checked_results::isolate(input, name, width),
+        ["rootsfield", _, _, _] => checked_results::json(args),
+        ["groebner", names, generators @ ..] => advanced_operations::basis(names, generators),
+        ["idealmember", names, target, generators @ ..] => advanced_operations::membership(names, generators, target),
+        ["trig", function, coefficient] => advanced_operations::trig(function, coefficient),
+        ["abssolve", source] => advanced_operations::absolute(source, "x"),
+        ["abssolve", source, name] => advanced_operations::absolute(source, name),
+        ["checkcalculus", relation, source, candidate, name] => advanced_operations::calculus(source, candidate, name, relation),
+        ["steps", kind, source, name] => advanced_operations::steps(kind, source, name),
         ["expr", input] => Ok(format!("expression: {}", expression(input)?)),
         ["expandall", input, variables @ ..] => user_solve::expand_all(input, variables),
         ["solveauto" | "inequality", input] if real_analysis::is_comparison(input) => {

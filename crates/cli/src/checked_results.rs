@@ -9,7 +9,7 @@ use mathematishia_kernel::{
 use super::real_analysis::{evaluation_error, parse_error};
 use super::{CliError, CliErrorKind, invalid, problem_error};
 
-fn request_error(error: RequestError) -> CliError {
+pub(super) fn request_error(error: RequestError) -> CliError {
     match error {
         RequestError::Parse(error) => parse_error(error),
         RequestError::Invalid(message) => invalid(message),

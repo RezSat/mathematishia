@@ -3,6 +3,7 @@
 //! Parsing and lowering are frontend responsibilities. The public output uses
 //! Mathema's syntax-independent immutable semantic values.
 
+pub mod advanced;
 pub mod problem;
 
 use std::error::Error;

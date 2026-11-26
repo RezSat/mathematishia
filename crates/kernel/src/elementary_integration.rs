@@ -456,7 +456,6 @@ impl EvaluationContext {
     }
 }
 
-
 /// The maximum admitted degree of the rational polynomial multiplier.
 const MAX_EXPONENTIAL_POLYNOMIAL_DEGREE: usize = 16;
 
@@ -615,10 +614,8 @@ impl EvaluationContext {
         let mut result = vec![zero.clone(); coefficients.len()];
         let mut next = zero;
         for (power, coefficient) in coefficients.iter().enumerate().rev() {
-            let derivative = meter.multiply_scalar(
-                &next,
-                &Rational::from(Integer::from(power + 1)),
-            )?;
+            let derivative =
+                meter.multiply_scalar(&next, &Rational::from(Integer::from(power + 1)))?;
             let residual = meter.subtract_scalar(coefficient, &derivative)?;
             next = meter.quotient(&residual, &input.slope)?;
             self.check_rational(&next)?;
@@ -734,9 +731,8 @@ mod exponential_tests {
         let result = context
             .integrate_polynomial_exponential(&input, &variable(), domain)
             .unwrap();
-        let expected = RationalPolynomial::new(
-            coefficients.iter().map(|&(n, d)| q(n, d)).collect(),
-        );
+        let expected =
+            RationalPolynomial::new(coefficients.iter().map(|&(n, d)| q(n, d)).collect());
         assert_eq!(result.primitive_polynomial(), &expected);
         assert_eq!(result.source(), &input);
         assert_eq!(result.variable(), &variable());
@@ -750,11 +746,7 @@ mod exponential_tests {
 
     #[test]
     fn integrates_x_exp_x() {
-        let result = checked(
-            product(x(), x()),
-            ScalarDomain::Real,
-            &[(-1, 1), (1, 1)],
-        );
+        let result = checked(product(x(), x()), ScalarDomain::Real, &[(-1, 1), (1, 1)]);
         assert_eq!(
             result.primitive().expression(),
             &product(Expr::add([x(), Expr::from(-1)]), x())
@@ -922,9 +914,9 @@ mod exponential_tests {
                 &variable(),
                 domain
             ),
-            Err(ElementaryIntegrationError::Evaluation(EvaluationError::Limit(
-                ResourceLimitKind::PolynomialDegree
-            )))
+            Err(ElementaryIntegrationError::Evaluation(
+                EvaluationError::Limit(ResourceLimitKind::PolynomialDegree)
+            ))
         );
         let work = EvaluationContext::new(ResourceLimits {
             max_work_units: 0,
@@ -933,9 +925,9 @@ mod exponential_tests {
         let input = source(product(x(), x()), domain);
         assert_eq!(
             work.integrate_polynomial_exponential(&input, &variable(), domain),
-            Err(ElementaryIntegrationError::Evaluation(EvaluationError::Limit(
-                ResourceLimitKind::WorkUnits
-            )))
+            Err(ElementaryIntegrationError::Evaluation(
+                EvaluationError::Limit(ResourceLimitKind::WorkUnits)
+            ))
         );
     }
 

@@ -23,7 +23,7 @@ values. Neither frontend substitutes numerical guesses for exact answers.
 | Exact matrix operations | `matdet`, `matinv`, `matrref`, `matmul`, `matsolve` | `matrix_determinant`, `matrix_inverse`, `matrix_rref`, `matrix_multiply`, `matrix_solve` | Rational matrices up to 16 by 16, exact rank, inverse and affine solutions. No eigenvalue or symbolic matrix support. |
 | Rational functions | `rat`, `rateval`, `ratdiff`, `ratop`, `ratsolveq`, `rsimplify`, `rdiff`, `reval`, `rsolve` | `rational_function`, `rational_evaluate`, `rational_differentiate`, `rational_operation`, `rational_solve_quadratic`, `rational_simplify`, `rational_derivative`, `rational_value`, `rational_solve` | Bounded Q(x), original denominator exclusions in domain-aware source paths; quadratic residual rational roots only. |
 | Symbolic differentiation | `diffexpr`, `diffreal` | `differentiate_expression`, `differentiate_expression_real` | Verified polynomial, product and supported analytic chain rules; real log/tan obligations; complex principal log branch cut unsupported. |
-| Integration | `integrate` | `integrate`, `integrate_expression_dispatch`, `integrate_polynomial`, `integrate_polynomial_between`, `integrate_elementary` | Zero-constant primitive for bounded polynomial and supported rational-affine sin/cos/exp sums; definite polynomial integral at exact rational bounds, without inherited restrictions. No general analytic integration. |
+| Integration | `integrate` | `integrate`, `integrate_expression_dispatch`, `integrate_polynomial`, `integrate_polynomial_between`, `integrate_elementary` | Zero-constant primitive for bounded polynomial, rational-affine sin/cos/exp sums and polynomial times affine exponential; definite polynomial integral at exact rational bounds, without inherited restrictions. No general analytic integration. |
 | Analytic constants | `evalexact` | `analytic_constant` | Five checked identities sin(0), cos(0), tan(0), exp(0), log(1); CLI applies up to 16 rewrites and reports partial when unresolved. Python also exposes `evalexact` through the shared dispatcher. |
 | Real finite-point limits | `limit` | `limit` | Exact Q(x) at finite rational point, left/right/two-sided, original exclusions; finite values, signed infinities, nonexistence. No analytic limits or limits at infinity. |
 | Real inequalities | `inequality`, `solve`, `solveauto` | `solve_inequality` | Single comparison of Q(x) expressions, numerator/denominator/restriction polynomials degree at most 2, exact rational or quadratic-algebraic interval endpoints; poles and holes excluded. |
@@ -64,17 +64,24 @@ operation. See [schema v1](../kernel/src/problem_result/README.md).
 | `trig`, `trigzeros` | `special_angle`, `trig_zero_examples` | Exact rational multiples of pi, supported unit-circle angles; tangent poles undefined, sine/cosine zero examples partial. |
 | `abssolve` | `solve_absolute` | One total real affine absolute-value chain per side, at most 8 layers total; complete closed interval unions. |
 | `checkcalculus` | `check_calculus` | Verify rational identities or derivatives with retained exclusions; candidate must cover the source domain. |
-| `steps` | `derivation_records` | Checked linear, derivative and distribution records; source restrictions and actual dependencies. |
+| `steps` | `derivation_records`, `derivation_records_json` | Checked linear, derivative and distribution records; source restrictions and actual dependencies. |
+| `divisiontrace` | `division_trace_json` | Actual ordered polynomial reduction trace, independently verified against the source. |
+| `solvefield` | `problem('solvefield', ...)` | Source-bound rational equations over Q/R/C, complete through quadratic residuals; higher-degree unresolved cofactors remain partial. |
+| `natural` | `problem('natural', ...)` | Opt-in special angles and affine absolute-value equations; radicals not yet admitted. |
 
-`rootsfield` uses the shared versioned JSON schema. The other new commands
-use checked native results and dedicated text/typed interfaces. Structured
-division certificates remain internal; existing division commands expose
-their final quotient and remainder, not an invented reduction history.
+`rootsfield`, `solvefield`, `natural`, `groebner`, `idealmember`,
+`trig`, `trigzeros` and `abssolve` expose the shared checked result schema
+through CLI JSON and Python `problem(*args)`. Existing text/typed interfaces
+remain available. `steps --json` and `divisiontrace` expose separately
+verified version-1 trace envelopes; the legacy division result is still final-only.
+The ordered trace records actual reductions and remainder moves over unrestricted
+Q-polynomials (at most 8 variables/divisors, degree 32, 64 terms and 128 steps).
+It does not claim a unique normal form for arbitrary divisors.
 
 Explicit construction-domain provenance is retained on bound values and
 checked in the shared dispatcher and selected calculus, substitution and
 rewrite paths. Legacy unbound expressions cannot attest a lost construction
-domain. The ordinary symbol pi is not silently reinterpreted. Use explicit
-angle coefficients. General periodic solution families, arbitrary piecewise
+domain. The ordinary symbol pi is not silently reinterpreted. Opt-in natural input
+supports selected special angles and total affine absolute-value equations. General periodic solution families, arbitrary piecewise
 or absolute-value expressions, general analytic calculus and universal result
 serialization remain unsupported.

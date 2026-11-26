@@ -187,7 +187,11 @@ fn derivation_records_json(kind: &str, source: &str, variable: &str) -> PyResult
 }
 
 #[pyfunction]
-fn division_trace_json(dividend: &str, divisors: Vec<String>, variables: Vec<String>) -> PyResult<String> {
+fn division_trace_json(
+    dividend: &str,
+    divisors: Vec<String>,
+    variables: Vec<String>,
+) -> PyResult<String> {
     let names = variables.iter().map(String::as_str).collect::<Vec<_>>();
     let divisors = divisors.iter().map(String::as_str).collect::<Vec<_>>();
     advanced::division_trace_json(&EvaluationContext::default(), &names, dividend, &divisors)

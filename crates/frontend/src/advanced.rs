@@ -412,7 +412,9 @@ pub fn derivation_json(
     with_derivation(context, kind, source, name, |evidence| {
         let limits = StepLimits::default();
         let records = record_steps(evidence, limits).map_err(step_error)?;
-        records.to_checked_json(evidence, limits).map_err(wire_step_error)
+        records
+            .to_checked_json(evidence, limits)
+            .map_err(wire_step_error)
     })
 }
 
@@ -564,7 +566,9 @@ pub fn division_trace_json(
 ) -> Result<String, AdvancedError> {
     use mathematishia_kernel::step_records::division_trace::record_ordered_division;
     if names.len() > 8 || divisors.len() > 8 {
-        return Err(AdvancedError::Resource("division trace input limit exceeded".into()));
+        return Err(AdvancedError::Resource(
+            "division trace input limit exceeded".into(),
+        ));
     }
     if divisors.is_empty() {
         return Err(invalid("expected at least one divisor"));
@@ -587,14 +591,21 @@ pub fn division_trace_json(
     let convert = |input: &str| {
         let source = problem::source(input, ScalarDomain::Rational)?;
         if !source.conditions().is_empty() {
-            return Err(AdvancedError::Domain("division trace requires unrestricted polynomials".into()));
+            return Err(AdvancedError::Domain(
+                "division trace requires unrestricted polynomials".into(),
+            ));
         }
         MultivariatePolynomial::try_from_expr(source.expression(), &variables, limits)
             .map_err(|error| groebner_error(GroebnerError::Expression(error)))
     };
     let dividend = convert(dividend)?;
-    let divisors = divisors.iter().map(|source| convert(source)).collect::<Result<Vec<_>, _>>()?;
+    let divisors = divisors
+        .iter()
+        .map(|source| convert(source))
+        .collect::<Result<Vec<_>, _>>()?;
     let limits = StepLimits::default();
     let trace = record_ordered_division(&dividend, &divisors, limits).map_err(step_error)?;
-    trace.to_checked_json(&dividend, &divisors, limits).map_err(wire_step_error)
+    trace
+        .to_checked_json(&dividend, &divisors, limits)
+        .map_err(wire_step_error)
 }

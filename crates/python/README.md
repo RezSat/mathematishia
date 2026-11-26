@@ -450,18 +450,25 @@ and resource exhaustion rather than reporting an incomplete list as complete.
 | `trig`, `trigzeros` | `special_angle`, `trig_zero_examples` | Exact rational multiples of pi, supported unit-circle angles; tangent poles undefined, sine/cosine zero examples partial. |
 | `abssolve` | `solve_absolute` | One total real affine absolute-value chain per side, at most 8 layers total; complete closed interval unions. |
 | `checkcalculus` | `check_calculus` | Verify rational identities or derivatives with retained exclusions; candidate must cover the source domain. |
-| `steps` | `derivation_records` | Checked linear, derivative and distribution records; source restrictions and actual dependencies. |
+| `steps` | `derivation_records`, `derivation_records_json` | Checked linear, derivative and distribution records; source restrictions and actual dependencies. |
+| `divisiontrace` | `division_trace_json` | Actual ordered polynomial reduction trace, independently verified against the source. |
+| `solvefield` | `problem('solvefield', ...)` | Source-bound rational equations over Q/R/C, complete through quadratic residuals; higher-degree unresolved cofactors remain partial. |
+| `natural` | `problem('natural', ...)` | Opt-in special angles and affine absolute-value equations; radicals not yet admitted. |
 
-`rootsfield` uses the shared versioned JSON schema. The other new commands
-use checked native results and dedicated text/typed interfaces. Structured
-division certificates remain internal; existing division commands expose
-their final quotient and remainder, not an invented reduction history.
+`rootsfield`, `solvefield`, `natural`, `groebner`, `idealmember`,
+`trig`, `trigzeros` and `abssolve` expose the shared checked result schema
+through CLI JSON and Python `problem(*args)`. Existing text/typed interfaces
+remain available. `steps --json` and `divisiontrace` expose separately
+verified version-1 trace envelopes; the legacy division result is still final-only.
+The ordered trace records actual reductions and remainder moves over unrestricted
+Q-polynomials (at most 8 variables/divisors, degree 32, 64 terms and 128 steps).
+It does not claim a unique normal form for arbitrary divisors.
 
 Explicit construction-domain provenance is retained on bound values and
 checked in the shared dispatcher and selected calculus, substitution and
 rewrite paths. Legacy unbound expressions cannot attest a lost construction
-domain. The ordinary symbol pi is not silently reinterpreted. Use explicit
-angle coefficients. General periodic solution families, arbitrary piecewise
+domain. The ordinary symbol pi is not silently reinterpreted. Opt-in natural input
+supports selected special angles and total affine absolute-value equations. General periodic solution families, arbitrary piecewise
 or absolute-value expressions, general analytic calculus and universal result
 serialization remain unsupported.
 
@@ -476,3 +483,18 @@ m.solve_absolute('abs(abs(x)-2)=1')
 m.check_calculus('x^2', '2*x', relation='derivative')
 m.derivation_records('linear', '2*x+4=10')
 ```
+
+
+```python
+import json
+import mathematishia as m
+
+m.problem('solvefield', '(x^2-1)/(x-1)=3', 'x', 'R')
+m.problem('natural', 'sin(pi/6)')
+m.problem('natural', '|2x-5|=7')
+m.integrate('x*exp(x)', 'x')
+json.loads(m.derivation_records_json('linear', '2*x+4=10'))
+json.loads(m.division_trace_json('x^2+x*y+y^2+1', ('x+y', 'x'), ('x', 'y')))
+```
+
+Polynomial-exponential primitives are checked using the exact polynomial identity Q' + aQ = P. This does not yet emit a complete integration-by-parts teaching trace.

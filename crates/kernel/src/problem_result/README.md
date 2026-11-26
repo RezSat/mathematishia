@@ -125,3 +125,8 @@ retained. Existing distribution, linear, derivative and both polynomial
 division record kinds are supported. This is not a decoder or a standalone
 proof; record verification and serialization errors remain distinct. New
 worker-specific record variants require explicit adapter agreement.
+
+
+`equation.source_bound` accepts original source equations over Q, R or C. It independently checks denominator exclusions, reduced residual identity and admitted root sets; higher-degree unresolved cofactors stay partial. The public `solvefield` command selects this operation, without changing the legacy `equation.auto` contract.
+
+`OrderedDivisionTrace::to_checked_json` rechecks actual ordered polynomial division transitions against the original dividend and ordered divisors. Its separate envelope has kind `checked_ordered_division`, domain Q, original operands, steps, quotients and remainder. Each step contains its index, previous premise (null at the first step), stable rule ID, optional divisor index, pending polynomials before and after, and exact monomial factor. A reduction means before = after + factor * divisor, whereas moving a term to the remainder means before = after + factor. These are not simple expression equalities. The trace cannot be inferred from a final-only certificate.

@@ -52,6 +52,7 @@ mod rational_expression;
 mod rational_factorization;
 mod rational_function;
 mod rational_quadratic;
+mod real_root_isolation;
 mod root_isolation;
 mod solution_certificates;
 mod solve_linear;
@@ -197,6 +198,9 @@ pub use rational_factorization::{
 pub use rational_function::{RationalFunction, RationalFunctionError};
 pub use rational_quadratic::{
     RationalQuadraticResult, RationalQuadraticRoots, verify_rational_quadratic_equation,
+};
+pub use real_root_isolation::{
+    IsolatedRealRoot, RealRootIsolation, RealRootIsolationError, verify_real_root_isolation,
 };
 pub use root_isolation::{
     RootIntervalOutcome, RootRefinement, RootRefinementError, RootRefinementVerificationError,

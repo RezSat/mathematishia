@@ -3,7 +3,15 @@
 //! Wire values are data, never an authority to construct a checked result.
 
 use super::*;
-use crate::{ExactQuadraticRoot, RealBound};
+use crate::step_records::{
+    StepClaim, StepConclusion, StepCondition, StepEvidence, StepEvidenceSource, StepLimits,
+    StepRecord, StepRecordError, StepRecords, verify_step_records,
+};
+use crate::{
+    AbsoluteAffine, AbsoluteCase, AbsoluteExpression, AbsoluteInterval, AbsoluteSign,
+    ExactQuadraticRoot, GroebnerPair, GroebnerReduction, MultivariatePolynomial, RealBound,
+    SpecialAngleOutcome, VerifiedCondition,
+};
 use mathema::{ExprView, Integer};
 use std::fmt;
 
@@ -17,6 +25,7 @@ pub enum ProblemWireError {
     OutputLimit,
     DepthLimit,
     ScalarLimit,
+    StepVerification(StepRecordError),
 }
 
 impl fmt::Display for ProblemWireError {
@@ -25,6 +34,7 @@ impl fmt::Display for ProblemWireError {
             Self::OutputLimit => "problem JSON exceeds the output byte limit",
             Self::DepthLimit => "problem JSON exceeds the expression depth limit",
             Self::ScalarLimit => "problem JSON exceeds the scalar bit limit",
+            Self::StepVerification(error) => return write!(f, "{error}"),
         })
     }
 }
@@ -214,8 +224,139 @@ impl Encoder {
         )
     }
 
+    fn absolute_affine(&mut self, value: &AbsoluteAffine) -> WireResult {
+        object!(self,
+            "slope" => |w| w.rational(&value.slope),
+            "constant" => |w| w.rational(&value.constant),
+        )
+    }
+
+    fn absolute_expression(&mut self, value: &AbsoluteExpression) -> WireResult {
+        object!(self,
+            "variable" => |w| w.string(value.variable.name()),
+            "base" => |w| w.absolute_affine(&value.base),
+            "layers" => |w| w.array(&value.layers, Self::absolute_affine),
+        )
+    }
+
+    fn absolute_interval(&mut self, value: &AbsoluteInterval) -> WireResult {
+        object!(self,
+            "lower" => |w| match &value.lower {
+                Some(lower) => w.rational(lower),
+                None => w.raw("null"),
+            },
+            "upper" => |w| match &value.upper {
+                Some(upper) => w.rational(upper),
+                None => w.raw("null"),
+            },
+        )
+    }
+
+    fn absolute_case(&mut self, value: &AbsoluteCase) -> WireResult {
+        object!(self,
+            "interval" => |w| w.absolute_interval(&value.interval),
+            "signs" => |w| w.array(&value.signs, |w, sign| w.string(match sign {
+                AbsoluteSign::Nonnegative => "nonnegative",
+                AbsoluteSign::Nonpositive => "nonpositive",
+            })),
+            "solution" => |w| match &value.solution {
+                Some(solution) => w.absolute_interval(solution),
+                None => w.raw("null"),
+            },
+        )
+    }
+
+    fn special_angle(&mut self, value: &SpecialAngleCertificate) -> WireResult {
+        object!(self,
+            "pi_multiple" => |w| w.rational(value.angle.coefficient()),
+            "function" => |w| w.string(trig_id(value.function)),
+            "domain" => |w| w.string(domain_id(value.domain)),
+            "tick" => |w| w.count(usize::from(value.tick)),
+            "outcome" => |w| match &value.outcome {
+                SpecialAngleOutcome::Exact(root) => object!(w,
+                    "kind" => |w| w.string("exact"),
+                    "value" => |w| w.root(root),
+                ),
+                SpecialAngleOutcome::UndefinedTangentPole => object!(w,
+                    "kind" => |w| w.string("undefined_tangent_pole"),
+                ),
+            },
+        )
+    }
+
+    fn multivariate(&mut self, value: &MultivariatePolynomial) -> WireResult {
+        object!(self,
+            "variables" => |w| w.array(value.variables(), |w, symbol| w.string(symbol.name())),
+            "terms" => |w| {
+                w.raw("[")?;
+                for (index, (powers, coefficient)) in value.terms().iter().enumerate() {
+                    if index != 0 {
+                        w.raw(",")?;
+                    }
+                    object!(w,
+                        "powers" => |w| w.array(powers, |w, power| w.count(*power as usize)),
+                        "coefficient" => |w| w.rational(coefficient),
+                    )?;
+                }
+                w.raw("]")
+            },
+        )
+    }
+
+    fn reduction(&mut self, value: &GroebnerReduction) -> WireResult {
+        object!(self,
+            "quotients" => |w| w.array(&value.quotients, Self::multivariate),
+            "remainder" => |w| w.multivariate(&value.remainder),
+            "steps" => |w| w.count(value.steps),
+        )
+    }
+
+    fn groebner_pair(&mut self, value: &GroebnerPair) -> WireResult {
+        object!(self,
+            "left" => |w| w.count(value.left),
+            "right" => |w| w.count(value.right),
+            "lcm" => |w| w.array(&value.lcm, |w, power| w.count(*power as usize)),
+            "reduction" => |w| w.reduction(&value.reduction),
+        )
+    }
+
+    fn groebner(&mut self, value: &GroebnerCertificate) -> WireResult {
+        object!(self,
+            "variables" => |w| w.array(&value.variables, |w, symbol| w.string(symbol.name())),
+            "basis" => |w| w.array(&value.basis, Self::multivariate),
+            "representations" => |w| w.array(&value.representations, |w, row| {
+                w.array(row, Self::multivariate)
+            }),
+            "generator_reductions" => |w| w.array(&value.generator_reductions, Self::reduction),
+            "pairs" => |w| w.array(&value.pairs, Self::groebner_pair),
+        )
+    }
+
     fn statement(&mut self, value: &ProblemStatement) -> WireResult {
         match value {
+            ProblemStatement::Absolute(equation) => object!(self,
+                "kind" => |w| w.string("absolute_affine"),
+                "domain" => |w| w.string(domain_id(equation.domain)),
+                "left" => |w| w.absolute_expression(&equation.left),
+                "right" => |w| w.absolute_expression(&equation.right),
+            ),
+            ProblemStatement::SpecialAngle { angle, function } => object!(self,
+                "kind" => |w| w.string("special_angle"),
+                "pi_multiple" => |w| w.rational(angle.coefficient()),
+                "function" => |w| w.string(trig_id(*function)),
+            ),
+            ProblemStatement::TrigZeros(function) => object!(self,
+                "kind" => |w| w.string("trig_zeros"),
+                "function" => |w| w.string(trig_id(*function)),
+            ),
+            ProblemStatement::Ideal { generators, target } => object!(self,
+                "kind" => |w| w.string("ideal"),
+                "generators" => |w| w.array(generators, Self::domain_expression),
+                "target" => |w| match target {
+                    Some(target) => w.domain_expression(target),
+                    None => w.raw("null"),
+                },
+            ),
             ProblemStatement::Equation(eq) => object!(self,
                 "kind" => |w| w.string("equation"),
                 "left" => |w| w.expression(eq.left(), 0),
@@ -342,6 +483,35 @@ impl Encoder {
 
     fn answer(&mut self, value: &ExactAnswer) -> WireResult {
         match value {
+            ExactAnswer::Absolute(value) => object!(self,
+                "kind" => |w| w.string("absolute_solution_union"),
+                "solutions" => |w| w.array(&value.solutions, Self::absolute_interval),
+                "cases" => |w| w.array(&value.cases, Self::absolute_case),
+            ),
+            ExactAnswer::SpecialAngle(value) => object!(self,
+                "kind" => |w| w.string("special_angle"),
+                "certificate" => |w| w.special_angle(value),
+            ),
+            ExactAnswer::TrigZeros(values) => object!(self,
+                "kind" => |w| w.string("trig_zeros"),
+                "certificates" => |w| w.array(values, Self::special_angle),
+            ),
+            ExactAnswer::Groebner(value) => object!(self,
+                "kind" => |w| w.string("groebner_basis"),
+                "certificate" => |w| w.groebner(value),
+            ),
+            ExactAnswer::Membership { basis, membership } => {
+                let (member, reduction) = match membership.as_ref() {
+                    IdealMembership::Member(reduction) => (true, reduction),
+                    IdealMembership::NonMember(reduction) => (false, reduction),
+                };
+                object!(self,
+                    "kind" => |w| w.string("ideal_membership"),
+                    "member" => |w| w.boolean(member),
+                    "basis_certificate" => |w| w.groebner(basis),
+                    "reduction" => |w| w.reduction(reduction),
+                )
+            }
             ExactAnswer::RationalRoots(values) => object!(self,
                 "kind" => |w| w.string("rational_roots"),
                 "values" => |w| w.array(values, Self::rational),
@@ -431,10 +601,14 @@ impl Encoder {
 
     fn evidence(&mut self, value: &ProblemResult) -> WireResult {
         match value.checked_by() {
-            Some(proof) => object!(self,
-                "checked_by" => |w| w.string(proof_id(proof)),
-                "steps" => |w| w.array(value.steps(), Self::step),
-            ),
+            Some(proof) => self.object(|obj| {
+                obj.field("checked_by", |w| w.string(proof_id(proof)))?;
+                obj.field("steps", |w| w.array(value.steps(), Self::step))?;
+                if let Some(detail) = value.evidence_detail() {
+                    obj.field("detail", |w| w.answer(detail))?;
+                }
+                Ok(())
+            }),
             None => self.raw("null"),
         }
     }
@@ -446,6 +620,14 @@ fn domain_id(value: ScalarDomain) -> &'static str {
         ScalarDomain::Rational => "Q",
         ScalarDomain::Real => "R",
         ScalarDomain::Complex => "C",
+    }
+}
+
+fn trig_id(value: TrigFunction) -> &'static str {
+    match value {
+        TrigFunction::Sin => "sin",
+        TrigFunction::Cos => "cos",
+        TrigFunction::Tan => "tan",
     }
 }
 
@@ -474,12 +656,14 @@ fn unsupported_id(value: UnsupportedReason) -> &'static str {
         UnsupportedReason::ExpressionOutsideAlgorithm => "expression_outside_algorithm",
         UnsupportedReason::DegreeOutsideAlgorithm => "degree_outside_algorithm",
         UnsupportedReason::RewriteStepLimit => "rewrite_step_limit",
+        UnsupportedReason::PeriodicCompletenessUnavailable => "periodic_completeness_unavailable",
     }
 }
 
 fn undefined_id(value: UndefinedReason) -> &'static str {
     match value {
         UndefinedReason::ExcludedPoint => "excluded_point",
+        UndefinedReason::TangentPole => "tangent_pole",
         UndefinedReason::ContradictedDomainCondition => "contradicted_domain_condition",
     }
 }
@@ -514,6 +698,11 @@ fn proof_id(value: CheckedBy) -> &'static str {
         CheckedBy::RationalQuadraticEquation => "rational_quadratic_equation",
         CheckedBy::AnalyticConstantRules => "analytic_constant_rules",
         CheckedBy::RationalLiteral => "rational_literal",
+        CheckedBy::AbsoluteSignCases => "absolute_sign_cases",
+        CheckedBy::SpecialAngleIdentity => "special_angle_identity",
+        CheckedBy::TrigZeroSubstitution => "trig_zero_substitution",
+        CheckedBy::GroebnerCriterion => "groebner_criterion",
+        CheckedBy::IdealReduction => "ideal_reduction",
     }
 }
 
@@ -540,6 +729,177 @@ impl ProblemResult {
             "outcome" => |w| w.outcome(self.outcome()),
             "restrictions" => |w| w.array(self.restrictions(), Encoder::restriction),
             "evidence" => |w| w.evidence(self),
+        )?;
+        Ok(writer.text)
+    }
+}
+
+impl Encoder {
+    fn equation(&mut self, value: &Equation) -> WireResult {
+        object!(self,
+            "left" => |w| w.expression(value.left(), 0),
+            "right" => |w| w.expression(value.right(), 0),
+        )
+    }
+
+    fn step_claim(&mut self, value: &StepClaim) -> WireResult {
+        match value {
+            StepClaim::Equal { before, after } => object!(self,
+                "kind" => |w| w.string("equal"),
+                "before" => |w| w.expression(before, 0),
+                "after" => |w| w.expression(after, 0),
+            ),
+            StepClaim::Equivalent {
+                before,
+                after,
+                variable,
+            } => object!(self,
+                "kind" => |w| w.string("equivalent"),
+                "before" => |w| w.equation(before),
+                "after" => |w| w.equation(after),
+                "variable" => |w| w.string(variable.name()),
+            ),
+            StepClaim::DerivativeOf {
+                before,
+                after,
+                variable,
+            } => object!(self,
+                "kind" => |w| w.string("derivative_of"),
+                "before" => |w| w.expression(before, 0),
+                "after" => |w| w.expression(after, 0),
+                "variable" => |w| w.string(variable.name()),
+            ),
+            StepClaim::PolynomialDivision {
+                dividend,
+                divisor,
+                quotient,
+                remainder,
+            } => object!(self,
+                "kind" => |w| w.string("polynomial_division"),
+                "dividend" => |w| w.polynomial(dividend),
+                "divisor" => |w| w.polynomial(divisor),
+                "quotient" => |w| w.polynomial(quotient),
+                "remainder" => |w| w.polynomial(remainder),
+            ),
+            StepClaim::MultivariateDivision {
+                dividend,
+                ordered_divisors,
+                quotients,
+                remainder,
+            } => object!(self,
+                "kind" => |w| w.string("multivariate_division"),
+                "dividend" => |w| w.multivariate(dividend),
+                "ordered_divisors" => |w| w.array(ordered_divisors, Self::multivariate),
+                "quotients" => |w| w.array(quotients, Self::multivariate),
+                "remainder" => |w| w.multivariate(remainder),
+            ),
+        }
+    }
+
+    fn step_condition(&mut self, value: &StepCondition) -> WireResult {
+        match value {
+            StepCondition::Source(index) => object!(self,
+                "kind" => |w| w.string("source"),
+                "index" => |w| w.count(*index),
+            ),
+            StepCondition::Proven(VerifiedCondition::Nonzero(value)) => object!(self,
+                "kind" => |w| w.string("proven_nonzero"),
+                "value" => |w| w.rational(value),
+            ),
+        }
+    }
+
+    fn step_source(&mut self, value: StepEvidenceSource) -> WireResult {
+        let (kind, index) = match value {
+            StepEvidenceSource::Distribution(index) => ("distribution", Some(index)),
+            StepEvidenceSource::Linear(index) => ("linear", Some(index)),
+            StepEvidenceSource::Derivative(index) => ("derivative", Some(index)),
+            StepEvidenceSource::PolynomialDivisionFinal => ("polynomial_division_final", None),
+            StepEvidenceSource::MultivariateDivisionFinal => ("multivariate_division_final", None),
+        };
+        self.object(|obj| {
+            obj.field("kind", |w| w.string(kind))?;
+            if let Some(index) = index {
+                obj.field("index", |w| w.count(index))?;
+            }
+            Ok(())
+        })
+    }
+
+    fn step_record(&mut self, value: &StepRecord) -> WireResult {
+        object!(self,
+            "index" => |w| w.count(value.index),
+            "rule_id" => |w| w.string(value.rule.stable_id()),
+            "claim" => |w| w.step_claim(&value.claim),
+            "premises" => |w| w.array(&value.premises, |w, index| w.count(*index)),
+            "conditions" => |w| w.array(&value.conditions, Self::step_condition),
+            "evidence" => |w| w.step_source(value.evidence),
+        )
+    }
+
+    fn step_conclusion(&mut self, value: &StepConclusion) -> WireResult {
+        match value {
+            StepConclusion::Distribution {
+                original,
+                result,
+                complete,
+            } => object!(self,
+                "kind" => |w| w.string("distribution"),
+                "original" => |w| w.expression(original, 0),
+                "result" => |w| w.expression(result, 0),
+                "complete" => |w| w.boolean(*complete),
+            ),
+            StepConclusion::Linear {
+                original,
+                variable,
+                solution,
+            } => object!(self,
+                "kind" => |w| w.string("linear"),
+                "original" => |w| w.equation(original),
+                "variable" => |w| w.string(variable.name()),
+                "solution" => |w| match solution {
+                    LinearSolution::Unique(root) => object!(w,
+                        "kind" => |w| w.string("unique"),
+                        "value" => |w| w.rational(root),
+                    ),
+                    LinearSolution::NoSolution => object!(w, "kind" => |w| w.string("no_solution")),
+                    LinearSolution::AllRationals => object!(w, "kind" => |w| w.string("all_rationals")),
+                },
+            ),
+            StepConclusion::Derivative {
+                original,
+                variable,
+                result,
+            } => object!(self,
+                "kind" => |w| w.string("derivative"),
+                "original" => |w| w.expression(original, 0),
+                "variable" => |w| w.string(variable.name()),
+                "result" => |w| w.expression(result, 0),
+            ),
+            StepConclusion::FinalDivision => {
+                object!(self, "kind" => |w| w.string("final_division"))
+            }
+        }
+    }
+}
+
+impl StepRecords {
+    /// Projects only records verified against the supplied native evidence.
+    /// The output is not a standalone proof or a trusted deserialization format.
+    pub fn to_checked_json(
+        &self,
+        evidence: StepEvidence<'_>,
+        limits: StepLimits,
+    ) -> Result<String, ProblemWireError> {
+        verify_step_records(evidence, self, limits).map_err(ProblemWireError::StepVerification)?;
+        let mut writer = Encoder::default();
+        object!(writer,
+            "schema_version" => |w| w.count(VERSION),
+            "kind" => |w| w.string("checked_step_records"),
+            "domain" => |w| w.string(domain_id(self.domain)),
+            "source_conditions" => |w| w.array(&self.source_conditions, Encoder::condition),
+            "steps" => |w| w.array(&self.steps, Encoder::step_record),
+            "conclusion" => |w| w.step_conclusion(&self.conclusion),
         )?;
         Ok(writer.text)
     }

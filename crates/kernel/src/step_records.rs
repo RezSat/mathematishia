@@ -3,6 +3,8 @@
 //! Records are not certificates on their own. Verification requires the
 //! original source and rule-specific evidence, never a display string.
 
+pub mod division_trace;
+
 use std::{error::Error, fmt};
 
 use mathema::{

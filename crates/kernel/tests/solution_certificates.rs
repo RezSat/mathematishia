@@ -389,3 +389,201 @@ fn complex_conjugate_multiplicity_and_original_nonzero_conditions() {
         ))
     );
 }
+
+fn quotient(numerator: &[i64], denominator: &[i64]) -> DomainExpression {
+    polynomial(numerator)
+        .divide(polynomial(denominator), 16)
+        .unwrap()
+}
+
+#[test]
+fn canceled_linear_root_is_removed_over_every_admitted_domain() {
+    let ctx = EvaluationContext::default();
+    let left = quotient(&[-1, 0, 1], &[-1, 1]);
+    for scalar in [
+        ScalarDomain::Rational,
+        ScalarDomain::Real,
+        ScalarDomain::Complex,
+    ] {
+        for (constant, expected) in [
+            (2, CertifiedSolutionSet::None),
+            (3, CertifiedSolutionSet::Finite(vec![root(2, 1)])),
+        ] {
+            let right = polynomial(&[constant]);
+            let result = certify_solution_set(&ctx, &left, &right, &x(), scalar, &[]).unwrap();
+            assert_eq!(result.solutions, expected);
+            assert_eq!(result.residual.excluded_zero_sets(), &[poly(&[-1, 1])]);
+            assert!(verify_solution_set(&ctx, &left, &right, &x(), scalar, &result).unwrap());
+        }
+    }
+}
+
+#[test]
+fn reciprocal_has_no_zero_despite_its_pole() {
+    let ctx = EvaluationContext::default();
+    let left = quotient(&[1], &[-1, 1]);
+    let right = polynomial(&[]);
+    let scalar = ScalarDomain::Real;
+    let result = certify_solution_set(&ctx, &left, &right, &x(), scalar, &[]).unwrap();
+    assert_eq!(result.solutions, CertifiedSolutionSet::None);
+    assert_eq!(result.residual.excluded_zero_sets(), &[poly(&[-1, 1])]);
+    assert!(verify_solution_set(&ctx, &left, &right, &x(), scalar, &result).unwrap());
+}
+
+#[test]
+fn zero_times_inverse_is_an_identity_only_on_its_original_domain() {
+    let ctx = EvaluationContext::default();
+    let left = DomainExpression::multiply([polynomial(&[]), quotient(&[1], &[0, 1])], 16).unwrap();
+    let right = polynomial(&[]);
+    let scalar = ScalarDomain::Real;
+    let result = certify_solution_set(&ctx, &left, &right, &x(), scalar, &[]).unwrap();
+    assert_eq!(result.solutions, CertifiedSolutionSet::AllAdmissible);
+    assert_eq!(result.residual.excluded_zero_sets(), &[poly(&[0, 1])]);
+    assert!(verify_solution_set(&ctx, &left, &right, &x(), scalar, &result).unwrap());
+}
+
+#[test]
+fn cancellation_across_operands_keeps_both_independent_holes() {
+    let ctx = EvaluationContext::default();
+    let left = quotient(&[0, -1, 1], &[-1, 1]);
+    let right = quotient(&[0, 1, 1], &[1, 1]);
+    let scalar = ScalarDomain::Real;
+    let result = certify_solution_set(&ctx, &left, &right, &x(), scalar, &[]).unwrap();
+    assert_eq!(result.solutions, CertifiedSolutionSet::AllAdmissible);
+    assert_eq!(
+        result.residual.excluded_zero_sets(),
+        &[poly(&[-1, 1]), poly(&[1, 1])]
+    );
+    assert!(verify_solution_set(&ctx, &left, &right, &x(), scalar, &result).unwrap());
+}
+
+#[test]
+fn quadratic_roots_are_excluded_by_a_polynomial_on_the_other_operand() {
+    let ctx = EvaluationContext::default();
+    let left = polynomial(&[-2, 0, 1]);
+    let right = DomainExpression::with_conditions(
+        0.into(),
+        [Condition::NonZero(poly(&[4, 0, -4, 0, 1]).to_expr(&x()))],
+        128,
+        8,
+    )
+    .unwrap();
+    for scalar in [ScalarDomain::Real, ScalarDomain::Complex] {
+        let result = certify_solution_set(&ctx, &left, &right, &x(), scalar, &[]).unwrap();
+        assert_eq!(result.solutions, CertifiedSolutionSet::None);
+        assert!(verify_solution_set(&ctx, &left, &right, &x(), scalar, &result).unwrap());
+    }
+}
+
+#[test]
+fn bound_real_source_can_be_certified_in_its_own_domain() {
+    let ctx = EvaluationContext::default();
+    let left = DomainExpression::from_expr_in_domain(
+        poly(&[-2, 0, 1]).to_expr(&x()),
+        ScalarDomain::Real,
+        128,
+        8,
+    )
+    .unwrap();
+    let right = polynomial(&[]);
+    let result = certify_solution_set(&ctx, &left, &right, &x(), ScalarDomain::Real, &[]).unwrap();
+    let CertifiedSolutionSet::Finite(ref roots) = result.solutions else {
+        panic!("expected exact real pair");
+    };
+    assert_eq!(roots.len(), 2);
+    assert!(verify_solution_set(&ctx, &left, &right, &x(), ScalarDomain::Real, &result).unwrap());
+}
+
+#[test]
+fn refuses_erased_complex_history_when_solving_over_real_or_rational_scalars() {
+    let ctx = EvaluationContext::default();
+    let logarithm = DomainExpression::from_expr_in_domain(
+        Expr::log((-1).into()),
+        ScalarDomain::Complex,
+        128,
+        8,
+    )
+    .unwrap();
+    let erased = DomainExpression::multiply([polynomial(&[]), logarithm], 16).unwrap();
+    let zero = polynomial(&[]);
+    for scalar in [ScalarDomain::Real, ScalarDomain::Rational] {
+        assert_eq!(
+            certify_solution_set(&ctx, &erased, &zero, &x(), scalar, &[]),
+            Err(SolutionCertificateError::UnsupportedDomain)
+        );
+        assert_eq!(
+            certify_solution_set(&ctx, &zero, &erased, &x(), scalar, &[]),
+            Err(SolutionCertificateError::UnsupportedDomain)
+        );
+    }
+}
+
+#[test]
+fn verifier_refuses_relabeling_a_bound_certificate() {
+    let ctx = EvaluationContext::default();
+    let left = DomainExpression::from_expr_in_domain(
+        poly(&[-2, 0, 1]).to_expr(&x()),
+        ScalarDomain::Real,
+        128,
+        8,
+    )
+    .unwrap();
+    let right = polynomial(&[]);
+    let mut result =
+        certify_solution_set(&ctx, &left, &right, &x(), ScalarDomain::Real, &[]).unwrap();
+    result.domain = ScalarDomain::Complex;
+    assert_eq!(
+        verify_solution_set(&ctx, &left, &right, &x(), ScalarDomain::Complex, &result),
+        Err(SolutionCertificateError::UnsupportedDomain)
+    );
+}
+
+#[test]
+fn verifier_rejects_identity_with_either_original_hole_removed() {
+    let ctx = EvaluationContext::default();
+    let left = quotient(&[0, -1, 1], &[-1, 1]);
+    let right = quotient(&[0, 1, 1], &[1, 1]);
+    let scalar = ScalarDomain::Real;
+    let result = certify_solution_set(&ctx, &left, &right, &x(), scalar, &[]).unwrap();
+    for exclusion in [poly(&[-1, 1]), poly(&[1, 1])] {
+        let mut forged = result.clone();
+        forged.residual = RationalFunction::from_polynomial(poly(&[]))
+            .restrict_nonzero(exclusion)
+            .unwrap();
+        assert!(!verify_solution_set(&ctx, &left, &right, &x(), scalar, &forged).unwrap());
+    }
+}
+
+#[test]
+fn verifier_rejects_empty_identity_and_all_admissible_nonzero_constant() {
+    let ctx = EvaluationContext::default();
+    let zero = polynomial(&[]);
+    let one = polynomial(&[1]);
+    let scalar = ScalarDomain::Real;
+    for (left, false_claim) in [
+        (&zero, CertifiedSolutionSet::None),
+        (&one, CertifiedSolutionSet::AllAdmissible),
+    ] {
+        let mut forged = certify_solution_set(&ctx, left, &zero, &x(), scalar, &[]).unwrap();
+        forged.solutions = false_claim;
+        assert!(!verify_solution_set(&ctx, left, &zero, &x(), scalar, &forged).unwrap());
+    }
+}
+
+#[test]
+fn refuses_branch_selective_nonpolynomial_restrictions() {
+    let ctx = EvaluationContext::default();
+    let left = DomainExpression::with_conditions(
+        poly(&[-2, 0, 1]).to_expr(&x()),
+        [Condition::Positive(Expr::from(x()))],
+        128,
+        8,
+    )
+    .unwrap();
+    assert_eq!(
+        certify_solution_set(&ctx, &left, &polynomial(&[]), &x(), ScalarDomain::Real, &[]),
+        Err(SolutionCertificateError::Expression(
+            RationalExpressionError::UnsupportedCondition
+        ))
+    );
+}

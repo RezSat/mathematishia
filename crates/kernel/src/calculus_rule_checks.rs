@@ -265,7 +265,9 @@ impl<'a> Checker<'a> {
                     EvaluationError::RationalFunction(RationalFunctionError::EmptyDomain).into(),
                 );
             }
-            let monic = self.work.gcd(restricted.numerator(), restricted.numerator())?;
+            let monic = self
+                .work
+                .gcd(restricted.numerator(), restricted.numerator())?;
             self.insert_exclusion(&mut exclusions, monic)?;
         }
         exclusions.sort_by(condition_order);
@@ -339,7 +341,8 @@ impl<'a> Checker<'a> {
                 let right = self.work.multiply(source.numerator(), &dd)?;
                 (
                     self.work.subtract(&left, &right)?,
-                    self.work.multiply(source.denominator(), source.denominator())?,
+                    self.work
+                        .multiply(source.denominator(), source.denominator())?,
                 )
             }
         };

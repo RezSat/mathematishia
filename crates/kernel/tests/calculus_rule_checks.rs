@@ -196,7 +196,14 @@ fn wrong_derivative_and_forged_evidence_are_rejected() {
     let mut forged = proof.clone();
     forged.value = RationalFunction::from_polynomial(proof.value.numerator().clone());
     assert_eq!(
-        verify_rational_calculus(&context, &source, &candidate, &variable(), Derivative, &forged),
+        verify_rational_calculus(
+            &context,
+            &source,
+            &candidate,
+            &variable(),
+            Derivative,
+            &forged
+        ),
         Err(RationalCalculusError::IncorrectCertificate)
     );
     let mut forged = proof.clone();
@@ -204,19 +211,40 @@ fn wrong_derivative_and_forged_evidence_are_rejected() {
         .restrict_nonzero(proof.value.excluded_zero_sets()[0].clone())
         .unwrap();
     assert_eq!(
-        verify_rational_calculus(&context, &source, &candidate, &variable(), Derivative, &forged),
+        verify_rational_calculus(
+            &context,
+            &source,
+            &candidate,
+            &variable(),
+            Derivative,
+            &forged
+        ),
         Err(RationalCalculusError::IncorrectIdentity)
     );
     let mut forged = proof.clone();
     forged.source = domain(power(x(), 2));
     assert_eq!(
-        verify_rational_calculus(&context, &source, &candidate, &variable(), Derivative, &forged),
+        verify_rational_calculus(
+            &context,
+            &source,
+            &candidate,
+            &variable(),
+            Derivative,
+            &forged
+        ),
         Err(RationalCalculusError::IncorrectCertificate)
     );
     let mut forged = proof;
     forged.relation = Identity;
     assert_eq!(
-        verify_rational_calculus(&context, &source, &candidate, &variable(), Derivative, &forged),
+        verify_rational_calculus(
+            &context,
+            &source,
+            &candidate,
+            &variable(),
+            Derivative,
+            &forged
+        ),
         Err(RationalCalculusError::IncorrectCertificate)
     );
 }
@@ -237,9 +265,9 @@ fn zero_power_respects_the_nonzero_base_convention() {
         let invalid = domain(power(0.into(), exponent));
         assert!(matches!(
             certify_rational_calculus(&context, &invalid, &candidate, &variable(), Derivative),
-            Err(RationalCalculusError::Evaluation(EvaluationError::RationalFunction(
-                RationalFunctionError::ZeroDivisor
-            )))
+            Err(RationalCalculusError::Evaluation(
+                EvaluationError::RationalFunction(RationalFunctionError::ZeroDivisor)
+            ))
         ));
     }
     let negative = domain(power((-2).into(), -3));
@@ -249,9 +277,9 @@ fn zero_power_respects_the_nonzero_base_convention() {
     let impossible = restricted(x(), 0.into());
     assert_eq!(
         certify_rational_calculus(&context, &impossible, &candidate, &variable(), Derivative),
-        Err(RationalCalculusError::Evaluation(EvaluationError::RationalFunction(
-            RationalFunctionError::EmptyDomain
-        )))
+        Err(RationalCalculusError::Evaluation(
+            EvaluationError::RationalFunction(RationalFunctionError::EmptyDomain)
+        ))
     );
 }
 
@@ -273,13 +301,8 @@ fn analytic_and_general_power_dependencies_are_explicit() {
     for base in [x(), (-2).into(), 0.into()] {
         assert!(DomainExpression::from_expr(Expr::pow(base, x()), 128).is_err());
     }
-    let source = DomainExpression::with_conditions(
-        x(),
-        [Condition::Positive(x())],
-        128,
-        16,
-    )
-    .unwrap();
+    let source =
+        DomainExpression::with_conditions(x(), [Condition::Positive(x())], 128, 16).unwrap();
     assert_eq!(
         certify_rational_calculus(&context, &source, &candidate, &variable(), Derivative),
         Err(RationalCalculusError::UnsupportedCondition)
@@ -302,9 +325,8 @@ fn resource_refusals_apply_to_generation_and_verification() {
         max_work_units: 1,
         ..ResourceLimits::default()
     });
-    let expected = RationalCalculusError::Evaluation(EvaluationError::Limit(
-        ResourceLimitKind::WorkUnits,
-    ));
+    let expected =
+        RationalCalculusError::Evaluation(EvaluationError::Limit(ResourceLimitKind::WorkUnits));
     assert_eq!(
         certify_rational_calculus(&tight, &source, &candidate, &variable(), Derivative),
         Err(expected)

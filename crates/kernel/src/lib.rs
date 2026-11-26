@@ -12,6 +12,7 @@ mod analytic_constants;
 mod analytic_semantics;
 mod assumptions;
 mod budget;
+mod calculus_rule_checks;
 mod conditional_rewrite;
 mod context;
 mod derivation_render;
@@ -83,6 +84,10 @@ pub use analytic_semantics::{
     check_domain_preconditions,
 };
 pub use assumptions::{AssumptionError, Assumptions, ConditionStatus};
+pub use calculus_rule_checks::{
+    RationalCalculusCertificate, RationalCalculusError, RationalCalculusRelation,
+    certify_rational_calculus, verify_rational_calculus,
+};
 pub use conditional_rewrite::{
     ConditionEvidence, ConditionalRewriteOutcome, ConditionalRewriteStep,
     ConditionalRewriteVerificationError, ConditionalRuleId, cancel_composite_inverse_once,

@@ -9,6 +9,7 @@ use mathema::{Expr, ExprView, Symbol};
 mod algebraic;
 mod algebraic_extension;
 mod analytic_constants;
+mod analytic_semantics;
 mod assumptions;
 mod budget;
 mod conditional_rewrite;
@@ -69,6 +70,10 @@ pub use analytic_constants::{
     AnalyticConstantError, AnalyticConstantLimit, AnalyticConstantLimits, AnalyticConstantOutcome,
     AnalyticConstantRewrite, AnalyticConstantRule, AnalyticConstantUnsupported,
     rewrite_analytic_constant_once, verify_analytic_constant_rewrite,
+};
+pub use analytic_semantics::{
+    DomainPreconditionError, DomainPreconditionReport, DomainPreconditionStatus,
+    check_domain_preconditions,
 };
 pub use assumptions::{AssumptionError, Assumptions, ConditionStatus};
 pub use conditional_rewrite::{

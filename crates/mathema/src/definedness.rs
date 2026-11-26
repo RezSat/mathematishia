@@ -165,6 +165,9 @@ impl DomainExpression {
     /// Divides expressions without discarding denominator exclusions.
     pub fn divide(self, divisor: Self, max_conditions: usize) -> Result<Self, DefinednessError> {
         let mut conditions = self.conditions;
+        if conditions.len() > max_conditions {
+            return Err(DefinednessError::ConditionLimitExceeded);
+        }
         for condition in divisor.conditions {
             append_unique(&mut conditions, condition, max_conditions)?;
         }

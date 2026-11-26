@@ -53,6 +53,7 @@ pub struct DomainExpression {
     expression: Expr,
     conditions: Vec<Condition>,
     construction_domain: Option<ScalarDomain>,
+    external_history: bool,
 }
 
 impl DomainExpression {
@@ -62,6 +63,7 @@ impl DomainExpression {
             expression,
             conditions,
             construction_domain: None,
+            external_history: false,
         })
     }
 
@@ -81,6 +83,7 @@ impl DomainExpression {
             expression,
             conditions,
             construction_domain: Some(domain),
+            external_history: false,
         })
     }
 
@@ -93,6 +96,7 @@ impl DomainExpression {
         max_conditions: usize,
     ) -> Result<Self, DefinednessError> {
         argument.check_construction_domain(domain)?;
+        let external_history = argument.external_history;
         let expression = Expr::function(name, argument.expression);
         let direct = expression
             .function_domain_conditions(domain)
@@ -108,6 +112,7 @@ impl DomainExpression {
             expression,
             conditions,
             construction_domain: Some(domain),
+            external_history,
         })
     }
 
@@ -124,6 +129,7 @@ impl DomainExpression {
         for condition in inherited {
             append_unique(&mut conditions, condition, max_conditions)?;
         }
+        let external_history = !conditions.is_empty();
         for condition in definedness_obligations(&expression, max_nodes)? {
             append_unique(&mut conditions, condition, max_conditions)?;
         }
@@ -131,6 +137,7 @@ impl DomainExpression {
             expression,
             conditions,
             construction_domain: None,
+            external_history,
         })
     }
 
@@ -146,6 +153,12 @@ impl DomainExpression {
     /// Legacy algebraic values and externally supplied history are unbound.
     pub fn construction_domain(&self) -> Option<ScalarDomain> {
         self.construction_domain
+    }
+
+    /// Whether any restrictions were supplied externally rather than collected
+    /// by construction. Binding or rebuilding a value cannot certify that history.
+    pub fn has_external_history(&self) -> bool {
+        self.external_history
     }
 
     /// Rejects reinterpretation of a bound value. Acceptance of an unbound
@@ -177,6 +190,7 @@ impl DomainExpression {
             expression,
             conditions,
             construction_domain: self.construction_domain,
+            external_history: self.external_history,
         })
     }
 
@@ -202,7 +216,9 @@ impl DomainExpression {
         let mut expressions = Vec::new();
         let mut conditions = Vec::new();
         let mut construction_domain = None;
+        let mut external_history = false;
         for part in parts {
+            external_history |= part.external_history;
             construction_domain = merge_domains(construction_domain, part.construction_domain)?;
             for condition in part.conditions {
                 append_unique(&mut conditions, condition, max_conditions)?;
@@ -217,6 +233,7 @@ impl DomainExpression {
             },
             conditions,
             construction_domain,
+            external_history,
         })
     }
 
@@ -224,6 +241,7 @@ impl DomainExpression {
     pub fn divide(self, divisor: Self, max_conditions: usize) -> Result<Self, DefinednessError> {
         let construction_domain =
             merge_domains(self.construction_domain, divisor.construction_domain)?;
+        let external_history = self.external_history || divisor.external_history;
         let mut conditions = self.conditions;
         if conditions.len() > max_conditions {
             return Err(DefinednessError::ConditionLimitExceeded);
@@ -256,6 +274,7 @@ impl DomainExpression {
             expression: Expr::mul([self.expression, inverse]),
             conditions,
             construction_domain,
+            external_history,
         })
     }
 
@@ -263,6 +282,7 @@ impl DomainExpression {
     pub fn pow(self, exponent: Self, max_conditions: usize) -> Result<Self, DefinednessError> {
         let construction_domain =
             merge_domains(self.construction_domain, exponent.construction_domain)?;
+        let external_history = self.external_history || exponent.external_history;
         let ExprView::Integer(value) = exponent.expression.view() else {
             return Err(DefinednessError::UnsupportedExponent);
         };
@@ -285,6 +305,7 @@ impl DomainExpression {
             expression: Expr::pow(self.expression, exponent.expression),
             conditions,
             construction_domain,
+            external_history,
         })
     }
 
@@ -308,6 +329,7 @@ impl DomainExpression {
             expression: Expr::pow(self.expression, Expr::from(exponent)),
             conditions,
             construction_domain: self.construction_domain,
+            external_history: self.external_history,
         })
     }
 }

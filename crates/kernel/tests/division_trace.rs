@@ -33,7 +33,10 @@ fn records_actual_priority_and_remainder_moves() {
     assert_eq!(first.before, f);
     assert_eq!(first.after, p(&[(0, 2, 1), (0, 0, 1)]));
     assert_eq!(first.factor, p(&[(1, 0, 1)]));
-    assert_eq!(first.rule, DivisionReductionRule::Reduce { divisor_index: 0 });
+    assert_eq!(
+        first.rule,
+        DivisionReductionRule::Reduce { divisor_index: 0 }
+    );
     assert_eq!(first.premise, None);
     assert_eq!(trace.steps[1].premise, Some(0));
     assert_eq!(trace.steps[1].rule, DivisionReductionRule::MoveToRemainder);

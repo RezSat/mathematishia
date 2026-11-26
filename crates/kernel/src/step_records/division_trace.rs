@@ -64,11 +64,7 @@ fn checked<T>(result: Result<T, MultivariateError>) -> RecordResult<T> {
     result.map_err(|error| MultivariateDivisionError::from(error).into())
 }
 
-fn admit(
-    dividend: &Polynomial,
-    divisors: &[Polynomial],
-    budget: &mut Budget,
-) -> RecordResult<()> {
+fn admit(dividend: &Polynomial, divisors: &[Polynomial], budget: &mut Budget) -> RecordResult<()> {
     if divisors.len() > 8 {
         return Err(StepRecordError::ResourceLimit);
     }

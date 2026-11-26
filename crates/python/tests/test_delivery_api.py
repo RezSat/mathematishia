@@ -94,6 +94,16 @@ class CertifiedDeliveryAPITests(unittest.TestCase):
         with self.assertRaises(m.MathSyntaxError):
             m.sturm_root_count("x^2-2", "x", "0..0", "2")
 
+
+    def test_sturm_preserves_endpoint_source_and_explicit_variable(self):
+        for endpoint in ("0/y", "0*(1/y)", "y^0-1"):
+            with self.subTest(endpoint=endpoint), self.assertRaises(m.UnsupportedMathematicsError):
+                m.sturm_root_count("x^2-2", "x", endpoint, "2")
+        for variable in ("x+0", "(x)", "x*1"):
+            with self.subTest(variable=variable), self.assertRaises(m.MathSyntaxError):
+                m.sturm_root_count("x^2-2", variable, "0", "2")
+        self.assertEqual(m.sturm_root_count("x^2-2", "x", "1/2", "2").count, 1)
+
     def test_checked_indefinite_and_directed_polynomial_integrals(self):
         primitive = m.integrate_polynomial("x^2", "x")
         self.assertEqual(primitive.integrand.coefficients,

@@ -40,6 +40,7 @@ mod multivariate_polynomial;
 mod poly_convert;
 mod poly_division;
 mod polynomial;
+mod polynomial_equation_dispatch;
 mod polynomial_residue;
 mod polynomial_solution_set;
 mod problem_result;
@@ -164,6 +165,10 @@ pub use multivariate_polynomial::{MultivariateError, MultivariateLimits, Multiva
 pub use poly_convert::PolynomialConversionError;
 pub use poly_division::ZeroPolynomialDivisor;
 pub use polynomial::RationalPolynomial;
+pub use polynomial_equation_dispatch::{
+    PolynomialEquationError, PolynomialEquationResult, solve_polynomial_equation,
+    verify_polynomial_equation,
+};
 pub use polynomial_residue::{PolynomialResidue, ResidueError, verify_residue_product};
 pub use polynomial_solution_set::{
     PartialPolynomialRootError, PartialPolynomialRootResult, PolynomialFactorRootEvidence,

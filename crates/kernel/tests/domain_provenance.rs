@@ -240,7 +240,8 @@ fn inverse_pair() -> DomainExpression {
 fn checked_rewrite_reports_retained_source_assumptions() {
     let source = inverse_pair();
     let assumptions = Assumptions::from_conditions([Condition::NonZero(x())]).unwrap();
-    let DomainRewriteOutcome::Applied(rewrite) = rewrite_domain_once(&source, &assumptions).unwrap()
+    let DomainRewriteOutcome::Applied(rewrite) =
+        rewrite_domain_once(&source, &assumptions).unwrap()
     else {
         panic!("expected cancellation");
     };

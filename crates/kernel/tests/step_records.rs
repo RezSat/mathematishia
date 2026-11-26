@@ -1,4 +1,6 @@
-use mathema::{Condition, DomainExpression, Equation, Expr, Integer, Rational, ScalarDomain, Symbol};
+use mathema::{
+    Condition, DomainExpression, Equation, Expr, Integer, Rational, ScalarDomain, Symbol,
+};
 use mathematishia_kernel::step_records::{
     StepClaim, StepConclusion, StepEvidence, StepEvidenceSource, StepLimits, StepRecordError,
     record_steps, verify_step_records,
@@ -104,7 +106,10 @@ fn linear_identity_keeps_classification_even_without_steps() {
     assert!(records.steps.is_empty());
     assert!(matches!(
         records.conclusion,
-        StepConclusion::Linear { solution: LinearSolution::AllRationals, .. }
+        StepConclusion::Linear {
+            solution: LinearSolution::AllRationals,
+            ..
+        }
     ));
 }
 
@@ -143,13 +148,9 @@ fn distribution_retains_original_conditions_and_partial_status() {
         Expr::add([x.clone(), 1.into()]),
         Expr::add([x.clone(), 2.into()]),
     ]);
-    let source = DomainExpression::with_conditions(
-        expression.clone(),
-        [Condition::NonZero(x)],
-        128,
-        32,
-    )
-    .unwrap();
+    let source =
+        DomainExpression::with_conditions(expression.clone(), [Condition::NonZero(x)], 128, 32)
+            .unwrap();
     let result = EvaluationContext::default()
         .with_distribution_steps(1)
         .expand(&expression)
@@ -166,7 +167,10 @@ fn distribution_retains_original_conditions_and_partial_status() {
     assert_eq!(records.steps[0].conditions.len(), 1);
     assert!(matches!(
         records.conclusion,
-        StepConclusion::Distribution { complete: false, .. }
+        StepConclusion::Distribution {
+            complete: false,
+            ..
+        }
     ));
     let mut forged = records.clone();
     forged.source_conditions.clear();
@@ -335,10 +339,7 @@ fn ordered_multivariate_division_does_not_claim_unique_normal_form() {
         .unwrap()
     };
     let dividend = p(&[(1, 1, 1)]);
-    let divisors = [
-        p(&[(1, 0, 1), (0, 0, -1)]),
-        p(&[(0, 1, 1), (0, 0, -2)]),
-    ];
+    let divisors = [p(&[(1, 0, 1), (0, 0, -1)]), p(&[(0, 1, 1), (0, 0, -2)])];
     let result = divide_multivariate(&dividend, &divisors, limits).unwrap();
     let evidence = StepEvidence::MultivariateDivision {
         dividend: &dividend,
@@ -355,7 +356,10 @@ fn ordered_multivariate_division_does_not_claim_unique_normal_form() {
     assert_eq!(result.remainder(), &p(&[(0, 0, 2)]));
     verify_step_records(evidence, &records, StepLimits::default()).unwrap();
     let mut forged = records;
-    let StepClaim::MultivariateDivision { ordered_divisors, .. } = &mut forged.steps[0].claim else {
+    let StepClaim::MultivariateDivision {
+        ordered_divisors, ..
+    } = &mut forged.steps[0].claim
+    else {
         panic!("expected division claim");
     };
     ordered_divisors.reverse();
@@ -425,7 +429,10 @@ fn refuses_zero_budgets_and_unrelated_sources() {
 
 #[test]
 fn refuted_historical_condition_is_not_accepted_as_a_premise() {
-    let expression = Expr::mul([symbol("x").into(), Expr::add([1.into(), symbol("y").into()])]);
+    let expression = Expr::mul([
+        symbol("x").into(),
+        Expr::add([1.into(), symbol("y").into()]),
+    ]);
     let source = DomainExpression::with_conditions(
         expression.clone(),
         [Condition::NonZero(0.into())],

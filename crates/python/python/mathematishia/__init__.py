@@ -1290,11 +1290,22 @@ def trig_zero_examples(function: str) -> PartialTrigZeros:
     return PartialTrigZeros(tuple(map(Fraction, _native.trig_zero_examples(function))))
 
 
+def derivation_records_json(kind: str, source: str, variable: str = "x") -> str:
+    """Return the source-verified structural derivation as versioned JSON."""
+    return _native.derivation_records_json(kind, source, variable)
+
+
+def division_trace_json(dividend: str, divisors: tuple[str, ...], variables: tuple[str, ...]) -> str:
+    """Return actual checked ordered division transitions for unrestricted Q-polynomials."""
+    return _native.division_trace_json(dividend, list(divisors), list(variables))
+
+
 __all__ = [
     "PartialTrigZeros", "trig_zero_examples",
     "GroebnerBasis", "groebner_basis", "IdealMembership", "ideal_membership",
     "special_angle", "AbsoluteInterval", "solve_absolute", "solve_polynomial_in_domain",
     "check_calculus", "DerivationRecord", "DerivationRecords", "derivation_records",
+    "derivation_records_json", "division_trace_json",
     "ProblemResult", "problem", "solveauto", "evalexact", "PolynomialExponentialEvidence",
     "IsolatedRealRoot", "isolate_real_roots",
     "AffineSystemResult", "solve_linear_system", "MultivariateDivisionResult",

@@ -368,9 +368,8 @@ pub fn calculus(
     Ok(result)
 }
 
-fn checked_records(evidence: StepEvidence<'_>) -> Result<StepRecords, AdvancedError> {
-    let limits = StepLimits::default();
-    let map = |error: StepRecordError| match error {
+fn step_error(error: StepRecordError) -> AdvancedError {
+    match error {
         StepRecordError::Evaluation(error) => evaluation(error),
         StepRecordError::ResourceLimit => AdvancedError::Resource(error.to_string()),
         StepRecordError::InvalidDomain => AdvancedError::Domain(error.to_string()),
@@ -378,9 +377,20 @@ fn checked_records(evidence: StepEvidence<'_>) -> Result<StepRecords, AdvancedEr
         | StepRecordError::InvalidRecord
         | StepRecordError::SourceMismatch => AdvancedError::Verification(error.to_string()),
         _ => AdvancedError::Unsupported(error.to_string()),
-    };
-    let records = record_steps(evidence, limits).map_err(map)?;
-    verify_step_records(evidence, &records, limits).map_err(map)?;
+    }
+}
+
+fn wire_step_error(error: mathematishia_kernel::ProblemWireError) -> AdvancedError {
+    match error {
+        mathematishia_kernel::ProblemWireError::StepVerification(error) => step_error(error),
+        _ => AdvancedError::Resource(error.to_string()),
+    }
+}
+
+fn checked_records(evidence: StepEvidence<'_>) -> Result<StepRecords, AdvancedError> {
+    let limits = StepLimits::default();
+    let records = record_steps(evidence, limits).map_err(step_error)?;
+    verify_step_records(evidence, &records, limits).map_err(step_error)?;
     Ok(records)
 }
 
@@ -390,13 +400,36 @@ pub fn derivation(
     source: &str,
     name: &str,
 ) -> Result<StepRecords, AdvancedError> {
+    with_derivation(context, kind, source, name, checked_records)
+}
+
+pub fn derivation_json(
+    context: &EvaluationContext,
+    kind: &str,
+    source: &str,
+    name: &str,
+) -> Result<String, AdvancedError> {
+    with_derivation(context, kind, source, name, |evidence| {
+        let limits = StepLimits::default();
+        let records = record_steps(evidence, limits).map_err(step_error)?;
+        records.to_checked_json(evidence, limits).map_err(wire_step_error)
+    })
+}
+
+fn with_derivation<T>(
+    context: &EvaluationContext,
+    kind: &str,
+    source: &str,
+    name: &str,
+    emit: impl FnOnce(StepEvidence<'_>) -> Result<T, AdvancedError>,
+) -> Result<T, AdvancedError> {
     let variable = problem::variable(context, name)?;
     match kind {
         "expand" => {
             let domain = ScalarDomain::Real;
             let source = problem::source(source, domain)?;
             let result = context.expand(source.expression()).map_err(evaluation)?;
-            checked_records(StepEvidence::Distribution {
+            emit(StepEvidence::Distribution {
                 source: &source,
                 domain,
                 result: &result,
@@ -417,7 +450,7 @@ pub fn derivation(
             let result = context
                 .solve_linear(&equation, &variable)
                 .map_err(evaluation)?;
-            checked_records(StepEvidence::Linear {
+            emit(StepEvidence::Linear {
                 left: &left,
                 right: &right,
                 variable: &variable,
@@ -430,7 +463,7 @@ pub fn derivation(
             let result = context
                 .differentiate_domain_expression(&source, &variable, domain)
                 .map_err(evaluation)?;
-            checked_records(StepEvidence::Derivative {
+            emit(StepEvidence::Derivative {
                 source: &source,
                 domain,
                 variable: &variable,
@@ -521,4 +554,47 @@ pub fn conclusion_text(conclusion: &StepConclusion) -> String {
             "final recomposition and reduced remainder verified".into()
         }
     }
+}
+
+pub fn division_trace_json(
+    context: &EvaluationContext,
+    names: &[&str],
+    dividend: &str,
+    divisors: &[&str],
+) -> Result<String, AdvancedError> {
+    use mathematishia_kernel::step_records::division_trace::record_ordered_division;
+    if names.len() > 8 || divisors.len() > 8 {
+        return Err(AdvancedError::Resource("division trace input limit exceeded".into()));
+    }
+    if divisors.is_empty() {
+        return Err(invalid("expected at least one divisor"));
+    }
+    let variables = names
+        .iter()
+        .map(|name| problem::variable(context, name))
+        .collect::<Result<Vec<_>, _>>()?;
+    if variables.iter().collect::<BTreeSet<_>>().len() != variables.len() {
+        return Err(invalid("variables must be distinct"));
+    }
+    let limits = MultivariateLimits {
+        max_variables: 8,
+        max_terms: 64,
+        max_input_terms: 4096,
+        max_total_degree: 32,
+        max_scalar_bits: 256,
+        max_work_units: 250_000,
+    };
+    let convert = |input: &str| {
+        let source = problem::source(input, ScalarDomain::Rational)?;
+        if !source.conditions().is_empty() {
+            return Err(AdvancedError::Domain("division trace requires unrestricted polynomials".into()));
+        }
+        MultivariatePolynomial::try_from_expr(source.expression(), &variables, limits)
+            .map_err(|error| groebner_error(GroebnerError::Expression(error)))
+    };
+    let dividend = convert(dividend)?;
+    let divisors = divisors.iter().map(|source| convert(source)).collect::<Result<Vec<_>, _>>()?;
+    let limits = StepLimits::default();
+    let trace = record_ordered_division(&dividend, &divisors, limits).map_err(step_error)?;
+    trace.to_checked_json(&dividend, &divisors, limits).map_err(wire_step_error)
 }

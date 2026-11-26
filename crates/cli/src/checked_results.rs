@@ -25,7 +25,19 @@ pub(super) fn request_error(error: RequestError) -> CliError {
 }
 
 pub(super) fn json(args: &[&str]) -> Result<String, CliError> {
-    problem::evaluate_json(&EvaluationContext::default(), args).map_err(request_error)
+    let context = EvaluationContext::default();
+    match args {
+        ["steps", kind, source, name] => {
+            mathema_frontend::advanced::derivation_json(&context, kind, source, name)
+                .map_err(super::advanced_operations::error)
+        }
+        ["divisiontrace", names, dividend, divisors @ ..] => {
+            let names = names.split(',').collect::<Vec<_>>();
+            mathema_frontend::advanced::division_trace_json(&context, &names, dividend, divisors)
+                .map_err(super::advanced_operations::error)
+        }
+        _ => problem::evaluate_json(&context, args).map_err(request_error),
+    }
 }
 
 fn isolation_error(error: RealRootIsolationError) -> CliError {

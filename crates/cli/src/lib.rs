@@ -45,7 +45,8 @@ Usage:
   mathematishia trigzeros <sin|cos>
   mathematishia abssolve <EQUATION> [VARIABLE]
   mathematishia checkcalculus <identity|derivative> <SOURCE> <CANDIDATE> <VARIABLE>
-  mathematishia steps <linear|derivative|expand> <SOURCE> <VARIABLE>
+  mathematishia steps <linear|derivative|expand> <SOURCE> <VARIABLE> [--json]
+  mathematishia divisiontrace <VARIABLES_CSV> <DIVIDEND> <DIVISORS...> [--json]
   mathematishia solve <EQUATION> <VARIABLE>
   mathematishia solveauto <EQUATION> [VARIABLE]  (defaults to x)
   mathematishia roots <POLYNOMIAL> [VARIABLE]
@@ -421,6 +422,7 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
         ["isolate", input, name, width] => checked_results::isolate(input, name, width),
         ["rootsfield" | "solvefield", _, _, _] => checked_results::json(args),
         ["natural", _] | ["natural", _, _] => checked_results::json(args),
+        ["divisiontrace", _, _, ..] => checked_results::json(args),
         ["groebner", names, generators @ ..] => advanced_operations::basis(names, generators),
         ["idealmember", names, target, generators @ ..] => {
             advanced_operations::membership(names, generators, target)

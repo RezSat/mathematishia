@@ -181,6 +181,19 @@ fn trig_zero_examples(function: &str) -> PyResult<Vec<String>> {
         .collect())
 }
 
+#[pyfunction]
+fn derivation_records_json(kind: &str, source: &str, variable: &str) -> PyResult<String> {
+    advanced::derivation_json(&EvaluationContext::default(), kind, source, variable).map_err(error)
+}
+
+#[pyfunction]
+fn division_trace_json(dividend: &str, divisors: Vec<String>, variables: Vec<String>) -> PyResult<String> {
+    let names = variables.iter().map(String::as_str).collect::<Vec<_>>();
+    let divisors = divisors.iter().map(String::as_str).collect::<Vec<_>>();
+    advanced::division_trace_json(&EvaluationContext::default(), &names, dividend, &divisors)
+        .map_err(error)
+}
+
 pub(super) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(trig_zero_examples, m)?)?;
     m.add_function(wrap_pyfunction!(groebner, m)?)?;
@@ -189,5 +202,7 @@ pub(super) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(solve_absolute, m)?)?;
     m.add_function(wrap_pyfunction!(check_calculus, m)?)?;
     m.add_function(wrap_pyfunction!(derivation_records, m)?)?;
+    m.add_function(wrap_pyfunction!(derivation_records_json, m)?)?;
+    m.add_function(wrap_pyfunction!(division_trace_json, m)?)?;
     Ok(())
 }

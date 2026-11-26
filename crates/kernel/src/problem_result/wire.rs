@@ -905,3 +905,45 @@ impl StepRecords {
         Ok(writer.text)
     }
 }
+
+impl crate::step_records::division_trace::OrderedDivisionTrace {
+    /// Rechecks the original ordered division before exposing actual transitions.
+    pub fn to_checked_json(
+        &self,
+        dividend: &MultivariatePolynomial,
+        divisors: &[MultivariatePolynomial],
+        limits: StepLimits,
+    ) -> Result<String, ProblemWireError> {
+        use crate::step_records::division_trace::{DivisionReductionRule, verify_ordered_division};
+        verify_ordered_division(dividend, divisors, self, limits)
+            .map_err(ProblemWireError::StepVerification)?;
+        let mut writer = Encoder::default();
+        object!(writer,
+            "schema_version" => |w| w.count(VERSION),
+            "kind" => |w| w.string("checked_ordered_division"),
+            "domain" => |w| w.string("Q"),
+            "dividend" => |w| w.multivariate(dividend),
+            "ordered_divisors" => |w| w.array(divisors, Encoder::multivariate),
+            "steps" => |w| w.array(&self.steps, |w, step| {
+                object!(w,
+                    "index" => |w| w.count(step.index),
+                    "premise" => |w| match step.premise {
+                        Some(index) => w.count(index),
+                        None => w.raw("null"),
+                    },
+                    "rule_id" => |w| w.string(step.rule.stable_id()),
+                    "divisor_index" => |w| match step.rule {
+                        DivisionReductionRule::Reduce { divisor_index } => w.count(divisor_index),
+                        DivisionReductionRule::MoveToRemainder => w.raw("null"),
+                    },
+                    "before" => |w| w.multivariate(&step.before),
+                    "after" => |w| w.multivariate(&step.after),
+                    "factor" => |w| w.multivariate(&step.factor),
+                )
+            }),
+            "quotients" => |w| w.array(&self.quotients, Encoder::multivariate),
+            "remainder" => |w| w.multivariate(&self.remainder),
+        )?;
+        Ok(writer.text)
+    }
+}

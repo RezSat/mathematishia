@@ -166,3 +166,15 @@ fn handles_zero_and_refuses_invalid_or_excessive_inputs() {
     assert!(record_ordered_division(&f, &g, tiny).is_err());
     assert!(verify_ordered_division(&f, &g, &trace, tiny).is_err());
 }
+
+#[test]
+fn checked_json_rejects_forged_trace() {
+    let (f, g) = example();
+    let limits = StepLimits::default();
+    let mut trace = record_ordered_division(&f, &g, limits).unwrap();
+    let json = trace.to_checked_json(&f, &g, limits).unwrap();
+    assert!(json.contains("\"kind\":\"checked_ordered_division\""));
+    assert!(json.contains("\"rule_id\":\"polynomial.reduce_leading_term\""));
+    trace.steps[0].premise = Some(0);
+    assert!(trace.to_checked_json(&f, &g, limits).is_err());
+}

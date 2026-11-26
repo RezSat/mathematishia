@@ -16,6 +16,7 @@ pub(super) fn is_native(operation: ProblemOperation) -> bool {
             | ProblemOperation::TrigZeros
             | ProblemOperation::GroebnerBasis
             | ProblemOperation::IdealMembership
+            | ProblemOperation::SolveSourceEquation
     )
 }
 
@@ -132,6 +133,25 @@ pub(super) fn dispatch(
     request: &ProblemRequest,
 ) -> Result<ProblemResult, ProblemError> {
     match &request.statement {
+        ProblemStatement::SourceEquation { left, right } => {
+            if source_is_refuted(left) || source_is_refuted(right) {
+                return Ok(result(
+                    request,
+                    ProblemOutcome::Undefined(UndefinedReason::ContradictedDomainCondition),
+                ));
+            }
+            match crate::certify_solution_set(
+                context,
+                left,
+                right,
+                request.variables.first().expect("validated variable"),
+                request.domain,
+                &[],
+            ) {
+                Ok(candidate) => adapt(context, request, ProblemEvidence::SourceEquation(&candidate)),
+                Err(error) => source_equation_failure(request, error),
+            }
+        }
         ProblemStatement::Absolute(equation) => match solve_absolute_equation(context, equation) {
             Ok(candidate) => adapt(context, request, ProblemEvidence::Absolute(&candidate)),
             Err(error) => absolute_failure(request, error),
@@ -195,12 +215,66 @@ fn zero_angles(function: TrigFunction) -> Option<[Rational; 2]> {
     }
 }
 
+fn source_equation_failure(
+    request: &ProblemRequest,
+    error: crate::SolutionCertificateError,
+) -> Result<ProblemResult, ProblemError> {
+    match error {
+        crate::SolutionCertificateError::Evaluation(error) => handle_evaluation_error(request, error),
+        crate::SolutionCertificateError::Expression(error) => conversion_failure(request, error),
+        crate::SolutionCertificateError::UnsupportedDomain => {
+            Ok(unsupported(request, UnsupportedReason::Domain))
+        }
+        crate::SolutionCertificateError::IncorrectCertificate => Err(ProblemError::InvalidEvidence),
+    }
+}
+
 pub(super) fn adapt(
     context: &EvaluationContext,
     request: &ProblemRequest,
     evidence: ProblemEvidence<'_>,
 ) -> Result<ProblemResult, ProblemError> {
     let (outcome, proof, detail) = match (&request.statement, evidence) {
+        (
+            ProblemStatement::SourceEquation { left, right },
+            ProblemEvidence::SourceEquation(candidate),
+        ) => {
+            match crate::verify_solution_set(
+                context,
+                left,
+                right,
+                request.variables.first().expect("validated variable"),
+                request.domain,
+                candidate,
+            ) {
+                Ok(true) => {}
+                Ok(false) => return Err(ProblemError::InvalidEvidence),
+                Err(error) => return source_equation_failure(request, error),
+            }
+            let outcome = match &candidate.solutions {
+                crate::CertifiedSolutionSet::None => ProblemOutcome::NoSolutions,
+                crate::CertifiedSolutionSet::AllAdmissible => ProblemOutcome::AllAdmissibleValues,
+                crate::CertifiedSolutionSet::Finite(roots) => {
+                    ProblemOutcome::SolvedExact(ExactAnswer::ComplexRoots(roots.clone()))
+                }
+                crate::CertifiedSolutionSet::Partial {
+                    roots,
+                    unresolved_cofactor,
+                } => ProblemOutcome::Partial {
+                    known: ExactAnswer::ComplexRoots(roots.clone()),
+                    unresolved: unresolved_cofactor.clone(),
+                },
+            };
+            return Ok(with_exclusions(
+                checked_result(
+                    request,
+                    outcome,
+                    CheckedBy::SourceBoundRationalEquation,
+                    Vec::new(),
+                ),
+                candidate.residual.excluded_zero_sets(),
+            ));
+        }
         (ProblemStatement::Absolute(equation), ProblemEvidence::Absolute(candidate)) => {
             match verify_absolute_equation(context, equation, candidate) {
                 Ok(true) => {}

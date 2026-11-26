@@ -287,11 +287,11 @@ fn absolute_chain(
     Ok(result)
 }
 
-pub fn absolute(
+pub(crate) fn absolute_request(
     context: &EvaluationContext,
     source: &str,
     name: &str,
-) -> Result<AbsoluteEquationResult, AdvancedError> {
+) -> Result<AbsoluteEquation, AdvancedError> {
     if source.len() > 32768 {
         return Err(AdvancedError::Resource(
             "absolute equation input limit exceeded".into(),
@@ -307,11 +307,19 @@ pub fn absolute(
         return Err(invalid("expected one equality"));
     }
     let variable = problem::variable(context, name)?;
-    let equation = AbsoluteEquation {
+    Ok(AbsoluteEquation {
         domain: ScalarDomain::Real,
         left: absolute_chain(context, left, &variable, 0)?,
         right: absolute_chain(context, right, &variable, 0)?,
-    };
+    })
+}
+
+pub fn absolute(
+    context: &EvaluationContext,
+    source: &str,
+    name: &str,
+) -> Result<AbsoluteEquationResult, AdvancedError> {
+    let equation = absolute_request(context, source, name)?;
     let map = |error: AbsoluteEquationError| match error {
         AbsoluteEquationError::Evaluation(error) => evaluation(error),
         AbsoluteEquationError::CaseLimit => AdvancedError::Resource(error.to_string()),

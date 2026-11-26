@@ -52,6 +52,7 @@ pub enum ProblemOperation {
     Limit,
     Inequality,
     SolveAuto,
+    SolveSourceEquation,
     EvaluateExact,
     SolveAbsolute,
     EvaluateSpecialAngle,
@@ -75,6 +76,7 @@ impl ProblemOperation {
             Self::Limit => "calculus.rational_limit",
             Self::Inequality => "inequality.rational",
             Self::SolveAuto => "equation.auto",
+            Self::SolveSourceEquation => "equation.source_bound",
             Self::EvaluateExact => "analytic.evaluate_exact",
             Self::SolveAbsolute => "equation.absolute_affine",
             Self::EvaluateSpecialAngle => "trig.special_angle",
@@ -205,6 +207,7 @@ pub enum CheckedBy {
     RationalEquationDomain,
     PartialComplexFactorization,
     SourceBoundPolynomial,
+    SourceBoundRationalEquation,
     SymbolicDerivativeRules,
     RationalEvaluation,
     IntegrationTerms,
@@ -306,6 +309,7 @@ pub enum ProblemEvidence<'a> {
     RationalEquation(&'a RationalEquationResult),
     ComplexRoots(&'a PartialPolynomialRootResult),
     PolynomialEquation(&'a crate::PolynomialEquationResult),
+    SourceEquation(&'a crate::SolutionSetCertificate),
     Derivative(&'a SymbolicDerivative),
     RationalEvaluation(&'a Rational),
     Integration(&'a DispatchedAntiderivative),
@@ -775,7 +779,7 @@ fn validate_request(request: &ProblemRequest) -> Result<Option<ProblemResult>, P
                 ProblemStatement::Comparison { .. }
             )
             | (
-                ProblemOperation::SolveAuto,
+                ProblemOperation::SolveAuto | ProblemOperation::SolveSourceEquation,
                 ProblemStatement::SourceEquation { .. }
             )
     );
@@ -809,6 +813,10 @@ fn validate_request(request: &ProblemRequest) -> Result<Option<ProblemResult>, P
         ProblemOperation::SolveAuto => matches!(
             request.domain,
             ScalarDomain::Rational | ScalarDomain::Complex
+        ),
+        ProblemOperation::SolveSourceEquation => matches!(
+            request.domain,
+            ScalarDomain::Rational | ScalarDomain::Real | ScalarDomain::Complex
         ),
         ProblemOperation::EvaluateExact
         | ProblemOperation::SolveAbsolute
@@ -1534,8 +1542,8 @@ fn solve_auto(
         return Err(ProblemError::InvalidEvidence);
     }
     // Check the rational solution set against both original operands, not only
-    // the reduced numerator. A complex request still has only rational scope
-    // on this fallback path.
+    // the reduced numerator. Verify in the source domain before projecting
+    // onto the legacy rational-only fallback scope.
     use crate::{
         CertifiedSolutionSet, SolutionCertificateError, certify_solution_set, verify_solution_set,
     };
@@ -1544,7 +1552,7 @@ fn solve_auto(
         original_left,
         original_right,
         variable,
-        ScalarDomain::Rational,
+        request.domain,
         &[],
     ) {
         Ok(value) => value,
@@ -1561,7 +1569,7 @@ fn solve_auto(
         original_left,
         original_right,
         variable,
-        ScalarDomain::Rational,
+        request.domain,
         &certificate,
     ) {
         Ok(true) => {}
@@ -1577,11 +1585,15 @@ fn solve_auto(
     let agrees = match (&certificate.solutions, checked.roots()) {
         (CertifiedSolutionSet::None, RationalQuadraticRoots::Finite(values)) => values.is_empty(),
         (CertifiedSolutionSet::Finite(roots), RationalQuadraticRoots::Finite(values)) => {
-            roots.len() == values.len()
-                && roots.iter().all(|root| match root.root() {
-                    crate::ExactQuadraticRoot::Rational(value) => values.contains(value),
-                    _ => false,
+            let rational_roots: Vec<_> = roots
+                .iter()
+                .filter_map(|root| match root.root() {
+                    crate::ExactQuadraticRoot::Rational(value) => Some(value),
+                    _ => None,
                 })
+                .collect();
+            rational_roots.len() == values.len()
+                && rational_roots.iter().all(|value| values.contains(value))
         }
         (CertifiedSolutionSet::AllAdmissible, RationalQuadraticRoots::AllAdmissibleRationals) => {
             true

@@ -689,6 +689,7 @@ fn proof_id(value: CheckedBy) -> &'static str {
         CheckedBy::RationalEquationDomain => "rational_equation_domain",
         CheckedBy::PartialComplexFactorization => "partial_complex_factorization",
         CheckedBy::SourceBoundPolynomial => "source_bound_polynomial",
+        CheckedBy::SourceBoundRationalEquation => "source_bound_rational_equation",
         CheckedBy::SymbolicDerivativeRules => "symbolic_derivative_rules",
         CheckedBy::RationalEvaluation => "rational_evaluation",
         CheckedBy::IntegrationTerms => "integration_terms",

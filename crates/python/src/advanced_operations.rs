@@ -10,7 +10,7 @@ use super::{
     ResourceLimitError, UndefinedAtPointError, UnsupportedMathematicsError, VerificationFailure,
 };
 
-fn error(error: AdvancedError) -> PyErr {
+pub(super) fn error(error: AdvancedError) -> PyErr {
     match error {
         AdvancedError::Input(error) => request_error(error),
         AdvancedError::Resource(message) => ResourceLimitError::new_err(message),

@@ -12,6 +12,7 @@ use super::{
 
 pub(super) fn request_error(error: RequestError) -> PyErr {
     match error {
+        RequestError::Advanced(error) => super::advanced_operations::error(*error),
         RequestError::Parse(error) => map_domain_parse(error),
         RequestError::Invalid(message) => MathSyntaxError::new_err(message),
         RequestError::Unsupported(message) => UnsupportedMathematicsError::new_err(message),

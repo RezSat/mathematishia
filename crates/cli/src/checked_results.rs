@@ -11,6 +11,7 @@ use super::{CliError, CliErrorKind, invalid, problem_error};
 
 pub(super) fn request_error(error: RequestError) -> CliError {
     match error {
+        RequestError::Advanced(error) => super::advanced_operations::error(*error),
         RequestError::Parse(error) => parse_error(error),
         RequestError::Invalid(message) => invalid(message),
         RequestError::Unsupported(message) => problem_error(CliErrorKind::Unsupported, message),

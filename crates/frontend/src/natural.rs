@@ -115,7 +115,11 @@ fn angle(context: &EvaluationContext, argument: &str) -> Result<PiMultiple, Adva
     let denominator = match rest {
         [Identifier("pi" | "π")] => "1",
         [Identifier("pi" | "π"), Slash, Digits(digits)] => *digits,
-        _ => return Err(unsupported("expected a signed integer multiple of pi[/integer]")),
+        _ => {
+            return Err(unsupported(
+                "expected a signed integer multiple of pi[/integer]",
+            ));
+        }
     };
     let numerator = integer(numerator)?;
     let numerator = if negative { -numerator } else { numerator };
@@ -135,7 +139,9 @@ fn affine(
         match token {
             TokenKind::Identifier(name) if *name == variable.name() => {}
             TokenKind::Identifier(_) | TokenKind::Caret => {
-                return Err(unsupported("expected rational-affine input in the named variable"));
+                return Err(unsupported(
+                    "expected rational-affine input in the named variable",
+                ));
             }
             _ => {}
         }
@@ -154,7 +160,9 @@ fn affine(
     }
     let parsed = problem::source(source, ScalarDomain::Real).map_err(request_error)?;
     if !parsed.conditions().is_empty() {
-        return Err(domain("absolute equations cannot discard source restrictions"));
+        return Err(domain(
+            "absolute equations cannot discard source restrictions",
+        ));
     }
     let polynomial = context
         .polynomial(parsed.expression(), variable)
@@ -233,7 +241,10 @@ pub fn parse_v1(
             return Err(invalid("expected exactly one equality"));
         }
         let variable = problem::variable(context, variable).map_err(request_error)?;
-        if matches!(variable.name(), "pi" | "π" | "abs" | "sqrt" | "sin" | "cos" | "tan") {
+        if matches!(
+            variable.name(),
+            "pi" | "π" | "abs" | "sqrt" | "sin" | "cos" | "tan"
+        ) {
             return Err(invalid("reserved natural v1 variable"));
         }
         let left = side(context, left, &variable)?;
@@ -241,11 +252,13 @@ pub fn parse_v1(
         if left.layers.is_empty() && right.layers.is_empty() {
             return Err(unsupported("expected at least one absolute-value operand"));
         }
-        return Ok(NaturalRequest::AbsoluteEquation(Box::new(AbsoluteEquation {
-            domain: ScalarDomain::Real,
-            left,
-            right,
-        })));
+        return Ok(NaturalRequest::AbsoluteEquation(Box::new(
+            AbsoluteEquation {
+                domain: ScalarDomain::Real,
+                left,
+                right,
+            },
+        )));
     }
     let (name, argument) = source
         .split_once('(')
@@ -263,15 +276,23 @@ pub fn parse_v1(
                 .iter()
                 .any(|kind| matches!(kind, TokenKind::Identifier(_) | TokenKind::Caret))
             {
-                return Err(unsupported("square roots require a checked rational argument"));
+                return Err(unsupported(
+                    "square roots require a checked rational argument",
+                ));
             }
             let value = problem::scalar(context, argument).map_err(request_error)?;
             if value.numerator() < &Integer::zero() {
                 return Err(domain("negative square root is undefined over the reals"));
             }
-            return Err(unsupported("principal rational square root dispatch is not admitted"));
+            return Err(unsupported(
+                "principal rational square root dispatch is not admitted",
+            ));
         }
-        _ => return Err(unsupported("expected sin, cos, tan or an absolute equation")),
+        _ => {
+            return Err(unsupported(
+                "expected sin, cos, tan or an absolute equation",
+            ));
+        }
     };
     Ok(NaturalRequest::SpecialAngle {
         function,
@@ -305,12 +326,16 @@ pub fn evaluate_v1(
 ) -> Result<NaturalOutcome, AdvancedError> {
     match request {
         NaturalRequest::SpecialAngle { function, angle } => {
-            context.check_rational(angle.coefficient()).map_err(evaluation)?;
+            context
+                .check_rational(angle.coefficient())
+                .map_err(evaluation)?;
             let limits = TrigLimits::default();
             let domain = ScalarDomain::Real;
             let result =
                 evaluate_special_angle(angle, *function, domain, limits).map_err(trig_error)?;
-            if !verify_special_angle(angle, *function, domain, &result, limits).map_err(trig_error)? {
+            if !verify_special_angle(angle, *function, domain, &result, limits)
+                .map_err(trig_error)?
+            {
                 return Err(AdvancedError::Verification(
                     "special angle evidence failed verification".into(),
                 ));
@@ -442,7 +467,10 @@ mod tests {
         let context = context();
         for source in ["|0*(1/x)|=0", "|x/x|=1", "|1/0|=1", "sin(pi/0)"] {
             assert!(
-                matches!(parse_v1(&context, source, "x"), Err(AdvancedError::Domain(_))),
+                matches!(
+                    parse_v1(&context, source, "x"),
+                    Err(AdvancedError::Domain(_))
+                ),
                 "{source}"
             );
         }

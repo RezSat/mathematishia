@@ -119,7 +119,7 @@ Checked derivatives cover selected analytic functions with domain conditions.
 
 The kernel provides checked multivariate expansion, integration dispatch, typed mathematical results and domain-aware exact operations. The CLI exposes `solveauto`, `roots`, `expandall`, `integrate`, and `evalexact`; Python exposes certified polynomial roots, Sturm counts, full bounded expansion, supported integration sums and analytic constants. Legacy `expand` remains distributive-step-only. Finite rational-point rational-function limits and degree-two-factor real inequalities are available through CLI `limit` and `inequality`, and Python `limit` and `solve_inequality`. These are bounded operations, not general-purpose analytic solving. CLI `sturm`, `rootbracket`, `isolate`, `linsystem` and `mvdivide` also have matched Python APIs. Selected commands accept `--json`, with the same checked schema available as Python `problem(*args)`, `solveauto` and `evalexact`. See [CAPABILITIES.md](CAPABILITIES.md) and [CLI/Python parity](crates/cli/PARITY.md) for supported domains and limits.
 
-Run the compiled 159-case student-problem regression corpus with `cargo test -p mathematishia-cli --test real_world_corpus --locked -- --nocapture`. The sample includes 107 solved cases, ten partial results, and explicit unsupported and refusal cases.
+Run the compiled 169-case student-problem regression corpus with `cargo test -p mathematishia-cli --test real_world_corpus --locked -- --nocapture`. The sample includes 115 solved cases, eleven partial results, and explicit unsupported and refusal cases.
 
 Resource limits bound selected algebraic operations; they are not process
 memory or execution-time limits.
@@ -127,3 +127,5 @@ memory or execution-time limits.
 For implemented operations and source locations, see [CAPABILITIES.md](CAPABILITIES.md). Architectural contracts are in [docs/design](docs/design), with planned work in [ROADMAP.md](ROADMAP.md).
 
 Licensed under [Apache-2.0](LICENSE).
+
+The checked algebra commands `groebner`, `idealmember`, `abssolve`, `trig`, `trigzeros`, `rootsfield`, `checkcalculus` and `steps` have matching Python interfaces. See the [parity table](crates/cli/PARITY.md) for examples and precise supported domains.

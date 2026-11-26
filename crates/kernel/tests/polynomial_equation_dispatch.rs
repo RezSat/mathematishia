@@ -226,7 +226,8 @@ fn rejects_forged_completeness_roots_and_source() {
     }
     assert!(!verify_polynomial_equation(&context, &p(&[1, 1]), &x(), domain, &result).unwrap());
     assert!(
-        !verify_polynomial_equation(&context, &original, &x(), ScalarDomain::Real, &result).unwrap()
+        !verify_polynomial_equation(&context, &original, &x(), ScalarDomain::Real, &result)
+            .unwrap()
     );
     let mut forged = result.clone();
     forged.complex_search = None;
@@ -283,7 +284,9 @@ fn field_and_resource_refusals_are_typed() {
         let limited = EvaluationContext::new(limits);
         assert_eq!(
             solve_polynomial_equation(&limited, &original, &x(), ScalarDomain::Complex),
-            Err(PolynomialEquationError::Evaluation(EvaluationError::Limit(kind)))
+            Err(PolynomialEquationError::Evaluation(EvaluationError::Limit(
+                kind
+            )))
         );
     }
 }

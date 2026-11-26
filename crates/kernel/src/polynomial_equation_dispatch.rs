@@ -134,9 +134,7 @@ fn agrees_with_search(
         .filter(|entry| in_domain(entry.root(), certificate.domain));
     match (&certificate.solutions, unresolved_cofactor) {
         (CertifiedSolutionSet::None, None) => Ok(*complete && admitted.count() == 0),
-        (CertifiedSolutionSet::Finite(values), None) => {
-            Ok(*complete && admitted.eq(values.iter()))
-        }
+        (CertifiedSolutionSet::Finite(values), None) => Ok(*complete && admitted.eq(values.iter())),
         (
             CertifiedSolutionSet::Partial {
                 roots: values,
@@ -207,7 +205,14 @@ pub fn verify_polynomial_equation(
 ) -> Result<bool, PolynomialEquationError> {
     let (left, right) = operands(context, original, variable, domain)?;
     if proposed.original != *original
-        || !verify_solution_set(context, &left, &right, variable, domain, &proposed.certificate)?
+        || !verify_solution_set(
+            context,
+            &left,
+            &right,
+            variable,
+            domain,
+            &proposed.certificate,
+        )?
     {
         return Ok(false);
     }

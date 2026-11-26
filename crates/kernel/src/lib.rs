@@ -24,6 +24,7 @@ mod extended_gcd;
 mod extension_minimal;
 mod finite_field;
 mod finite_field_factorization;
+mod groebner;
 mod guarded_rewrite;
 mod hensel_lift;
 mod inequalities;
@@ -121,6 +122,13 @@ pub use finite_field::{FiniteFieldError, FiniteFieldPolynomial, is_small_prime};
 pub use finite_field_factorization::{
     FiniteFieldFactor, FiniteFieldFactorization, factor_finite_field,
     verify_finite_field_factorization,
+};
+pub use groebner::{
+    GroebnerCertificate, GroebnerError, GroebnerPair, GroebnerReduction, IdealMembership,
+    groebner_basis, groebner_basis_from_domain_expressions, ideal_membership,
+    ideal_membership_from_domain_expressions, verify_groebner_basis,
+    verify_groebner_basis_from_domain_expressions, verify_ideal_membership,
+    verify_ideal_membership_from_domain_expressions,
 };
 pub use guarded_rewrite::{
     GuardedRewriteOutcome, GuardedRewriteStep, GuardedRewriteVerificationError, GuardedRuleId,

@@ -606,10 +606,16 @@ fn admit_request(
 }
 
 fn validate_request(request: &ProblemRequest) -> Result<Option<ProblemResult>, ProblemError> {
-    let matches_domain = |source: &DomainExpression| source.check_construction_domain(request.domain).is_ok();
+    let matches_domain =
+        |source: &DomainExpression| source.check_construction_domain(request.domain).is_ok();
     let compatible = match &request.statement {
-        ProblemStatement::Expression(source) | ProblemStatement::Limit { source, .. } => matches_domain(source),
-        ProblemStatement::SourceEquation { left, right } | ProblemStatement::Comparison { left, right, .. } => matches_domain(left) && matches_domain(right),
+        ProblemStatement::Expression(source) | ProblemStatement::Limit { source, .. } => {
+            matches_domain(source)
+        }
+        ProblemStatement::SourceEquation { left, right }
+        | ProblemStatement::Comparison { left, right, .. } => {
+            matches_domain(left) && matches_domain(right)
+        }
         _ => true,
     };
     if !compatible {
@@ -681,7 +687,10 @@ fn validate_request(request: &ProblemRequest) -> Result<Option<ProblemResult>, P
         | ProblemOperation::RationalRoots
         | ProblemOperation::EvaluateRational => request.domain == ScalarDomain::Rational,
         ProblemOperation::ComplexPolynomialRoots => request.domain == ScalarDomain::Complex,
-        ProblemOperation::PolynomialEquation => matches!(request.domain, ScalarDomain::Rational | ScalarDomain::Real | ScalarDomain::Complex),
+        ProblemOperation::PolynomialEquation => matches!(
+            request.domain,
+            ScalarDomain::Rational | ScalarDomain::Real | ScalarDomain::Complex
+        ),
         ProblemOperation::Differentiate => {
             matches!(request.domain, ScalarDomain::Real | ScalarDomain::Complex)
         }
@@ -890,18 +899,33 @@ pub fn adapt_verified_problem(
             ProblemStatement::PolynomialZero(polynomial),
             ProblemEvidence::PolynomialEquation(candidate),
         ) => {
-            use crate::{CertifiedSolutionSet, PolynomialEquationError, verify_polynomial_equation};
-            match verify_polynomial_equation(context, polynomial, variable.expect("validated variable"), request.domain, candidate) {
+            use crate::{
+                CertifiedSolutionSet, PolynomialEquationError, verify_polynomial_equation,
+            };
+            match verify_polynomial_equation(
+                context,
+                polynomial,
+                variable.expect("validated variable"),
+                request.domain,
+                candidate,
+            ) {
                 Ok(true) => {}
                 Ok(false) => return Err(ProblemError::InvalidEvidence),
-                Err(PolynomialEquationError::Evaluation(error)) => return handle_evaluation_error(request, error),
+                Err(PolynomialEquationError::Evaluation(error)) => {
+                    return handle_evaluation_error(request, error);
+                }
                 Err(_) => return Err(ProblemError::InvalidEvidence),
             }
             let outcome = match candidate.solutions() {
                 CertifiedSolutionSet::None => ProblemOutcome::NoSolutions,
-                CertifiedSolutionSet::Finite(roots) => ProblemOutcome::SolvedExact(ExactAnswer::ComplexRoots(roots.clone())),
+                CertifiedSolutionSet::Finite(roots) => {
+                    ProblemOutcome::SolvedExact(ExactAnswer::ComplexRoots(roots.clone()))
+                }
                 CertifiedSolutionSet::AllAdmissible => ProblemOutcome::AllAdmissibleValues,
-                CertifiedSolutionSet::Partial { roots, unresolved_cofactor } => ProblemOutcome::Partial {
+                CertifiedSolutionSet::Partial {
+                    roots,
+                    unresolved_cofactor,
+                } => ProblemOutcome::Partial {
                     known: ExactAnswer::ComplexRoots(roots.clone()),
                     unresolved: unresolved_cofactor.clone(),
                 },
@@ -1171,9 +1195,20 @@ pub fn dispatch_problem(
         },
         (ProblemOperation::PolynomialEquation, ProblemStatement::PolynomialZero(polynomial)) => {
             use crate::{PolynomialEquationError, solve_polynomial_equation};
-            match solve_polynomial_equation(context, polynomial, variable.expect("validated variable"), request.domain) {
-                Ok(proof) => adapt_verified_problem(context, request, ProblemEvidence::PolynomialEquation(&proof)),
-                Err(PolynomialEquationError::Evaluation(error)) => handle_evaluation_error(request, error),
+            match solve_polynomial_equation(
+                context,
+                polynomial,
+                variable.expect("validated variable"),
+                request.domain,
+            ) {
+                Ok(proof) => adapt_verified_problem(
+                    context,
+                    request,
+                    ProblemEvidence::PolynomialEquation(&proof),
+                ),
+                Err(PolynomialEquationError::Evaluation(error)) => {
+                    handle_evaluation_error(request, error)
+                }
                 Err(_) => Err(ProblemError::InvalidEvidence),
             }
         }

@@ -192,7 +192,9 @@ impl Encoder {
     fn domain_expression(&mut self, value: &DomainExpression) -> WireResult {
         self.object(|obj| {
             obj.field("expression", |w| w.expression(value.expression(), 0))?;
-            obj.field("conditions", |w| w.array(value.conditions(), Self::condition))?;
+            obj.field("conditions", |w| {
+                w.array(value.conditions(), Self::condition)
+            })?;
             if let Some(domain) = value.construction_domain() {
                 obj.field("construction_domain", |w| w.string(domain_id(domain)))?;
             }

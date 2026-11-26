@@ -418,11 +418,15 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
         ["isolate", input, name, width] => checked_results::isolate(input, name, width),
         ["rootsfield", _, _, _] => checked_results::json(args),
         ["groebner", names, generators @ ..] => advanced_operations::basis(names, generators),
-        ["idealmember", names, target, generators @ ..] => advanced_operations::membership(names, generators, target),
+        ["idealmember", names, target, generators @ ..] => {
+            advanced_operations::membership(names, generators, target)
+        }
         ["trig", function, coefficient] => advanced_operations::trig(function, coefficient),
         ["abssolve", source] => advanced_operations::absolute(source, "x"),
         ["abssolve", source, name] => advanced_operations::absolute(source, name),
-        ["checkcalculus", relation, source, candidate, name] => advanced_operations::calculus(source, candidate, name, relation),
+        ["checkcalculus", relation, source, candidate, name] => {
+            advanced_operations::calculus(source, candidate, name, relation)
+        }
         ["steps", kind, source, name] => advanced_operations::steps(kind, source, name),
         ["expr", input] => Ok(format!("expression: {}", expression(input)?)),
         ["expandall", input, variables @ ..] => user_solve::expand_all(input, variables),

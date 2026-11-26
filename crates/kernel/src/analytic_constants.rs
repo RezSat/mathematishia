@@ -425,7 +425,9 @@ pub fn rewrite_analytic_constant_once(
     limits: AnalyticConstantLimits,
 ) -> Result<AnalyticConstantOutcome, AnalyticConstantError> {
     validate_limits(limits)?;
-    source.check_construction_domain(domain).map_err(map_definedness)?;
+    source
+        .check_construction_domain(domain)
+        .map_err(map_definedness)?;
     if !matches!(domain, ScalarDomain::Real | ScalarDomain::Complex) {
         return Ok(AnalyticConstantOutcome::Unsupported(
             AnalyticConstantUnsupported::Domain(domain),
@@ -468,7 +470,9 @@ pub fn verify_analytic_constant_rewrite(
     limits: AnalyticConstantLimits,
 ) -> Result<bool, AnalyticConstantError> {
     validate_limits(limits)?;
-    expected_source.check_construction_domain(expected_domain).map_err(map_definedness)?;
+    expected_source
+        .check_construction_domain(expected_domain)
+        .map_err(map_definedness)?;
     if certificate.domain != expected_domain
         || !matches!(expected_domain, ScalarDomain::Real | ScalarDomain::Complex)
         || certificate.path.len() > limits.max_depth

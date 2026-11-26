@@ -232,9 +232,13 @@ pub fn request(context: &EvaluationContext, args: &[&str]) -> Result<ProblemRequ
             let symbol = variable(context, name)?;
             let expression = source(input, domain)?;
             if !expression.conditions().is_empty() {
-                return Err(RequestError::Unsupported("polynomial roots cannot discard source restrictions"));
+                return Err(RequestError::Unsupported(
+                    "polynomial roots cannot discard source restrictions",
+                ));
             }
-            let polynomial = context.polynomial(expression.expression(), &symbol).map_err(RequestError::Evaluation)?;
+            let polynomial = context
+                .polynomial(expression.expression(), &symbol)
+                .map_err(RequestError::Evaluation)?;
             Ok(ProblemRequest {
                 operation: ProblemOperation::PolynomialEquation,
                 statement: ProblemStatement::PolynomialZero(polynomial),

@@ -1,9 +1,13 @@
 use mathema_frontend::advanced::{self, AdvancedError};
-use mathematishia_kernel::{EvaluationContext, ExactQuadraticRoot, IdealMembership, SpecialAngleOutcome};
+use mathematishia_kernel::{
+    EvaluationContext, ExactQuadraticRoot, IdealMembership, SpecialAngleOutcome,
+};
 use pyo3::prelude::*;
 
-use super::{ResourceLimitError, UndefinedAtPointError, UnsupportedMathematicsError, VerificationFailure};
 use super::checked_results::request_error;
+use super::{
+    ResourceLimitError, UndefinedAtPointError, UnsupportedMathematicsError, VerificationFailure,
+};
 
 fn error(error: AdvancedError) -> PyErr {
     match error {
@@ -21,15 +25,29 @@ type BasisData = (Vec<String>, Vec<String>);
 fn groebner(variables: Vec<String>, generators: Vec<String>) -> PyResult<BasisData> {
     let variables = variables.iter().map(String::as_str).collect::<Vec<_>>();
     let generators = generators.iter().map(String::as_str).collect::<Vec<_>>();
-    let result = advanced::basis(&EvaluationContext::default(), &variables, &generators).map_err(error)?;
-    Ok((result.variables.iter().map(ToString::to_string).collect(), result.basis.iter().map(ToString::to_string).collect()))
+    let result =
+        advanced::basis(&EvaluationContext::default(), &variables, &generators).map_err(error)?;
+    Ok((
+        result.variables.iter().map(ToString::to_string).collect(),
+        result.basis.iter().map(ToString::to_string).collect(),
+    ))
 }
 
 #[pyfunction]
-fn ideal_membership(variables: Vec<String>, generators: Vec<String>, target: &str) -> PyResult<(bool, String)> {
+fn ideal_membership(
+    variables: Vec<String>,
+    generators: Vec<String>,
+    target: &str,
+) -> PyResult<(bool, String)> {
     let variables = variables.iter().map(String::as_str).collect::<Vec<_>>();
     let generators = generators.iter().map(String::as_str).collect::<Vec<_>>();
-    let result = advanced::membership(&EvaluationContext::default(), &variables, &generators, target).map_err(error)?;
+    let result = advanced::membership(
+        &EvaluationContext::default(),
+        &variables,
+        &generators,
+        target,
+    )
+    .map_err(error)?;
     Ok(match result {
         IdealMembership::Member(reduction) => (true, reduction.remainder.to_string()),
         IdealMembership::NonMember(reduction) => (false, reduction.remainder.to_string()),
@@ -40,12 +58,27 @@ type AngleData = (String, Option<String>, Option<Vec<String>>, Option<String>);
 
 #[pyfunction]
 fn special_angle(function: &str, coefficient: &str) -> PyResult<AngleData> {
-    let result = advanced::special_angle(&EvaluationContext::default(), function, coefficient).map_err(error)?;
+    let result = advanced::special_angle(&EvaluationContext::default(), function, coefficient)
+        .map_err(error)?;
     Ok(match result.outcome {
         SpecialAngleOutcome::UndefinedTangentPole => ("undefined".into(), None, None, None),
-        SpecialAngleOutcome::Exact(ExactQuadraticRoot::Rational(value)) => ("rational".into(), Some(value.to_string()), None, None),
-        SpecialAngleOutcome::Exact(ExactQuadraticRoot::Algebraic { minimal_polynomial, branch }) => (
-            "real_quadratic".into(), None, Some(minimal_polynomial.coefficients().iter().map(ToString::to_string).collect()), Some(branch.stable_id().into())
+        SpecialAngleOutcome::Exact(ExactQuadraticRoot::Rational(value)) => {
+            ("rational".into(), Some(value.to_string()), None, None)
+        }
+        SpecialAngleOutcome::Exact(ExactQuadraticRoot::Algebraic {
+            minimal_polynomial,
+            branch,
+        }) => (
+            "real_quadratic".into(),
+            None,
+            Some(
+                minimal_polynomial
+                    .coefficients()
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect(),
+            ),
+            Some(branch.stable_id().into()),
         ),
     })
 }
@@ -54,14 +87,46 @@ type IntervalData = (Option<String>, Option<String>);
 
 #[pyfunction]
 fn solve_absolute(source: &str, variable: &str) -> PyResult<Vec<IntervalData>> {
-    let result = advanced::absolute(&EvaluationContext::default(), source, variable).map_err(error)?;
-    Ok(result.solutions.into_iter().map(|interval| (interval.lower.map(|v| v.to_string()), interval.upper.map(|v| v.to_string()))).collect())
+    let result =
+        advanced::absolute(&EvaluationContext::default(), source, variable).map_err(error)?;
+    Ok(result
+        .solutions
+        .into_iter()
+        .map(|interval| {
+            (
+                interval.lower.map(|v| v.to_string()),
+                interval.upper.map(|v| v.to_string()),
+            )
+        })
+        .collect())
 }
 
 #[pyfunction]
-fn check_calculus(source: &str, candidate: &str, variable: &str, relation: &str) -> PyResult<Vec<Vec<String>>> {
-    let result = advanced::calculus(&EvaluationContext::default(), source, candidate, variable, relation).map_err(error)?;
-    Ok(result.value.excluded_zero_sets().iter().map(|poly| poly.coefficients().iter().map(ToString::to_string).collect()).collect())
+fn check_calculus(
+    source: &str,
+    candidate: &str,
+    variable: &str,
+    relation: &str,
+) -> PyResult<Vec<Vec<String>>> {
+    let result = advanced::calculus(
+        &EvaluationContext::default(),
+        source,
+        candidate,
+        variable,
+        relation,
+    )
+    .map_err(error)?;
+    Ok(result
+        .value
+        .excluded_zero_sets()
+        .iter()
+        .map(|poly| {
+            poly.coefficients()
+                .iter()
+                .map(ToString::to_string)
+                .collect()
+        })
+        .collect())
 }
 
 type RecordData = (usize, String, String, Vec<usize>, Vec<String>);
@@ -69,10 +134,32 @@ type DerivationData = (Vec<String>, Vec<RecordData>, String);
 
 #[pyfunction]
 fn derivation_records(kind: &str, source: &str, variable: &str) -> PyResult<DerivationData> {
-    let result = advanced::derivation(&EvaluationContext::default(), kind, source, variable).map_err(error)?;
-    Ok((result.source_conditions.iter().map(|condition| format!("{condition:?}")).collect(),
-        result.steps.into_iter().map(|step| (step.index, step.rule.stable_id().into(), format!("{:?}", step.claim), step.premises, step.conditions.iter().map(|condition| format!("{condition:?}")).collect())).collect(),
-        format!("{:?}", result.conclusion)))
+    let result = advanced::derivation(&EvaluationContext::default(), kind, source, variable)
+        .map_err(error)?;
+    Ok((
+        result
+            .source_conditions
+            .iter()
+            .map(|condition| format!("{condition:?}"))
+            .collect(),
+        result
+            .steps
+            .into_iter()
+            .map(|step| {
+                (
+                    step.index,
+                    step.rule.stable_id().into(),
+                    format!("{:?}", step.claim),
+                    step.premises,
+                    step.conditions
+                        .iter()
+                        .map(|condition| format!("{condition:?}"))
+                        .collect(),
+                )
+            })
+            .collect(),
+        format!("{:?}", result.conclusion),
+    ))
 }
 
 pub(super) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {

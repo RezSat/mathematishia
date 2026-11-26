@@ -189,7 +189,29 @@ pub fn substitute_domain(
         conditions.extend(replacement.conditions().iter().cloned());
     }
 
-    DomainExpression::with_conditions(replaced, conditions, max_nodes, max_conditions)
+    let domain = source.construction_domain().or_else(|| {
+        if encountered {
+            replacement.construction_domain()
+        } else {
+            None
+        }
+    });
+    if let Some(domain) = domain {
+        if encountered {
+            replacement.check_construction_domain(domain)?;
+        }
+        let value =
+            DomainExpression::from_expr_in_domain(replaced, domain, max_nodes, max_conditions)?;
+        let history = DomainExpression::with_conditions(
+            Expr::from(0),
+            conditions,
+            max_nodes,
+            max_conditions,
+        )?;
+        DomainExpression::add([history, value], max_conditions)
+    } else {
+        DomainExpression::with_conditions(replaced, conditions, max_nodes, max_conditions)
+    }
 }
 
 fn substitute_condition(condition: &Condition, symbol: &Symbol, replacement: &Expr) -> Condition {

@@ -425,14 +425,14 @@ pub fn rewrite_analytic_constant_once(
     limits: AnalyticConstantLimits,
 ) -> Result<AnalyticConstantOutcome, AnalyticConstantError> {
     validate_limits(limits)?;
-    source
-        .check_construction_domain(domain)
-        .map_err(map_definedness)?;
     if !matches!(domain, ScalarDomain::Real | ScalarDomain::Complex) {
         return Ok(AnalyticConstantOutcome::Unsupported(
             AnalyticConstantUnsupported::Domain(domain),
         ));
     }
+    source
+        .check_construction_domain(domain)
+        .map_err(map_definedness)?;
     let mut meter = Meter { nodes: 0, work: 0 };
     let (conditions, first) = match conditions_for(source, domain, &mut meter, limits) {
         Ok(value) => value,

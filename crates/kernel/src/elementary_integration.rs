@@ -243,6 +243,7 @@ fn check_source(
     if !matches!(domain, ScalarDomain::Real | ScalarDomain::Complex) {
         return Err(ElementaryIntegrationError::UnsupportedScalarDomain);
     }
+    source.check_construction_domain(domain)?;
     context.check_expression(source.expression())?;
     if source.conditions().len() > context.limits().max_rational_conditions {
         return Err(EvaluationError::Limit(ResourceLimitKind::RationalConditions).into());

@@ -1257,7 +1257,7 @@ class DerivationRecords:
 
 
 def derivation_records(kind: str, source: str, variable: str = "x") -> DerivationRecords:
-    """Checked linear or derivative records; display text is not a certificate."""
+    """Checked linear, derivative or distribution records; display text is not a certificate."""
     conditions, steps, conclusion = _native.derivation_records(kind, source, variable)
     return DerivationRecords(tuple(conditions),
                              tuple(DerivationRecord(i, rule, claim, tuple(premises), tuple(required))
@@ -1265,7 +1265,19 @@ def derivation_records(kind: str, source: str, variable: str = "x") -> Derivatio
                              conclusion)
 
 
+@dataclass(frozen=True)
+class PartialTrigZeros:
+    pi_coefficients: tuple[Fraction, ...]
+    complete: bool = False
+
+
+def trig_zero_examples(function: str) -> PartialTrigZeros:
+    """Two verified examples only; not a complete periodic solution set."""
+    return PartialTrigZeros(tuple(map(Fraction, _native.trig_zero_examples(function))))
+
+
 __all__ = [
+    "PartialTrigZeros", "trig_zero_examples",
     "GroebnerBasis", "groebner_basis", "IdealMembership", "ideal_membership",
     "special_angle", "AbsoluteInterval", "solve_absolute", "solve_polynomial_in_domain",
     "check_calculus", "DerivationRecord", "DerivationRecords", "derivation_records",

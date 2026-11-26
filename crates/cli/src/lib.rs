@@ -40,9 +40,10 @@ Usage:
   mathematishia groebner <VARIABLES_CSV> <GENERATOR> ...
   mathematishia idealmember <VARIABLES_CSV> <TARGET> <GENERATOR> ...
   mathematishia trig <sin|cos|tan> <PI_COEFFICIENT>
+  mathematishia trigzeros <sin|cos>
   mathematishia abssolve <EQUATION> [VARIABLE]
   mathematishia checkcalculus <identity|derivative> <SOURCE> <CANDIDATE> <VARIABLE>
-  mathematishia steps <linear|derivative> <SOURCE> <VARIABLE>
+  mathematishia steps <linear|derivative|expand> <SOURCE> <VARIABLE>
   mathematishia solve <EQUATION> <VARIABLE>
   mathematishia solveauto <EQUATION> [VARIABLE]  (defaults to x)
   mathematishia roots <POLYNOMIAL> [VARIABLE]
@@ -422,6 +423,7 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
             advanced_operations::membership(names, generators, target)
         }
         ["trig", function, coefficient] => advanced_operations::trig(function, coefficient),
+        ["trigzeros", function] => advanced_operations::trig_zeros(function),
         ["abssolve", source] => advanced_operations::absolute(source, "x"),
         ["abssolve", source, name] => advanced_operations::absolute(source, name),
         ["checkcalculus", relation, source, candidate, name] => {

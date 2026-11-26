@@ -28,7 +28,7 @@ pub(super) fn basis(names: &str, generators: &[&str]) -> Result<String, CliError
         result.basis.len()
     );
     for polynomial in result.basis {
-        write!(output, "\nbasis: {polynomial}").unwrap();
+        write!(output, "\nbasis: {}", advanced::polynomial_text(&polynomial).map_err(error)?).unwrap();
     }
     output.push_str("\nverified: true");
     Ok(output)
@@ -48,7 +48,7 @@ pub(super) fn membership(
     };
     Ok(format!(
         "status: exact\nmember: {member}\nremainder: {}\nverified: true",
-        reduction.remainder
+        advanced::polynomial_text(&reduction.remainder).map_err(error)?
     ))
 }
 
@@ -130,23 +130,31 @@ pub(super) fn steps(kind: &str, source: &str, name: &str) -> Result<String, CliE
     for step in result.steps {
         write!(
             output,
-            "\n{}. {}: {:?}; premises: {:?}; conditions: {:?}",
+            "\n{}. {}: {}; premises: {:?}; conditions: {}",
             step.index,
             step.rule.stable_id(),
-            step.claim,
+            advanced::claim_text(&step.claim),
             step.premises,
-            step.conditions
+            step.conditions.iter().map(advanced::step_condition_text).collect::<Vec<_>>().join(", ")
         )
         .unwrap();
     }
     for condition in result.source_conditions {
-        write!(output, "\nsource condition: {condition:?}").unwrap();
+        write!(output, "\nsource condition: {}", advanced::condition_text(&condition)).unwrap();
     }
     write!(
         output,
-        "\nconclusion: {:?}\nverified: true",
-        result.conclusion
+        "\nconclusion: {}\nverified: true",
+        advanced::conclusion_text(&result.conclusion)
     )
     .unwrap();
+    Ok(output)
+}
+
+pub(super) fn trig_zeros(function: &str) -> Result<String, CliError> {
+    let zeros = advanced::trig_zeros(function).map_err(error)?;
+    let mut output = String::from("status: partial\ndomain: R");
+    for zero in zeros { write!(output, "\nknown_pi_coefficient: {zero}").unwrap(); }
+    output.push_str("\nreason: integer-parameter completeness unavailable\nverified: true");
     Ok(output)
 }

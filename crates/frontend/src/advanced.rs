@@ -2,17 +2,17 @@
 
 use std::{collections::BTreeSet, fmt};
 
-use mathema::{DomainExpression, Equation, Integer, Rational, ScalarDomain, Symbol};
+use mathema::{Condition, DomainExpression, Equation, Integer, Rational, ScalarDomain, Symbol};
 use mathematishia_kernel::{
     AbsoluteAffine, AbsoluteEquation, AbsoluteEquationError, AbsoluteEquationResult,
     AbsoluteExpression, EvaluationContext, GroebnerCertificate, GroebnerError, IdealMembership,
     MultivariateError, MultivariateExprError, MultivariateLimits, MultivariatePolynomial,
     PiMultiple, RationalCalculusCertificate, RationalCalculusError, RationalCalculusRelation,
-    SpecialAngleCertificate, TrigError, TrigFunction, TrigLimits, certify_rational_calculus,
+    SpecialAngleCertificate, TrigError, TrigFunction, TrigLimits, LinearSolution, VerifiedCondition, certify_rational_calculus,
     evaluate_special_angle, groebner_basis_from_domain_expressions,
-    ideal_membership_from_domain_expressions, solve_absolute_equation,
+    ideal_membership_from_domain_expressions, partial_trig_zeros, solve_absolute_equation,
     step_records::{
-        StepEvidence, StepLimits, StepRecordError, StepRecords, record_steps, verify_step_records,
+        StepClaim, StepConclusion, StepCondition, StepEvidence, StepLimits, StepRecordError, StepRecords, record_steps, verify_step_records,
     },
     verify_absolute_equation, verify_groebner_basis_from_domain_expressions,
     verify_ideal_membership_from_domain_expressions, verify_rational_calculus,
@@ -382,6 +382,12 @@ pub fn derivation(
 ) -> Result<StepRecords, AdvancedError> {
     let variable = problem::variable(context, name)?;
     match kind {
+        "expand" => {
+            let domain = ScalarDomain::Real;
+            let source = problem::source(source, domain)?;
+            let result = context.expand(source.expression()).map_err(evaluation)?;
+            checked_records(StepEvidence::Distribution { source: &source, domain, result: &result })
+        }
         "linear" => {
             let statement = parse_domain_statement_in_domain(source, ScalarDomain::Rational)
                 .map_err(RequestError::Parse)?;
@@ -417,10 +423,60 @@ pub fn derivation(
                 result: &result,
             })
         }
-        _ => Err(invalid("expected linear or derivative")),
+        _ => Err(invalid("expected linear, derivative or expand")),
     }
 }
 
-pub fn polynomial_text(poly: &MultivariatePolynomial) -> String {
-    poly.to_string()
+pub fn polynomial_text(poly: &MultivariatePolynomial) -> Result<String, AdvancedError> {
+    poly.to_expr(MultivariateLimits::default()).map(|value| value.to_string()).map_err(|error| groebner_error(GroebnerError::Expression(error)))
+}
+
+pub fn trig_zeros(function: &str) -> Result<Vec<Rational>, AdvancedError> {
+    let function = match function {
+        "sin" => TrigFunction::Sin,
+        "cos" => TrigFunction::Cos,
+        _ => return Err(rejected("partial zero examples support sine and cosine")),
+    };
+    let result = partial_trig_zeros(function, ScalarDomain::Real, TrigLimits::default())
+        .map_err(|error| AdvancedError::Unsupported(error.to_string()))?;
+    Ok(result.known_zeros().iter().map(|proof| proof.angle.coefficient().clone()).collect())
+}
+
+pub fn condition_text(condition: &Condition) -> String {
+    match condition {
+        Condition::NonZero(expr) => format!("{expr} != 0"),
+        Condition::Positive(expr) => format!("{expr} > 0"),
+        Condition::Real(expr) => format!("{expr} in R"),
+        Condition::Integer(expr) => format!("{expr} in Z"),
+        Condition::InDomain { expression, domain } => format!("{expression} in {domain:?}"),
+    }
+}
+
+pub fn step_condition_text(condition: &StepCondition) -> String {
+    match condition {
+        StepCondition::Source(index) => format!("source condition {index}"),
+        StepCondition::Proven(VerifiedCondition::Nonzero(value)) => format!("proved {value} != 0"),
+    }
+}
+
+pub fn claim_text(claim: &StepClaim) -> String {
+    match claim {
+        StepClaim::Equal { before, after } => format!("{before} = {after}"),
+        StepClaim::Equivalent { before, after, variable } => format!("{} = {} <=> {} = {} (in {variable})", before.left(), before.right(), after.left(), after.right()),
+        StepClaim::DerivativeOf { before, after, variable } => format!("d/d{variable} ({before}) = {after}"),
+        StepClaim::PolynomialDivision { .. } | StepClaim::MultivariateDivision { .. } => "final polynomial division recomposition".into(),
+    }
+}
+
+pub fn conclusion_text(conclusion: &StepConclusion) -> String {
+    match conclusion {
+        StepConclusion::Distribution { result, complete, .. } => format!("distribution result: {result}; distributive traversal complete: {complete}"),
+        StepConclusion::Linear { variable, solution, .. } => match solution {
+            LinearSolution::Unique(value) => format!("{variable} = {value}"),
+            LinearSolution::NoSolution => "no rational solutions".into(),
+            LinearSolution::AllRationals => "all rational values".into(),
+        },
+        StepConclusion::Derivative { result, .. } => format!("derivative: {result}"),
+        StepConclusion::FinalDivision => "final recomposition and reduced remainder verified".into(),
+    }
 }

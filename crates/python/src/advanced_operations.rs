@@ -29,7 +29,7 @@ fn groebner(variables: Vec<String>, generators: Vec<String>) -> PyResult<BasisDa
         advanced::basis(&EvaluationContext::default(), &variables, &generators).map_err(error)?;
     Ok((
         result.variables.iter().map(ToString::to_string).collect(),
-        result.basis.iter().map(ToString::to_string).collect(),
+        result.basis.iter().map(advanced::polynomial_text).collect::<Result<Vec<_>, _>>().map_err(error)?,
     ))
 }
 
@@ -49,8 +49,8 @@ fn ideal_membership(
     )
     .map_err(error)?;
     Ok(match result {
-        IdealMembership::Member(reduction) => (true, reduction.remainder.to_string()),
-        IdealMembership::NonMember(reduction) => (false, reduction.remainder.to_string()),
+        IdealMembership::Member(reduction) => (true, advanced::polynomial_text(&reduction.remainder).map_err(error)?),
+        IdealMembership::NonMember(reduction) => (false, advanced::polynomial_text(&reduction.remainder).map_err(error)?),
     })
 }
 
@@ -140,7 +140,7 @@ fn derivation_records(kind: &str, source: &str, variable: &str) -> PyResult<Deri
         result
             .source_conditions
             .iter()
-            .map(|condition| format!("{condition:?}"))
+            .map(advanced::condition_text)
             .collect(),
         result
             .steps
@@ -149,20 +149,26 @@ fn derivation_records(kind: &str, source: &str, variable: &str) -> PyResult<Deri
                 (
                     step.index,
                     step.rule.stable_id().into(),
-                    format!("{:?}", step.claim),
+                    advanced::claim_text(&step.claim),
                     step.premises,
                     step.conditions
                         .iter()
-                        .map(|condition| format!("{condition:?}"))
+                        .map(advanced::step_condition_text)
                         .collect(),
                 )
             })
             .collect(),
-        format!("{:?}", result.conclusion),
+        advanced::conclusion_text(&result.conclusion),
     ))
 }
 
+#[pyfunction]
+fn trig_zero_examples(function: &str) -> PyResult<Vec<String>> {
+    Ok(advanced::trig_zeros(function).map_err(error)?.iter().map(ToString::to_string).collect())
+}
+
 pub(super) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(trig_zero_examples, m)?)?;
     m.add_function(wrap_pyfunction!(groebner, m)?)?;
     m.add_function(wrap_pyfunction!(ideal_membership, m)?)?;
     m.add_function(wrap_pyfunction!(special_angle, m)?)?;

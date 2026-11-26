@@ -39,6 +39,7 @@ pub enum ProblemOperation {
     SolveRational,
     RationalRoots,
     ComplexPolynomialRoots,
+    PolynomialEquation,
     Differentiate,
     EvaluateRational,
     Integrate,
@@ -56,6 +57,7 @@ impl ProblemOperation {
             Self::SolveRational => "equation.rational_linear",
             Self::RationalRoots => "polynomial.rational_roots_degree_two",
             Self::ComplexPolynomialRoots => "polynomial.complex_roots_partial",
+            Self::PolynomialEquation => "polynomial.equation",
             Self::Differentiate => "calculus.differentiate",
             Self::EvaluateRational => "rational.evaluate",
             Self::Integrate => "calculus.integrate",
@@ -167,6 +169,7 @@ pub enum CheckedBy {
     QuadraticRootCriterion,
     RationalEquationDomain,
     PartialComplexFactorization,
+    SourceBoundPolynomial,
     SymbolicDerivativeRules,
     RationalEvaluation,
     IntegrationTerms,
@@ -256,6 +259,7 @@ pub enum ProblemEvidence<'a> {
     Quadratic(&'a QuadraticResult),
     RationalEquation(&'a RationalEquationResult),
     ComplexRoots(&'a PartialPolynomialRootResult),
+    PolynomialEquation(&'a crate::PolynomialEquationResult),
     Derivative(&'a SymbolicDerivative),
     RationalEvaluation(&'a Rational),
     Integration(&'a DispatchedAntiderivative),
@@ -602,6 +606,21 @@ fn admit_request(
 }
 
 fn validate_request(request: &ProblemRequest) -> Result<Option<ProblemResult>, ProblemError> {
+    let matches_domain =
+        |source: &DomainExpression| source.check_construction_domain(request.domain).is_ok();
+    let compatible = match &request.statement {
+        ProblemStatement::Expression(source) | ProblemStatement::Limit { source, .. } => {
+            matches_domain(source)
+        }
+        ProblemStatement::SourceEquation { left, right }
+        | ProblemStatement::Comparison { left, right, .. } => {
+            matches_domain(left) && matches_domain(right)
+        }
+        _ => true,
+    };
+    if !compatible {
+        return Ok(Some(unsupported(request, UnsupportedReason::Domain)));
+    }
     if request.variables.is_empty()
         && !matches!(
             request.operation,
@@ -632,7 +651,7 @@ fn validate_request(request: &ProblemRequest) -> Result<Option<ProblemResult>, P
                 ProblemStatement::PolynomialZero(_)
             )
             | (
-                ProblemOperation::ComplexPolynomialRoots,
+                ProblemOperation::ComplexPolynomialRoots | ProblemOperation::PolynomialEquation,
                 ProblemStatement::PolynomialZero(_)
             )
             | (
@@ -668,6 +687,10 @@ fn validate_request(request: &ProblemRequest) -> Result<Option<ProblemResult>, P
         | ProblemOperation::RationalRoots
         | ProblemOperation::EvaluateRational => request.domain == ScalarDomain::Rational,
         ProblemOperation::ComplexPolynomialRoots => request.domain == ScalarDomain::Complex,
+        ProblemOperation::PolynomialEquation => matches!(
+            request.domain,
+            ScalarDomain::Rational | ScalarDomain::Real | ScalarDomain::Complex
+        ),
         ProblemOperation::Differentiate => {
             matches!(request.domain, ScalarDomain::Real | ScalarDomain::Complex)
         }
@@ -870,6 +893,44 @@ pub fn adapt_verified_problem(
                 _ => return Err(ProblemError::InvalidEvidence),
             };
             (outcome, CheckedBy::PartialComplexFactorization, Vec::new())
+        }
+        (
+            ProblemOperation::PolynomialEquation,
+            ProblemStatement::PolynomialZero(polynomial),
+            ProblemEvidence::PolynomialEquation(candidate),
+        ) => {
+            use crate::{
+                CertifiedSolutionSet, PolynomialEquationError, verify_polynomial_equation,
+            };
+            match verify_polynomial_equation(
+                context,
+                polynomial,
+                variable.expect("validated variable"),
+                request.domain,
+                candidate,
+            ) {
+                Ok(true) => {}
+                Ok(false) => return Err(ProblemError::InvalidEvidence),
+                Err(PolynomialEquationError::Evaluation(error)) => {
+                    return handle_evaluation_error(request, error);
+                }
+                Err(_) => return Err(ProblemError::InvalidEvidence),
+            }
+            let outcome = match candidate.solutions() {
+                CertifiedSolutionSet::None => ProblemOutcome::NoSolutions,
+                CertifiedSolutionSet::Finite(roots) => {
+                    ProblemOutcome::SolvedExact(ExactAnswer::ComplexRoots(roots.clone()))
+                }
+                CertifiedSolutionSet::AllAdmissible => ProblemOutcome::AllAdmissibleValues,
+                CertifiedSolutionSet::Partial {
+                    roots,
+                    unresolved_cofactor,
+                } => ProblemOutcome::Partial {
+                    known: ExactAnswer::ComplexRoots(roots.clone()),
+                    unresolved: unresolved_cofactor.clone(),
+                },
+            };
+            (outcome, CheckedBy::SourceBoundPolynomial, Vec::new())
         }
         (
             ProblemOperation::Differentiate,
@@ -1132,6 +1193,25 @@ pub fn dispatch_problem(
             }
             Err(error) => Err(ProblemError::PolynomialRoots(error)),
         },
+        (ProblemOperation::PolynomialEquation, ProblemStatement::PolynomialZero(polynomial)) => {
+            use crate::{PolynomialEquationError, solve_polynomial_equation};
+            match solve_polynomial_equation(
+                context,
+                polynomial,
+                variable.expect("validated variable"),
+                request.domain,
+            ) {
+                Ok(proof) => adapt_verified_problem(
+                    context,
+                    request,
+                    ProblemEvidence::PolynomialEquation(&proof),
+                ),
+                Err(PolynomialEquationError::Evaluation(error)) => {
+                    handle_evaluation_error(request, error)
+                }
+                Err(_) => Err(ProblemError::InvalidEvidence),
+            }
+        }
         (ProblemOperation::Differentiate, ProblemStatement::Expression(source)) => {
             let assumptions = Assumptions::new();
             if source

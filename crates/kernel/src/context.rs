@@ -463,6 +463,9 @@ impl EvaluationContext {
         variable: &Symbol,
         domain: ScalarDomain,
     ) -> Result<SymbolicDerivative, EvaluationError> {
+        source
+            .check_construction_domain(domain)
+            .map_err(|_| SymbolicDifferentiationError::MissingDomainCondition)?;
         self.check_expression(source.expression())?;
         if source.conditions().len() > self.limits.max_rational_conditions {
             return Err(EvaluationError::Limit(

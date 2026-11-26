@@ -430,6 +430,9 @@ pub fn rewrite_analytic_constant_once(
             AnalyticConstantUnsupported::Domain(domain),
         ));
     }
+    source
+        .check_construction_domain(domain)
+        .map_err(map_definedness)?;
     let mut meter = Meter { nodes: 0, work: 0 };
     let (conditions, first) = match conditions_for(source, domain, &mut meter, limits) {
         Ok(value) => value,
@@ -467,6 +470,9 @@ pub fn verify_analytic_constant_rewrite(
     limits: AnalyticConstantLimits,
 ) -> Result<bool, AnalyticConstantError> {
     validate_limits(limits)?;
+    expected_source
+        .check_construction_domain(expected_domain)
+        .map_err(map_definedness)?;
     if certificate.domain != expected_domain
         || !matches!(expected_domain, ScalarDomain::Real | ScalarDomain::Complex)
         || certificate.path.len() > limits.max_depth

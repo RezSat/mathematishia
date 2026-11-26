@@ -6,12 +6,14 @@
 
 use mathema::{Expr, ExprView, Symbol};
 
+mod absolute_equations;
 mod algebraic;
 mod algebraic_extension;
 mod analytic_constants;
 mod analytic_semantics;
 mod assumptions;
 mod budget;
+mod calculus_rule_checks;
 mod conditional_rewrite;
 mod context;
 mod derivation_render;
@@ -24,6 +26,7 @@ mod extended_gcd;
 mod extension_minimal;
 mod finite_field;
 mod finite_field_factorization;
+mod groebner;
 mod guarded_rewrite;
 mod hensel_lift;
 mod inequalities;
@@ -40,6 +43,7 @@ mod multivariate_polynomial;
 mod poly_convert;
 mod poly_division;
 mod polynomial;
+mod polynomial_equation_dispatch;
 mod polynomial_residue;
 mod polynomial_solution_set;
 mod problem_result;
@@ -57,7 +61,9 @@ mod root_isolation;
 mod solution_certificates;
 mod solve_linear;
 mod square_free;
+pub mod step_records;
 mod sturm_count;
+mod trigonometry;
 mod verification;
 
 pub use solution_certificates::{
@@ -65,6 +71,11 @@ pub use solution_certificates::{
     verify_solution_set,
 };
 
+pub use absolute_equations::{
+    AbsoluteAffine, AbsoluteCase, AbsoluteEquation, AbsoluteEquationError, AbsoluteEquationResult,
+    AbsoluteExpression, AbsoluteInterval, AbsoluteSign, solve_absolute_equation,
+    verify_absolute_equation,
+};
 pub use algebraic::{
     AlgebraicRootEvidence, AlgebraicRootResult, AlgebraicRootRule, AlgebraicRootSet,
     AlgebraicVerificationError, ExactQuadraticRoot, QuadraticBranch, verify_algebraic_roots,
@@ -83,6 +94,10 @@ pub use analytic_semantics::{
     check_domain_preconditions,
 };
 pub use assumptions::{AssumptionError, Assumptions, ConditionStatus};
+pub use calculus_rule_checks::{
+    RationalCalculusCertificate, RationalCalculusError, RationalCalculusRelation,
+    certify_rational_calculus, verify_rational_calculus,
+};
 pub use conditional_rewrite::{
     ConditionEvidence, ConditionalRewriteOutcome, ConditionalRewriteStep,
     ConditionalRewriteVerificationError, ConditionalRuleId, cancel_composite_inverse_once,
@@ -121,6 +136,13 @@ pub use finite_field::{FiniteFieldError, FiniteFieldPolynomial, is_small_prime};
 pub use finite_field_factorization::{
     FiniteFieldFactor, FiniteFieldFactorization, factor_finite_field,
     verify_finite_field_factorization,
+};
+pub use groebner::{
+    GroebnerCertificate, GroebnerError, GroebnerPair, GroebnerReduction, IdealMembership,
+    groebner_basis, groebner_basis_from_domain_expressions, ideal_membership,
+    ideal_membership_from_domain_expressions, verify_groebner_basis,
+    verify_groebner_basis_from_domain_expressions, verify_ideal_membership,
+    verify_ideal_membership_from_domain_expressions,
 };
 pub use guarded_rewrite::{
     GuardedRewriteOutcome, GuardedRewriteStep, GuardedRewriteVerificationError, GuardedRuleId,
@@ -164,6 +186,10 @@ pub use multivariate_polynomial::{MultivariateError, MultivariateLimits, Multiva
 pub use poly_convert::PolynomialConversionError;
 pub use poly_division::ZeroPolynomialDivisor;
 pub use polynomial::RationalPolynomial;
+pub use polynomial_equation_dispatch::{
+    PolynomialEquationError, PolynomialEquationResult, solve_polynomial_equation,
+    verify_polynomial_equation,
+};
 pub use polynomial_residue::{PolynomialResidue, ResidueError, verify_residue_product};
 pub use polynomial_solution_set::{
     PartialPolynomialRootError, PartialPolynomialRootResult, PolynomialFactorRootEvidence,
@@ -217,6 +243,11 @@ pub use square_free::{
 pub use sturm_count::{
     SturmCountCertificate, SturmCountError, SturmDivisionEvidence, SturmSign,
     SturmVerificationError, verify_sturm_count,
+};
+pub use trigonometry::{
+    PartialTrigZeros, PiMultiple, SpecialAngleCertificate, SpecialAngleOutcome,
+    TrigEquationUnsupported, TrigError, TrigFunction, TrigLimits, evaluate_special_angle,
+    partial_trig_zeros, verify_special_angle,
 };
 pub use verification::{
     VerificationError, verify_distribution, verify_distribution_step, verify_equation_step,

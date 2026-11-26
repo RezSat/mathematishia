@@ -440,3 +440,39 @@ trusted deserialized certificates. The legacy typed APIs remain unchanged.
 endpoints, midpoints and half-widths. It certifies complete coverage for nonzero
 square-free unrestricted Q[x]. It refuses repeated roots, source restrictions,
 and resource exhaustion rather than reporting an incomplete list as complete.
+
+## Checked algebra, angles and derivations
+
+| CLI | Python | Supported mathematical scope |
+| --- | --- | --- |
+| `rootsfield` | `solve_polynomial_in_domain` | Unrestricted Q[x], explicit Q/R/C solution domain; checked factors and unresolved cofactors. |
+| `groebner`, `idealmember` | `groebner_basis`, `ideal_membership` | Formal rational polynomial ideals; at most 3 variables, 8 generators and 12 basis elements. Lexicographic, not necessarily reduced or monic. |
+| `trig`, `trigzeros` | `special_angle`, `trig_zero_examples` | Exact rational multiples of pi, supported unit-circle angles; tangent poles undefined, sine/cosine zero examples partial. |
+| `abssolve` | `solve_absolute` | One total real affine absolute-value chain per side, at most 8 layers total; complete closed interval unions. |
+| `checkcalculus` | `check_calculus` | Verify rational identities or derivatives with retained exclusions; candidate must cover the source domain. |
+| `steps` | `derivation_records` | Checked linear, derivative and distribution records; source restrictions and actual dependencies. |
+
+`rootsfield` uses the shared versioned JSON schema. The other new commands
+use checked native results and dedicated text/typed interfaces. Structured
+division certificates remain internal; existing division commands expose
+their final quotient and remainder, not an invented reduction history.
+
+Explicit construction-domain provenance is retained on bound values and
+checked in the shared dispatcher and selected calculus, substitution and
+rewrite paths. Legacy unbound expressions cannot attest a lost construction
+domain. The ordinary symbol pi is not silently reinterpreted. Use explicit
+angle coefficients. General periodic solution families, arbitrary piecewise
+or absolute-value expressions, general analytic calculus and universal result
+serialization remain unsupported.
+
+```python
+import mathematishia as m
+
+m.solve_polynomial_in_domain('x^2-2', domain='R')
+m.groebner_basis(('x*y-1', 'y^2-1'), ('x', 'y'))
+m.ideal_membership('x-y', ('x*y-1', 'y^2-1'), ('x', 'y'))
+m.special_angle('sin', '1/6')
+m.solve_absolute('abs(abs(x)-2)=1')
+m.check_calculus('x^2', '2*x', relation='derivative')
+m.derivation_records('linear', '2*x+4=10')
+```

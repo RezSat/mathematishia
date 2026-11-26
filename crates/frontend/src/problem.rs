@@ -222,6 +222,30 @@ pub fn request(context: &EvaluationContext, args: &[&str]) -> Result<ProblemRequ
         ["inequality", input, name] => comparison(context, input, name),
         ["roots", input] => roots(context, input, "x"),
         ["roots", input, name] => roots(context, input, name),
+        ["rootsfield", input, name, field] => {
+            let domain = match *field {
+                "Q" => ScalarDomain::Rational,
+                "R" => ScalarDomain::Real,
+                "C" => ScalarDomain::Complex,
+                _ => return Err(RequestError::Invalid("expected Q, R or C")),
+            };
+            let symbol = variable(context, name)?;
+            let expression = source(input, domain)?;
+            if !expression.conditions().is_empty() {
+                return Err(RequestError::Unsupported(
+                    "polynomial roots cannot discard source restrictions",
+                ));
+            }
+            let polynomial = context
+                .polynomial(expression.expression(), &symbol)
+                .map_err(RequestError::Evaluation)?;
+            Ok(ProblemRequest {
+                operation: ProblemOperation::PolynomialEquation,
+                statement: ProblemStatement::PolynomialZero(polynomial),
+                variables: vec![symbol],
+                domain,
+            })
+        }
         ["integrate", input] => expression_request(
             context,
             ProblemOperation::Integrate,

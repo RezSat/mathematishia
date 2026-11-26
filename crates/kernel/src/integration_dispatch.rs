@@ -201,6 +201,7 @@ fn check_source(
     if domain == ScalarDomain::Integer {
         return Err(IntegrationDispatchError::UnsupportedScalarDomain);
     }
+    source.check_construction_domain(domain)?;
     context.check_expression(source.expression())?;
     if source.conditions().len() > context.limits().max_rational_conditions {
         return Err(EvaluationError::Limit(crate::ResourceLimitKind::RationalConditions).into());

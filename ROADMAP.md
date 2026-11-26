@@ -41,12 +41,12 @@ This file tracks implemented areas and the next domain extensions. See [CAPABILI
 - Public typed problem results distinguishing solved, conditional, partial, unsupported, undefined and resource refusal outcomes.
 - CLI automatic equation dispatch, checked root sets, full bounded polynomial expansion, supported integral sums and exact constant evaluation; Python typed roots, Sturm counts, expansion, integral sums and analytic identities.
 - Shared versioned result adapter in the CLI and Python, with matched affine-system, ordered multivariate division, Sturm and root-refinement interfaces.
-- Permanent compiled CLI benchmark (159 cases), independent metamorphic and forged-certificate tests.
+- Permanent compiled CLI benchmark (169 cases), independent metamorphic and forged-certificate tests.
 - Experimental Python bindings, platform wheel tests and source-distribution rebuild.
 
 ## In progress / next
 
-1. Extend the bounded multivariate expression bridge to independently verified Buchberger reductions and Gröbner bases; expand exact algebra simplification without assuming arbitrary generators give unique normal forms.
+1. Extend the checked bounded Buchberger implementation to wider ideals and resource limits; expand exact algebra simplification without assuming arbitrary generators give unique normal forms.
 2. Extend analytic domain contracts to safe symbolic rewriting, additional derivatives and explicit complex branch handling.
 3. Extend nonlinear equations, higher-degree inequalities and non-affine systems. Extend certified root isolation to repeated factors and source-restricted equations.
 4. Add truthful per-reduction multivariate division traces and additional checked algebra/calculus rendering, then stable frontend-oriented serialization.
@@ -56,3 +56,5 @@ This file tracks implemented areas and the next domain extensions. See [CAPABILI
 8. Extend schema v1 to additional mathematical operations, extend the real-question benchmark with each frontend feature, and stabilize package releases.
 
 The implemented proof graph checks dependencies and supported rule evidence; it is not a general theorem prover.
+
+Bounded Gröbner certificates, affine absolute-value equations, exact special angles, domain-selected polynomial roots, rational calculus checks and structural step records are implemented. Remaining work includes general periodic solution families, more general piecewise expressions, full domain-provenance adoption and more structured result types.

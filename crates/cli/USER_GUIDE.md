@@ -58,7 +58,7 @@ mathematishia evalexact 'sin(0)+cos(0)'
   `distribution_complete` and `polynomial_expansion: not certified`;
   its behavior is intentionally unchanged.
 
-The parser accepts exact integers, rational numbers, finite decimals, and supported implicit multiplication such as `2x`, `2(x+1)` and `(x+1)(x-1)`. Single real comparisons (`<`, `<=`, `>`, `>=`, `≤`, `≥`) are supported by `inequality`, `solve` and `solveauto`; chained comparisons, `sqrt`, `abs`, and ambiguous identifier juxtaposition remain unsupported. The kernel enforces checked expression, scalar,
+The parser accepts exact integers, rational numbers, finite decimals, and supported implicit multiplication such as `2x`, `2(x+1)` and `(x+1)(x-1)`. Single real comparisons (`<`, `<=`, `>`, `>=`, `≤`, `≥`) are supported by `inequality`, `solve` and `solveauto`; the general expression parser still refuses chained comparisons, `sqrt`, `abs`, and ambiguous identifier juxtaposition. The dedicated `abssolve` adapter admits bounded affine chains. The kernel enforces checked expression, scalar,
 degree and work-unit admission limits. Verification records are checked
 before the CLI presents results. Conditions are unproved obligations,
 not facts established by this tool.
@@ -151,3 +151,37 @@ requested rational width. Each interval contains exactly one root; the
 midpoint and error bound are exact rational numbers. Repeated factors and
 source-domain restrictions are refused. This is stronger than a sign-change
 bracket, which certifies existence only.
+
+## Checked algebra, angles and derivations
+
+| CLI | Python | Supported mathematical scope |
+| --- | --- | --- |
+| `rootsfield` | `solve_polynomial_in_domain` | Unrestricted Q[x], explicit Q/R/C solution domain; checked factors and unresolved cofactors. |
+| `groebner`, `idealmember` | `groebner_basis`, `ideal_membership` | Formal rational polynomial ideals; at most 3 variables, 8 generators and 12 basis elements. Lexicographic, not necessarily reduced or monic. |
+| `trig`, `trigzeros` | `special_angle`, `trig_zero_examples` | Exact rational multiples of pi, supported unit-circle angles; tangent poles undefined, sine/cosine zero examples partial. |
+| `abssolve` | `solve_absolute` | One total real affine absolute-value chain per side, at most 8 layers total; complete closed interval unions. |
+| `checkcalculus` | `check_calculus` | Verify rational identities or derivatives with retained exclusions; candidate must cover the source domain. |
+| `steps` | `derivation_records` | Checked linear, derivative and distribution records; source restrictions and actual dependencies. |
+
+`rootsfield` uses the shared versioned JSON schema. The other new commands
+use checked native results and dedicated text/typed interfaces. Structured
+division certificates remain internal; existing division commands expose
+their final quotient and remainder, not an invented reduction history.
+
+Explicit construction-domain provenance is retained on bound values and
+checked in the shared dispatcher and selected calculus, substitution and
+rewrite paths. Legacy unbound expressions cannot attest a lost construction
+domain. The ordinary symbol pi is not silently reinterpreted. Use explicit
+angle coefficients. General periodic solution families, arbitrary piecewise
+or absolute-value expressions, general analytic calculus and universal result
+serialization remain unsupported.
+
+```sh
+mathematishia rootsfield 'x^2-2' x R --json
+mathematishia groebner x,y 'x*y-1' 'y^2-1'
+mathematishia idealmember x,y 'x-y' 'x*y-1' 'y^2-1'
+mathematishia trig sin 1/6
+mathematishia abssolve 'abs(abs(x)-2)=1'
+mathematishia checkcalculus derivative 'x^2' '2*x' x
+mathematishia steps linear '2*x+4=10' x
+```

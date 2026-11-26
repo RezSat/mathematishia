@@ -43,7 +43,7 @@ The following are not claims of frontend coverage.
 - Proof graphs, proof verifiers, assumption primitives, derivation records
   and certificate reconstruction are internal evidence mechanisms. They need
   not each become commands. New structured proof delivery is a separate scope.
-- Root isolation of repeated factors, Gröbner bases, general algebraic
+- Root isolation of repeated factors, larger Gröbner ideals, general algebraic
   solutions, general analytic calculus, symbolic matrices and numerical
   analytic evaluation are not provided by these commands.
 
@@ -54,3 +54,27 @@ operations. Append `--json` to a supported command or use Python
 `problem(*args)` with the same arguments (without the flag). Legacy text and
 typed APIs remain supported; the versioned schema does not cover every legacy
 operation. See [schema v1](../kernel/src/problem_result/README.md).
+
+## Checked algebra, angles and derivations
+
+| CLI | Python | Supported mathematical scope |
+| --- | --- | --- |
+| `rootsfield` | `solve_polynomial_in_domain` | Unrestricted Q[x], explicit Q/R/C solution domain; checked factors and unresolved cofactors. |
+| `groebner`, `idealmember` | `groebner_basis`, `ideal_membership` | Formal rational polynomial ideals; at most 3 variables, 8 generators and 12 basis elements. Lexicographic, not necessarily reduced or monic. |
+| `trig`, `trigzeros` | `special_angle`, `trig_zero_examples` | Exact rational multiples of pi, supported unit-circle angles; tangent poles undefined, sine/cosine zero examples partial. |
+| `abssolve` | `solve_absolute` | One total real affine absolute-value chain per side, at most 8 layers total; complete closed interval unions. |
+| `checkcalculus` | `check_calculus` | Verify rational identities or derivatives with retained exclusions; candidate must cover the source domain. |
+| `steps` | `derivation_records` | Checked linear, derivative and distribution records; source restrictions and actual dependencies. |
+
+`rootsfield` uses the shared versioned JSON schema. The other new commands
+use checked native results and dedicated text/typed interfaces. Structured
+division certificates remain internal; existing division commands expose
+their final quotient and remainder, not an invented reduction history.
+
+Explicit construction-domain provenance is retained on bound values and
+checked in the shared dispatcher and selected calculus, substitution and
+rewrite paths. Legacy unbound expressions cannot attest a lost construction
+domain. The ordinary symbol pi is not silently reinterpreted. Use explicit
+angle coefficients. General periodic solution families, arbitrary piecewise
+or absolute-value expressions, general analytic calculus and universal result
+serialization remain unsupported.

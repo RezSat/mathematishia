@@ -13,6 +13,10 @@ pub enum DefinednessError {
     ZeroDenominator,
     NodeLimitExceeded,
     ConditionLimitExceeded,
+    DomainMismatch {
+        left: ScalarDomain,
+        right: ScalarDomain,
+    },
 }
 
 impl fmt::Display for DefinednessError {
@@ -27,6 +31,12 @@ impl fmt::Display for DefinednessError {
                 f.write_str("definedness inspection exceeded the node limit")
             }
             Self::ConditionLimitExceeded => f.write_str("definedness condition limit exceeded"),
+            Self::DomainMismatch { left, right } => {
+                write!(
+                    f,
+                    "incompatible construction domains: {left:?} and {right:?}"
+                )
+            }
         }
     }
 }
@@ -42,6 +52,7 @@ impl Error for DefinednessError {}
 pub struct DomainExpression {
     expression: Expr,
     conditions: Vec<Condition>,
+    construction_domain: Option<ScalarDomain>,
 }
 
 impl DomainExpression {
@@ -50,6 +61,7 @@ impl DomainExpression {
         Ok(Self {
             expression,
             conditions,
+            construction_domain: None,
         })
     }
 
@@ -68,6 +80,7 @@ impl DomainExpression {
         Ok(Self {
             expression,
             conditions,
+            construction_domain: Some(domain),
         })
     }
 
@@ -79,6 +92,7 @@ impl DomainExpression {
         domain: ScalarDomain,
         max_conditions: usize,
     ) -> Result<Self, DefinednessError> {
+        argument.check_construction_domain(domain)?;
         let expression = Expr::function(name, argument.expression);
         let direct = expression
             .function_domain_conditions(domain)
@@ -93,11 +107,13 @@ impl DomainExpression {
         Ok(Self {
             expression,
             conditions,
+            construction_domain: Some(domain),
         })
     }
 
     /// Constructs an expression with additional restrictions from an earlier
-    /// transformation or its source expression.
+    /// transformation or its source expression. These externally supplied
+    /// restrictions do not establish a construction domain or prove equivalence.
     pub fn with_conditions(
         expression: Expr,
         inherited: impl IntoIterator<Item = Condition>,
@@ -114,6 +130,7 @@ impl DomainExpression {
         Ok(Self {
             expression,
             conditions,
+            construction_domain: None,
         })
     }
 
@@ -123,6 +140,44 @@ impl DomainExpression {
 
     pub fn conditions(&self) -> &[Condition] {
         &self.conditions
+    }
+
+    /// The explicitly selected domain, if one was supplied during construction.
+    /// Legacy algebraic values and externally supplied history are unbound.
+    pub fn construction_domain(&self) -> Option<ScalarDomain> {
+        self.construction_domain
+    }
+
+    /// Rejects reinterpretation of a bound value. Acceptance of an unbound
+    /// value does not certify its origin or the truth of its conditions.
+    pub fn check_construction_domain(&self, domain: ScalarDomain) -> Result<(), DefinednessError> {
+        merge_domains(self.construction_domain, Some(domain)).map(|_| ())
+    }
+
+    /// Retains the source's domain and restrictions and collects those of the
+    /// replacement expression. The caller must separately verify equivalence.
+    pub fn rebuild_with_expression(
+        &self,
+        expression: Expr,
+        max_nodes: usize,
+        max_conditions: usize,
+    ) -> Result<Self, DefinednessError> {
+        if self.conditions.len() > max_conditions {
+            return Err(DefinednessError::ConditionLimitExceeded);
+        }
+        let direct = match self.construction_domain {
+            Some(domain) => definedness_obligations_in_domain(&expression, max_nodes, domain),
+            None => definedness_obligations(&expression, max_nodes),
+        }?;
+        let mut conditions = self.conditions.clone();
+        for condition in direct {
+            append_unique(&mut conditions, condition, max_conditions)?;
+        }
+        Ok(Self {
+            expression,
+            conditions,
+            construction_domain: self.construction_domain,
+        })
     }
 
     pub fn add(
@@ -146,7 +201,9 @@ impl DomainExpression {
     ) -> Result<Self, DefinednessError> {
         let mut expressions = Vec::new();
         let mut conditions = Vec::new();
+        let mut construction_domain = None;
         for part in parts {
+            construction_domain = merge_domains(construction_domain, part.construction_domain)?;
             for condition in part.conditions {
                 append_unique(&mut conditions, condition, max_conditions)?;
             }
@@ -159,11 +216,14 @@ impl DomainExpression {
                 Expr::mul(expressions)
             },
             conditions,
+            construction_domain,
         })
     }
 
     /// Divides expressions without discarding denominator exclusions.
     pub fn divide(self, divisor: Self, max_conditions: usize) -> Result<Self, DefinednessError> {
+        let construction_domain =
+            merge_domains(self.construction_domain, divisor.construction_domain)?;
         let mut conditions = self.conditions;
         if conditions.len() > max_conditions {
             return Err(DefinednessError::ConditionLimitExceeded);
@@ -195,11 +255,14 @@ impl DomainExpression {
         Ok(Self {
             expression: Expr::mul([self.expression, inverse]),
             conditions,
+            construction_domain,
         })
     }
 
     /// Power with an explicitly evaluated integer exponent.
     pub fn pow(self, exponent: Self, max_conditions: usize) -> Result<Self, DefinednessError> {
+        let construction_domain =
+            merge_domains(self.construction_domain, exponent.construction_domain)?;
         let ExprView::Integer(value) = exponent.expression.view() else {
             return Err(DefinednessError::UnsupportedExponent);
         };
@@ -221,6 +284,7 @@ impl DomainExpression {
         Ok(Self {
             expression: Expr::pow(self.expression, exponent.expression),
             conditions,
+            construction_domain,
         })
     }
 
@@ -243,7 +307,20 @@ impl DomainExpression {
         Ok(Self {
             expression: Expr::pow(self.expression, Expr::from(exponent)),
             conditions,
+            construction_domain: self.construction_domain,
         })
+    }
+}
+
+fn merge_domains(
+    left: Option<ScalarDomain>,
+    right: Option<ScalarDomain>,
+) -> Result<Option<ScalarDomain>, DefinednessError> {
+    match (left, right) {
+        (Some(left), Some(right)) if left != right => {
+            Err(DefinednessError::DomainMismatch { left, right })
+        }
+        _ => Ok(left.or(right)),
     }
 }
 
@@ -304,6 +381,13 @@ fn collect_obligations(
         match expr.view() {
             ExprView::Integer(_) | ExprView::Rational(_) | ExprView::Symbol(_) => {}
             ExprView::Add(children) | ExprView::Mul(children) => {
+                if children.len()
+                    > max_nodes
+                        .saturating_sub(visited)
+                        .saturating_sub(pending.len())
+                {
+                    return Err(DefinednessError::NodeLimitExceeded);
+                }
                 pending.extend(children.iter().rev());
             }
             ExprView::Function { argument, .. } => {
@@ -330,8 +414,12 @@ fn collect_obligations(
                         conditions.push(condition);
                     }
                 }
+                pending.push(exponent);
                 pending.push(base);
             }
+        }
+        if pending.len() > max_nodes - visited {
+            return Err(DefinednessError::NodeLimitExceeded);
         }
     }
 

@@ -161,3 +161,13 @@ id	category	question	outcome	exit	error_kind	arguments	semantic_lines	conditions
 157	algebra	Refine a sign-change root bracket	partial	0	-	rootbracket¦x^2-2¦x¦1¦2¦1/16¦8	status: partial¦claim: at least one root; uniqueness not established¦precision_met: true¦verified: true	conditions: none	none	existence_not_uniqueness	checked-operations
 158	algebra	Isolate all real roots of a square-free quadratic	solved	0	-	isolate¦x^2-2¦x¦1/32	status: exact¦roots: 2¦target_width: 1/32¦complete: true¦verified: true	conditions: none	none	exact	checked-operations
 159	algebra	Certify a polynomial has no real roots	solved	0	-	isolate¦x^2+1¦x¦1/32	status: exact¦roots: 0¦complete: true¦verified: true	conditions: none	none	exact	checked-operations
+160	equations	Solve an affine absolute-value equation	solved	0	-	abssolve¦abs(2*x-5)=7	status: exact¦interval: [-1, -1]¦interval: [6, 6]¦complete: true¦verified: true	-	none	exact	checked-algebra
+161	equations	Solve a nested absolute-value equation	solved	0	-	abssolve¦abs(abs(x)-2)=1	components: 4¦interval: [-3, -3]¦interval: [-1, -1]¦interval: [1, 1]¦interval: [3, 3]¦complete: true	-	none	exact	checked-algebra
+162	equations	Solve an absolute-value equation with an infinite solution interval	solved	0	-	abssolve¦abs(x)=x	interval: [0, infinity)¦complete: true	-	none	exact	checked-algebra
+163	trigonometry	Evaluate sine at pi over six	solved	0	-	trig¦sin¦1/6	status: exact¦value: 1/2¦verified: true	-	none	exact	checked-algebra
+164	trigonometry	Evaluate cosine at pi over three	solved	0	-	trig¦cos¦1/3	status: exact¦value: 1/2¦verified: true	-	none	exact	checked-algebra
+165	trigonometry	Find checked examples of cosine zeros	partial	0	-	trigzeros¦cos	status: partial¦known_pi_coefficient: 1/2¦known_pi_coefficient: 3/2¦reason: integer-parameter completeness unavailable¦verified: true	-	none	periodic_completeness_unavailable	checked-algebra
+166	algebra	Check membership in a rational polynomial ideal	solved	0	-	idealmember¦x,y¦x-y¦x*y-1¦y^2-1	status: exact¦member: true¦remainder: 0¦verified: true	-	none	exact	checked-algebra
+167	algebra	Check nonmembership in a rational polynomial ideal	solved	0	-	idealmember¦x,y¦x*y¦x^2¦y^2	status: exact¦member: false¦verified: true	-	none	exact	checked-algebra
+168	derivatives	Verify a rational derivative	solved	0	-	checkcalculus¦derivative¦x^2¦2*x¦x	status: exact¦relation: derivative¦verified: true	-	none	exact	checked-algebra
+169	rational_domains	Refuse an absolute value with a hidden excluded point	domain	2	Domain	abssolve¦abs(x+0/x)=3	error:*	-	none	retained_restriction	checked-algebra

@@ -190,10 +190,16 @@ impl Encoder {
     }
 
     fn domain_expression(&mut self, value: &DomainExpression) -> WireResult {
-        object!(self,
-            "expression" => |w| w.expression(value.expression(), 0),
-            "conditions" => |w| w.array(value.conditions(), Self::condition),
-        )
+        self.object(|obj| {
+            obj.field("expression", |w| w.expression(value.expression(), 0))?;
+            obj.field("conditions", |w| {
+                w.array(value.conditions(), Self::condition)
+            })?;
+            if let Some(domain) = value.construction_domain() {
+                obj.field("construction_domain", |w| w.string(domain_id(domain)))?;
+            }
+            Ok(())
+        })
     }
 
     fn polynomial(&mut self, value: &RationalPolynomial) -> WireResult {
@@ -498,6 +504,7 @@ fn proof_id(value: CheckedBy) -> &'static str {
         CheckedBy::QuadraticRootCriterion => "quadratic_root_criterion",
         CheckedBy::RationalEquationDomain => "rational_equation_domain",
         CheckedBy::PartialComplexFactorization => "partial_complex_factorization",
+        CheckedBy::SourceBoundPolynomial => "source_bound_polynomial",
         CheckedBy::SymbolicDerivativeRules => "symbolic_derivative_rules",
         CheckedBy::RationalEvaluation => "rational_evaluation",
         CheckedBy::IntegrationTerms => "integration_terms",

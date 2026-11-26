@@ -65,3 +65,5 @@ or floating-point conversion is supplied. The existing configurable algorithm
 budgets remain in force; exact analytic rewrites are capped at 16. Frontends
 should present unsupported and partial outcomes explicitly, never as success
 without qualification.
+
+The `polynomial.equation` operation accepts `PolynomialZero` over Q, R or C. Its answer uses the existing exact root representation (including multiplicities); `result_domain` specifies which roots are admitted. The `source_bound_polynomial` evidence marker denotes independently checked solution-set and factor-search evidence. Bound domain expressions include `construction_domain`; an absent field denotes legacy unbound provenance.

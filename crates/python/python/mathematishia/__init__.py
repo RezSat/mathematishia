@@ -1182,7 +1182,105 @@ def isolate_real_roots(source: str, variable: str, target_width: str) -> tuple[I
                  _native.isolate_real_roots(source, variable, target_width))
 
 
+@dataclass(frozen=True)
+class GroebnerBasis:
+    variables: tuple[str, ...]
+    basis: tuple[str, ...]
+
+
+def groebner_basis(generators: tuple[str, ...], variables: tuple[str, ...]) -> GroebnerBasis:
+    """Certified formal ideal basis over Q, not necessarily reduced or monic."""
+    names, basis = _native.groebner(list(variables), list(generators))
+    return GroebnerBasis(tuple(names), tuple(basis))
+
+
+@dataclass(frozen=True)
+class IdealMembership:
+    member: bool
+    remainder: str
+
+
+def ideal_membership(target: str, generators: tuple[str, ...], variables: tuple[str, ...]) -> IdealMembership:
+    """Checked formal membership or nonmembership in the generated ideal."""
+    return IdealMembership(*_native.ideal_membership(list(variables), list(generators), target))
+
+
+def special_angle(function: str, pi_coefficient: str) -> ExactQuadraticRoot | None:
+    """Exact value at q*pi radians; None denotes a verified tangent pole."""
+    kind, value, minimal, branch = _native.special_angle(function, pi_coefficient)
+    if kind == "undefined":
+        return None
+    return ExactQuadraticRoot(kind, Fraction(value) if value is not None else None,
+                              _poly(minimal) if minimal is not None else None, branch)
+
+
+@dataclass(frozen=True)
+class AbsoluteInterval:
+    lower: Fraction | None
+    upper: Fraction | None
+
+
+def solve_absolute(source: str, variable: str = "x") -> tuple[AbsoluteInterval, ...]:
+    """Complete closed real interval union; None denotes an infinite bound."""
+    return tuple(AbsoluteInterval(Fraction(a) if a is not None else None,
+                                  Fraction(b) if b is not None else None)
+                 for a, b in _native.solve_absolute(source, variable))
+
+
+def solve_polynomial_in_domain(source: str, variable: str = "x", domain: str = "C") -> ProblemResult:
+    """Checked roots over Q, R or C, with explicit unresolved cofactor."""
+    return problem("rootsfield", source, variable, domain)
+
+
+def check_calculus(source: str, candidate: str, variable: str = "x", relation: str = "identity") -> tuple[Polynomial, ...]:
+    """Verify identity or derivative over the original real rational domain.
+
+    Returns retained polynomial nonzero restrictions. Invalid claims raise.
+    """
+    return tuple(_poly(poly) for poly in _native.check_calculus(source, candidate, variable, relation))
+
+
+@dataclass(frozen=True)
+class DerivationRecord:
+    index: int
+    rule: str
+    claim: str
+    premises: tuple[int, ...]
+    conditions: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class DerivationRecords:
+    source_conditions: tuple[str, ...]
+    steps: tuple[DerivationRecord, ...]
+    conclusion: str
+
+
+def derivation_records(kind: str, source: str, variable: str = "x") -> DerivationRecords:
+    """Checked linear, derivative or distribution records; display text is not a certificate."""
+    conditions, steps, conclusion = _native.derivation_records(kind, source, variable)
+    return DerivationRecords(tuple(conditions),
+                             tuple(DerivationRecord(i, rule, claim, tuple(premises), tuple(required))
+                                   for i, rule, claim, premises, required in steps),
+                             conclusion)
+
+
+@dataclass(frozen=True)
+class PartialTrigZeros:
+    pi_coefficients: tuple[Fraction, ...]
+    complete: bool = False
+
+
+def trig_zero_examples(function: str) -> PartialTrigZeros:
+    """Two verified examples only; not a complete periodic solution set."""
+    return PartialTrigZeros(tuple(map(Fraction, _native.trig_zero_examples(function))))
+
+
 __all__ = [
+    "PartialTrigZeros", "trig_zero_examples",
+    "GroebnerBasis", "groebner_basis", "IdealMembership", "ideal_membership",
+    "special_angle", "AbsoluteInterval", "solve_absolute", "solve_polynomial_in_domain",
+    "check_calculus", "DerivationRecord", "DerivationRecords", "derivation_records",
     "ProblemResult", "problem", "solveauto", "evalexact",
     "IsolatedRealRoot", "isolate_real_roots",
     "AffineSystemResult", "solve_linear_system", "MultivariateDivisionResult",

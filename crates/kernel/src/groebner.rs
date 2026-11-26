@@ -158,7 +158,8 @@ impl Work {
 
     fn degree(&self, powers: &[u32]) -> Result<(), GroebnerError> {
         let degree = powers.iter().try_fold(0_u32, |sum, &n| {
-            sum.checked_add(n).ok_or(MultivariateError::TotalDegreeLimit)
+            sum.checked_add(n)
+                .ok_or(MultivariateError::TotalDegreeLimit)
         })?;
         if degree > self.limits.max_total_degree {
             return Err(MultivariateError::TotalDegreeLimit.into());
@@ -183,8 +184,11 @@ impl Work {
                 .bit_len()
                 .saturating_add(b.numerator().bit_len()),
         )?;
-        Rational::new(a.numerator() * b.denominator(), a.denominator() * b.numerator())
-            .map_err(|_| GroebnerError::InvalidCertificate)
+        Rational::new(
+            a.numerator() * b.denominator(),
+            a.denominator() * b.numerator(),
+        )
+        .map_err(|_| GroebnerError::InvalidCertificate)
     }
 
     fn term(

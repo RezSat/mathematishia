@@ -38,7 +38,7 @@ fn check_query(
     assert_eq!(matches!(&result, IdealMembership::Member(_)), expected);
     assert!(
         verify_ideal_membership(variables, generators, &certificate, target, &result, limits)
-        .unwrap()
+            .unwrap()
     );
 }
 
@@ -47,15 +47,26 @@ fn eliminate_x_from_xy_minus_one_and_y_squared_minus_one() {
     let limits = MultivariateLimits::default();
     let generators = [p(&[(1, 1, 1), (0, 0, -1)]), p(&[(0, 2, 1), (0, 0, -1)])];
     let target = p(&[(1, 0, 1), (0, 1, -1)]);
-    assert_eq!(divide_multivariate(&target, &generators, limits).unwrap().remainder(), &target);
+    assert_eq!(
+        divide_multivariate(&target, &generators, limits)
+            .unwrap()
+            .remainder(),
+        &target
+    );
     let certificate = groebner_basis(&vars(), &generators, limits).unwrap();
     assert_eq!(certificate.basis.len(), 3);
     assert_eq!(certificate.basis[2], target);
     assert_eq!(certificate.pairs.len(), 3);
     assert_eq!(certificate.pairs[0].lcm, vec![1, 2]);
-    assert_eq!(certificate.representations[2], vec![p(&[(0, 1, 1)]), p(&[(1, 0, -1)])]);
+    assert_eq!(
+        certificate.representations[2],
+        vec![p(&[(0, 1, 1)]), p(&[(1, 0, -1)])]
+    );
     assert!(verify_groebner_basis(&vars(), &generators, &certificate, limits).unwrap());
-    assert_eq!(certificate, groebner_basis(&[s("y"), s("x")], &generators, limits).unwrap());
+    assert_eq!(
+        certificate,
+        groebner_basis(&[s("y"), s("x")], &generators, limits).unwrap()
+    );
     check_query(&generators, &target, true);
     check_query(&generators, &p(&[(0, 1, 1), (0, 0, -1)]), false);
 }
@@ -96,7 +107,11 @@ fn three_variables_and_rational_coefficients() {
         convert(Expr::add([y, minus(z.clone())])),
         convert(Expr::add([z, minus(half.clone())])),
     ];
-    check_query(&generators, &convert(Expr::add([x.clone(), minus(half)])), true);
+    check_query(
+        &generators,
+        &convert(Expr::add([x.clone(), minus(half)])),
+        true,
+    );
     check_query(&generators, &convert(x), false);
 }
 
@@ -202,11 +217,15 @@ fn rejects_wrong_ring_even_for_the_zero_ideal() {
     assert!(!verify_groebner_basis(&[s("z")], &[], &certificate, limits).unwrap());
     assert_eq!(
         groebner_basis(&[s("z")], &[p(&[])], limits),
-        Err(GroebnerError::Polynomial(MultivariateError::VariableMismatch))
+        Err(GroebnerError::Polynomial(
+            MultivariateError::VariableMismatch
+        ))
     );
     assert_eq!(
         groebner_basis(&[s("x"), s("x")], &[], limits),
-        Err(GroebnerError::Polynomial(MultivariateError::DuplicateVariable))
+        Err(GroebnerError::Polynomial(
+            MultivariateError::DuplicateVariable
+        ))
     );
 }
 
@@ -225,11 +244,16 @@ fn domain_input_and_target_are_bound_to_original_conditions() {
     let certificate = groebner_basis_from_domain_expressions(&vars(), &generators, limits).unwrap();
     assert!(
         verify_groebner_basis_from_domain_expressions(&vars(), &generators, &certificate, limits)
-        .unwrap()
+            .unwrap()
     );
-    let result =
-        ideal_membership_from_domain_expressions(&vars(), &generators, &certificate, &target, limits)
-            .unwrap();
+    let result = ideal_membership_from_domain_expressions(
+        &vars(),
+        &generators,
+        &certificate,
+        &target,
+        limits,
+    )
+    .unwrap();
     assert!(matches!(&result, IdealMembership::Member(_)));
     assert!(
         verify_ideal_membership_from_domain_expressions(
@@ -277,12 +301,10 @@ fn unsupported_expressions_are_not_polynomialized() {
         DomainExpression::from_expr_in_domain(Expr::sin(x), ScalarDomain::Real, 100, 10).unwrap();
     let other = DomainExpression::from_expr(Expr::from(s("z")), 32).unwrap();
     for expr in [analytic, other] {
-        assert!(
-            matches!(
-                groebner_basis_from_domain_expressions(&vars(), &[expr], limits),
-                Err(GroebnerError::Expression(_))
-            )
-        );
+        assert!(matches!(
+            groebner_basis_from_domain_expressions(&vars(), &[expr], limits),
+            Err(GroebnerError::Expression(_))
+        ));
     }
 }
 
@@ -290,28 +312,37 @@ fn unsupported_expressions_are_not_polynomialized() {
 fn resource_limits_cover_intermediate_lcm_and_aggregate_work() {
     let limits = MultivariateLimits::default();
     let generators = [p(&[(2, 0, 1)]), p(&[(0, 2, 1)])];
-    let low_degree = MultivariateLimits { max_total_degree: 2, ..limits };
+    let low_degree = MultivariateLimits {
+        max_total_degree: 2,
+        ..limits
+    };
     assert_eq!(
         groebner_basis(&vars(), &generators, low_degree),
-        Err(GroebnerError::Polynomial(MultivariateError::TotalDegreeLimit))
+        Err(GroebnerError::Polynomial(
+            MultivariateError::TotalDegreeLimit
+        ))
     );
-    let low_work = MultivariateLimits { max_work_units: 12, ..limits };
+    let low_work = MultivariateLimits {
+        max_work_units: 12,
+        ..limits
+    };
     assert_eq!(
         groebner_basis(&vars(), &generators, low_work),
         Err(GroebnerError::Polynomial(MultivariateError::WorkLimit))
     );
     let certificate = groebner_basis(&vars(), &generators, limits).unwrap();
-    assert!(
-        matches!(
-            verify_groebner_basis(&vars(), &generators, &certificate, low_work),
-            Err(GroebnerError::Polynomial(MultivariateError::WorkLimit))
-        )
-    );
+    assert!(matches!(
+        verify_groebner_basis(&vars(), &generators, &certificate, low_work),
+        Err(GroebnerError::Polynomial(MultivariateError::WorkLimit))
+    ));
     assert_eq!(
         groebner_basis(
             &vars(),
             &[p(&[(1, 0, 9)])],
-            MultivariateLimits { max_scalar_bits: 3, ..limits }
+            MultivariateLimits {
+                max_scalar_bits: 3,
+                ..limits
+            }
         ),
         Err(GroebnerError::Polynomial(MultivariateError::ScalarBitLimit))
     );
@@ -319,7 +350,10 @@ fn resource_limits_cover_intermediate_lcm_and_aggregate_work() {
         groebner_basis(
             &vars(),
             &[p(&[(1, 0, 1), (0, 1, 1)])],
-            MultivariateLimits { max_terms: 1, ..limits }
+            MultivariateLimits {
+                max_terms: 1,
+                ..limits
+            }
         ),
         Err(GroebnerError::Polynomial(MultivariateError::TermLimit))
     );
@@ -348,7 +382,13 @@ fn a_generating_set_with_an_unresolved_s_pair_cannot_certify_nonmembership() {
     forged.pairs[0].reduction.quotients.truncate(2);
     assert!(!verify_groebner_basis(&vars(), &generators, &forged, limits).unwrap());
     assert_eq!(
-        ideal_membership(&vars(), &generators, &forged, &p(&[(1, 0, 1), (0, 1, -1)]), limits),
+        ideal_membership(
+            &vars(),
+            &generators,
+            &forged,
+            &p(&[(1, 0, 1), (0, 1, -1)]),
+            limits
+        ),
         Err(GroebnerError::InvalidCertificate)
     );
 }
@@ -358,7 +398,14 @@ fn intermediate_scalar_growth_and_oversized_evidence_are_refused() {
     let limits = MultivariateLimits::default();
     let generators = [p(&[(1, 0, 7)]), p(&[(0, 1, 1)])];
     assert_eq!(
-        groebner_basis(&vars(), &generators, MultivariateLimits { max_scalar_bits: 3, ..limits }),
+        groebner_basis(
+            &vars(),
+            &generators,
+            MultivariateLimits {
+                max_scalar_bits: 3,
+                ..limits
+            }
+        ),
         Err(GroebnerError::Polynomial(MultivariateError::ScalarBitLimit))
     );
     let mut forged = groebner_basis(&vars(), &generators, limits).unwrap();

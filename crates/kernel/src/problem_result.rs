@@ -821,13 +821,12 @@ fn validate_request(request: &ProblemRequest) -> Result<Option<ProblemResult>, P
     if !domain_supported {
         return Ok(Some(unsupported(request, UnsupportedReason::Domain)));
     }
-    if let ProblemStatement::Absolute(equation) = &request.statement {
-        if equation.domain != request.domain
+    if let ProblemStatement::Absolute(equation) = &request.statement
+        && (equation.domain != request.domain
             || request.variables.first() != Some(&equation.left.variable)
-            || equation.left.variable != equation.right.variable
-        {
-            return Err(ProblemError::StatementMismatch);
-        }
+            || equation.left.variable != equation.right.variable)
+    {
+        return Err(ProblemError::StatementMismatch);
     }
     Ok(None)
 }

@@ -6,6 +6,7 @@
 
 use mathema::{Expr, ExprView, Symbol};
 
+mod absolute_equations;
 mod algebraic;
 mod algebraic_extension;
 mod analytic_constants;
@@ -65,6 +66,11 @@ pub use solution_certificates::{
     verify_solution_set,
 };
 
+pub use absolute_equations::{
+    AbsoluteAffine, AbsoluteCase, AbsoluteEquation, AbsoluteEquationError, AbsoluteEquationResult,
+    AbsoluteExpression, AbsoluteInterval, AbsoluteSign, solve_absolute_equation,
+    verify_absolute_equation,
+};
 pub use algebraic::{
     AlgebraicRootEvidence, AlgebraicRootResult, AlgebraicRootRule, AlgebraicRootSet,
     AlgebraicVerificationError, ExactQuadraticRoot, QuadraticBranch, verify_algebraic_roots,

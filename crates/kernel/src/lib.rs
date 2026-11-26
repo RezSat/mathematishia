@@ -58,6 +58,7 @@ mod solution_certificates;
 mod solve_linear;
 mod square_free;
 mod sturm_count;
+mod trigonometry;
 mod verification;
 
 pub use solution_certificates::{
@@ -217,6 +218,11 @@ pub use square_free::{
 pub use sturm_count::{
     SturmCountCertificate, SturmCountError, SturmDivisionEvidence, SturmSign,
     SturmVerificationError, verify_sturm_count,
+};
+pub use trigonometry::{
+    PartialTrigZeros, PiMultiple, SpecialAngleCertificate, SpecialAngleOutcome,
+    TrigEquationUnsupported, TrigError, TrigFunction, TrigLimits, evaluate_special_angle,
+    partial_trig_zeros, verify_special_angle,
 };
 pub use verification::{
     VerificationError, verify_distribution, verify_distribution_step, verify_equation_step,

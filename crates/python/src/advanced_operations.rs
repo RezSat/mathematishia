@@ -67,7 +67,12 @@ fn ideal_membership(
 }
 
 type PolynomialData = (String, Vec<String>);
-type AngleData = (String, Option<String>, Option<PolynomialData>, Option<String>);
+type AngleData = (
+    String,
+    Option<String>,
+    Option<PolynomialData>,
+    Option<String>,
+);
 
 #[pyfunction]
 fn special_angle(function: &str, coefficient: &str) -> PyResult<AngleData> {

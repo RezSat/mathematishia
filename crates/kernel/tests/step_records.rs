@@ -295,15 +295,18 @@ fn polynomial_division_records_only_checked_final_recomposition() {
         Err(StepRecordError::InvalidEvidence)
     );
     let zero = polynomial(&[]);
-    assert!(record_steps(
-        StepEvidence::PolynomialDivision {
-            dividend: &dividend,
-            divisor: &zero,
-            quotient: &quotient,
-            remainder: &remainder,
-        },
-        StepLimits::default()
-    ).is_err());
+    assert!(
+        record_steps(
+            StepEvidence::PolynomialDivision {
+                dividend: &dividend,
+                divisor: &zero,
+                quotient: &quotient,
+                remainder: &remainder,
+            },
+            StepLimits::default()
+        )
+        .is_err()
+    );
     assert_eq!(
         record_steps(
             StepEvidence::PolynomialDivision {
@@ -379,15 +382,15 @@ fn refuses_zero_budgets_and_unrelated_sources() {
     for limits in [
         StepLimits {
             max_steps: 0,
-            ..StepLimits::default(),
+            ..StepLimits::default()
         },
         StepLimits {
             max_nodes: 0,
-            ..StepLimits::default(),
+            ..StepLimits::default()
         },
         StepLimits {
             max_work_units: 0,
-            ..StepLimits::default(),
+            ..StepLimits::default()
         },
     ] {
         assert_eq!(

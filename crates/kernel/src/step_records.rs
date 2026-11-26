@@ -444,7 +444,8 @@ fn distribution(
     let size = budget.expression(result.result())?;
     budget.work.charge(size.saturating_pow(3))?;
     check_definedness(result.result(), domain, &assumptions)?;
-    verify_distribution(source.expression(), result).map_err(|_| StepRecordError::InvalidEvidence)?;
+    verify_distribution(source.expression(), result)
+        .map_err(|_| StepRecordError::InvalidEvidence)?;
     let steps = result
         .steps()
         .iter()

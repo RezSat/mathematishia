@@ -110,7 +110,7 @@ fn check_residual(
 ) -> Result<(), SolutionCertificateError> {
     let mut exclusions = left.excluded_zero_sets().to_vec();
     exclusions.extend_from_slice(right.excluded_zero_sets());
-    work.charge(exclusions.len())?;
+    work.charge(exclusions.len() as u64)?;
     exclusions.sort_by(crate::rational_function::condition_order);
     exclusions.dedup();
     if exclusions != residual.excluded_zero_sets() {

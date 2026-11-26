@@ -433,8 +433,7 @@ fn reciprocal_has_no_zero_despite_its_pole() {
 #[test]
 fn zero_times_inverse_is_an_identity_only_on_its_original_domain() {
     let ctx = EvaluationContext::default();
-    let left =
-        DomainExpression::multiply([polynomial(&[]), quotient(&[1], &[0, 1])], 16).unwrap();
+    let left = DomainExpression::multiply([polynomial(&[]), quotient(&[1], &[0, 1])], 16).unwrap();
     let right = polynomial(&[]);
     let scalar = ScalarDomain::Real;
     let result = certify_solution_set(&ctx, &left, &right, &x(), scalar, &[]).unwrap();
@@ -487,8 +486,7 @@ fn bound_real_source_can_be_certified_in_its_own_domain() {
     )
     .unwrap();
     let right = polynomial(&[]);
-    let result =
-        certify_solution_set(&ctx, &left, &right, &x(), ScalarDomain::Real, &[]).unwrap();
+    let result = certify_solution_set(&ctx, &left, &right, &x(), ScalarDomain::Real, &[]).unwrap();
     let CertifiedSolutionSet::Finite(ref roots) = result.solutions else {
         panic!("expected exact real pair");
     };
@@ -499,9 +497,13 @@ fn bound_real_source_can_be_certified_in_its_own_domain() {
 #[test]
 fn refuses_erased_complex_history_when_solving_over_real_or_rational_scalars() {
     let ctx = EvaluationContext::default();
-    let logarithm =
-        DomainExpression::from_expr_in_domain(Expr::log((-1).into()), ScalarDomain::Complex, 128, 8)
-            .unwrap();
+    let logarithm = DomainExpression::from_expr_in_domain(
+        Expr::log((-1).into()),
+        ScalarDomain::Complex,
+        128,
+        8,
+    )
+    .unwrap();
     let erased = DomainExpression::multiply([polynomial(&[]), logarithm], 16).unwrap();
     let zero = polynomial(&[]);
     for scalar in [ScalarDomain::Real, ScalarDomain::Rational] {

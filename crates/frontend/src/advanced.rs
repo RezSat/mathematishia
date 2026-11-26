@@ -6,13 +6,15 @@ use mathema::{Condition, DomainExpression, Equation, Integer, Rational, ScalarDo
 use mathematishia_kernel::{
     AbsoluteAffine, AbsoluteEquation, AbsoluteEquationError, AbsoluteEquationResult,
     AbsoluteExpression, EvaluationContext, GroebnerCertificate, GroebnerError, IdealMembership,
-    MultivariateError, MultivariateExprError, MultivariateLimits, MultivariatePolynomial,
-    PiMultiple, RationalCalculusCertificate, RationalCalculusError, RationalCalculusRelation,
-    SpecialAngleCertificate, TrigError, TrigFunction, TrigLimits, LinearSolution, VerifiedCondition, certify_rational_calculus,
-    evaluate_special_angle, groebner_basis_from_domain_expressions,
-    ideal_membership_from_domain_expressions, partial_trig_zeros, solve_absolute_equation,
+    LinearSolution, MultivariateError, MultivariateExprError, MultivariateLimits,
+    MultivariatePolynomial, PiMultiple, RationalCalculusCertificate, RationalCalculusError,
+    RationalCalculusRelation, SpecialAngleCertificate, TrigError, TrigFunction, TrigLimits,
+    VerifiedCondition, certify_rational_calculus, evaluate_special_angle,
+    groebner_basis_from_domain_expressions, ideal_membership_from_domain_expressions,
+    partial_trig_zeros, solve_absolute_equation,
     step_records::{
-        StepClaim, StepConclusion, StepCondition, StepEvidence, StepLimits, StepRecordError, StepRecords, record_steps, verify_step_records,
+        StepClaim, StepConclusion, StepCondition, StepEvidence, StepLimits, StepRecordError,
+        StepRecords, record_steps, verify_step_records,
     },
     verify_absolute_equation, verify_groebner_basis_from_domain_expressions,
     verify_ideal_membership_from_domain_expressions, verify_rational_calculus,
@@ -386,7 +388,11 @@ pub fn derivation(
             let domain = ScalarDomain::Real;
             let source = problem::source(source, domain)?;
             let result = context.expand(source.expression()).map_err(evaluation)?;
-            checked_records(StepEvidence::Distribution { source: &source, domain, result: &result })
+            checked_records(StepEvidence::Distribution {
+                source: &source,
+                domain,
+                result: &result,
+            })
         }
         "linear" => {
             let statement = parse_domain_statement_in_domain(source, ScalarDomain::Rational)
@@ -428,7 +434,9 @@ pub fn derivation(
 }
 
 pub fn polynomial_text(poly: &MultivariatePolynomial) -> Result<String, AdvancedError> {
-    poly.to_expr(MultivariateLimits::default()).map(|value| value.to_string()).map_err(|error| groebner_error(GroebnerError::Expression(error)))
+    poly.to_expr(MultivariateLimits::default())
+        .map(|value| value.to_string())
+        .map_err(|error| groebner_error(GroebnerError::Expression(error)))
 }
 
 pub fn trig_zeros(function: &str) -> Result<Vec<Rational>, AdvancedError> {
@@ -439,7 +447,11 @@ pub fn trig_zeros(function: &str) -> Result<Vec<Rational>, AdvancedError> {
     };
     let result = partial_trig_zeros(function, ScalarDomain::Real, TrigLimits::default())
         .map_err(|error| AdvancedError::Unsupported(error.to_string()))?;
-    Ok(result.known_zeros().iter().map(|proof| proof.angle.coefficient().clone()).collect())
+    Ok(result
+        .known_zeros()
+        .iter()
+        .map(|proof| proof.angle.coefficient().clone())
+        .collect())
 }
 
 pub fn condition_text(condition: &Condition) -> String {
@@ -462,21 +474,43 @@ pub fn step_condition_text(condition: &StepCondition) -> String {
 pub fn claim_text(claim: &StepClaim) -> String {
     match claim {
         StepClaim::Equal { before, after } => format!("{before} = {after}"),
-        StepClaim::Equivalent { before, after, variable } => format!("{} = {} <=> {} = {} (in {variable})", before.left(), before.right(), after.left(), after.right()),
-        StepClaim::DerivativeOf { before, after, variable } => format!("d/d{variable} ({before}) = {after}"),
-        StepClaim::PolynomialDivision { .. } | StepClaim::MultivariateDivision { .. } => "final polynomial division recomposition".into(),
+        StepClaim::Equivalent {
+            before,
+            after,
+            variable,
+        } => format!(
+            "{} = {} <=> {} = {} (in {variable})",
+            before.left(),
+            before.right(),
+            after.left(),
+            after.right()
+        ),
+        StepClaim::DerivativeOf {
+            before,
+            after,
+            variable,
+        } => format!("d/d{variable} ({before}) = {after}"),
+        StepClaim::PolynomialDivision { .. } | StepClaim::MultivariateDivision { .. } => {
+            "final polynomial division recomposition".into()
+        }
     }
 }
 
 pub fn conclusion_text(conclusion: &StepConclusion) -> String {
     match conclusion {
-        StepConclusion::Distribution { result, complete, .. } => format!("distribution result: {result}; distributive traversal complete: {complete}"),
-        StepConclusion::Linear { variable, solution, .. } => match solution {
+        StepConclusion::Distribution {
+            result, complete, ..
+        } => format!("distribution result: {result}; distributive traversal complete: {complete}"),
+        StepConclusion::Linear {
+            variable, solution, ..
+        } => match solution {
             LinearSolution::Unique(value) => format!("{variable} = {value}"),
             LinearSolution::NoSolution => "no rational solutions".into(),
             LinearSolution::AllRationals => "all rational values".into(),
         },
         StepConclusion::Derivative { result, .. } => format!("derivative: {result}"),
-        StepConclusion::FinalDivision => "final recomposition and reduced remainder verified".into(),
+        StepConclusion::FinalDivision => {
+            "final recomposition and reduced remainder verified".into()
+        }
     }
 }

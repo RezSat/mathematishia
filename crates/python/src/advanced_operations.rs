@@ -5,6 +5,7 @@ use mathematishia_kernel::{
 use pyo3::prelude::*;
 
 use super::checked_results::request_error;
+use super::poly_data;
 use super::{
     ResourceLimitError, UndefinedAtPointError, UnsupportedMathematicsError, VerificationFailure,
 };
@@ -29,7 +30,12 @@ fn groebner(variables: Vec<String>, generators: Vec<String>) -> PyResult<BasisDa
         advanced::basis(&EvaluationContext::default(), &variables, &generators).map_err(error)?;
     Ok((
         result.variables.iter().map(ToString::to_string).collect(),
-        result.basis.iter().map(advanced::polynomial_text).collect::<Result<Vec<_>, _>>().map_err(error)?,
+        result
+            .basis
+            .iter()
+            .map(advanced::polynomial_text)
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(error)?,
     ))
 }
 
@@ -49,12 +55,19 @@ fn ideal_membership(
     )
     .map_err(error)?;
     Ok(match result {
-        IdealMembership::Member(reduction) => (true, advanced::polynomial_text(&reduction.remainder).map_err(error)?),
-        IdealMembership::NonMember(reduction) => (false, advanced::polynomial_text(&reduction.remainder).map_err(error)?),
+        IdealMembership::Member(reduction) => (
+            true,
+            advanced::polynomial_text(&reduction.remainder).map_err(error)?,
+        ),
+        IdealMembership::NonMember(reduction) => (
+            false,
+            advanced::polynomial_text(&reduction.remainder).map_err(error)?,
+        ),
     })
 }
 
-type AngleData = (String, Option<String>, Option<Vec<String>>, Option<String>);
+type PolynomialData = (String, Vec<String>);
+type AngleData = (String, Option<String>, Option<PolynomialData>, Option<String>);
 
 #[pyfunction]
 fn special_angle(function: &str, coefficient: &str) -> PyResult<AngleData> {
@@ -71,13 +84,10 @@ fn special_angle(function: &str, coefficient: &str) -> PyResult<AngleData> {
         }) => (
             "real_quadratic".into(),
             None,
-            Some(
-                minimal_polynomial
-                    .coefficients()
-                    .iter()
-                    .map(ToString::to_string)
-                    .collect(),
-            ),
+            Some(poly_data(
+                &minimal_polynomial,
+                &mathema::Symbol::new("t").unwrap(),
+            )),
             Some(branch.stable_id().into()),
         ),
     })
@@ -107,7 +117,7 @@ fn check_calculus(
     candidate: &str,
     variable: &str,
     relation: &str,
-) -> PyResult<Vec<Vec<String>>> {
+) -> PyResult<Vec<PolynomialData>> {
     let result = advanced::calculus(
         &EvaluationContext::default(),
         source,
@@ -120,12 +130,7 @@ fn check_calculus(
         .value
         .excluded_zero_sets()
         .iter()
-        .map(|poly| {
-            poly.coefficients()
-                .iter()
-                .map(ToString::to_string)
-                .collect()
-        })
+        .map(|poly| poly_data(poly, &result.variable))
         .collect())
 }
 
@@ -164,7 +169,11 @@ fn derivation_records(kind: &str, source: &str, variable: &str) -> PyResult<Deri
 
 #[pyfunction]
 fn trig_zero_examples(function: &str) -> PyResult<Vec<String>> {
-    Ok(advanced::trig_zeros(function).map_err(error)?.iter().map(ToString::to_string).collect())
+    Ok(advanced::trig_zeros(function)
+        .map_err(error)?
+        .iter()
+        .map(ToString::to_string)
+        .collect())
 }
 
 pub(super) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {

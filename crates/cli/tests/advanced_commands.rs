@@ -28,7 +28,11 @@ fn exact_algebra_frontend() {
 fn exact_angles_and_absolute_intervals() {
     let sine = run(&["trig", "sin", "1/6"]).unwrap();
     assert!(sine.contains("value: 1/2"));
-    assert!(run(&["trig", "tan", "1/2"]).unwrap().contains("status: undefined"));
+    assert!(
+        run(&["trig", "tan", "1/2"])
+            .unwrap()
+            .contains("status: undefined")
+    );
     assert!(run(&["trig", "sin", "1/7"]).is_err());
     let zeros = run(&["trigzeros", "cos"]).unwrap();
     assert!(zeros.contains("status: partial"));
@@ -37,7 +41,11 @@ fn exact_angles_and_absolute_intervals() {
     for root in [-3, -1, 1, 3] {
         assert!(intervals.contains(&format!("interval: [{root}, {root}]")));
     }
-    assert!(run(&["abssolve", "abs(x)=x"]).unwrap().contains("interval: [0, infinity)"));
+    assert!(
+        run(&["abssolve", "abs(x)=x"])
+            .unwrap()
+            .contains("interval: [0, infinity)")
+    );
     assert!(run(&["abssolve", "abs(x+0/x)=3"]).is_err());
     assert!(run(&["abssolve", "abs(x^2)=3"]).is_err());
 }
@@ -48,7 +56,11 @@ fn calculus_and_step_records() {
     assert!(result.contains("condition: "));
     assert!(run(&["checkcalculus", "identity", "x+1", "(x^2-1)/(x-1)", "x"]).is_err());
     assert!(run(&["checkcalculus", "derivative", "x^2", "3*x", "x"]).is_err());
-    assert!(run(&["checkcalculus", "derivative", "x^2", "2*x", "x"]).unwrap().contains("verified: true"));
+    assert!(
+        run(&["checkcalculus", "derivative", "x^2", "2*x", "x"])
+            .unwrap()
+            .contains("verified: true")
+    );
     for args in [
         &["steps", "linear", "2*x+4=10", "x"][..],
         &["steps", "derivative", "sin(x^2)", "x"],

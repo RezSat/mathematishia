@@ -206,8 +206,9 @@ fn assess(condition: &Condition, assumptions: &Assumptions) -> ConditionStatus {
 /// Inspect a normalized source and all retained and explicit conditions in a
 /// selected real or complex domain. Symbols range over that domain; this
 /// checks definedness, not complex branch identities or arbitrary membership.
-/// The caller must use the original construction domain. DomainExpression
-/// does not encode domain provenance, so this is not a domain conversion API.
+/// Bound sources must be checked in their original construction domain.
+/// For legacy unbound sources the caller supplies the domain; admission does
+/// not recover missing provenance and is not a domain conversion API.
 ///
 /// All input trees share a fixed node budget. Assumed conditions never become
 /// unconditional facts. Unrecognized functions and noninteger powers refuse
@@ -224,6 +225,7 @@ pub fn check_domain_preconditions(
     if !matches!(domain, ScalarDomain::Real | ScalarDomain::Complex) {
         return Err(DomainPreconditionError::UnsupportedDomain);
     }
+    source.check_construction_domain(domain)?;
     if source
         .conditions()
         .len()

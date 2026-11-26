@@ -145,13 +145,9 @@ fn rebuilding_retains_source_provenance_and_collects_new_obligations() {
 
 #[test]
 fn external_history_is_unbound_and_still_requires_checked_premises() {
-    let history = DomainExpression::with_conditions(
-        0.into(),
-        [Condition::NonZero(Expr::log(x()))],
-        128,
-        16,
-    )
-    .unwrap();
+    let history =
+        DomainExpression::with_conditions(0.into(), [Condition::NonZero(Expr::log(x()))], 128, 16)
+            .unwrap();
     assert_eq!(history.construction_domain(), None);
     let assumptions = Assumptions::from_conditions(history.conditions().iter().cloned()).unwrap();
     let report = check_domain_preconditions(&history, ScalarDomain::Real, &assumptions).unwrap();
@@ -172,7 +168,9 @@ fn node_limit_counts_exponents_and_refuses_wide_trees() {
         Err(DefinednessError::NodeLimitExceeded)
     );
     assert_eq!(
-        DomainExpression::from_expr(expression, 3).unwrap().conditions(),
+        DomainExpression::from_expr(expression, 3)
+            .unwrap()
+            .conditions(),
         &[Condition::NonZero(x())]
     );
     let wide = Expr::add((0..128).map(|i| Expr::from(Symbol::new(format!("x{i}")).unwrap())));

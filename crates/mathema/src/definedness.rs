@@ -32,7 +32,10 @@ impl fmt::Display for DefinednessError {
             }
             Self::ConditionLimitExceeded => f.write_str("definedness condition limit exceeded"),
             Self::DomainMismatch { left, right } => {
-                write!(f, "incompatible construction domains: {left:?} and {right:?}")
+                write!(
+                    f,
+                    "incompatible construction domains: {left:?} and {right:?}"
+                )
             }
         }
     }
@@ -378,7 +381,10 @@ fn collect_obligations(
         match expr.view() {
             ExprView::Integer(_) | ExprView::Rational(_) | ExprView::Symbol(_) => {}
             ExprView::Add(children) | ExprView::Mul(children) => {
-                if children.len() > max_nodes.saturating_sub(visited).saturating_sub(pending.len())
+                if children.len()
+                    > max_nodes
+                        .saturating_sub(visited)
+                        .saturating_sub(pending.len())
                 {
                     return Err(DefinednessError::NodeLimitExceeded);
                 }

@@ -176,6 +176,20 @@ class WaveTwoPythonParityTests(unittest.TestCase):
         with self.assertRaises(m.ResourceLimitError):
             m.integrate("x" * 32769, "x")
 
+    def test_polynomial_exponential_dispatch(self):
+        result = m.integrate("x*exp(x)", "x")
+        self.assertEqual(result.status, "exact")
+        term = result.terms[0]
+        self.assertEqual(term.kind, "polynomial_exponential")
+        self.assertEqual(term.rule, "calculus.integrate_polynomial_exponential")
+        proof = term.polynomial_exponential
+        self.assertEqual(proof.input_polynomial.coefficients, (Fraction(0), Fraction(1)))
+        self.assertEqual(proof.primitive_polynomial.coefficients, (Fraction(-1), Fraction(1)))
+        self.assertEqual(proof.slope, Fraction(1))
+        self.assertIsNone(term.polynomial)
+        self.assertIsNone(term.affine)
+        self.assertEqual(term.derivative_rules, ())
+
     def test_existing_interfaces_still_return_distinct_typed_results(self):
         self.assertTrue(m.expand("2*(x+1)", 8).complete)
         self.assertEqual(m.integrate_polynomial("x^2", "x").primitive.coefficients,

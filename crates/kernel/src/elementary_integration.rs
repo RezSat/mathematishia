@@ -15,7 +15,7 @@ use mathema::{
 use crate::budget::WorkBudget;
 use crate::{
     DerivativeVerificationError, EvaluationContext, EvaluationError, PolynomialConversionError,
-    ResourceLimitKind, SymbolicDerivative, verify_symbolic_derivative,
+    RationalPolynomial, ResourceLimitKind, SymbolicDerivative, verify_symbolic_derivative,
 };
 
 /// Exact inverse-chain-rule identities in the supported domain.
@@ -453,6 +453,525 @@ impl EvaluationContext {
         claim: &ElementaryAntiderivative,
     ) -> Result<(), ElementaryIntegrationError> {
         validate_claim(self, source, variable, domain, claim)
+    }
+}
+
+/// The maximum admitted degree of the rational polynomial multiplier.
+const MAX_EXPONENTIAL_POLYNOMIAL_DEGREE: usize = 16;
+
+/// A checked primitive Q(x) exp(ax+b) for P(x) exp(ax+b).
+///
+/// The certificate retains the source domain and verifies the product and
+/// chain rule identity Q' + aQ = P by exact polynomial arithmetic. It does
+/// not assert that inherited domain obligations hold.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PolynomialExponentialPrimitive {
+    source: DomainExpression,
+    variable: Symbol,
+    domain: ScalarDomain,
+    primitive: DomainExpression,
+    input_polynomial: RationalPolynomial,
+    primitive_polynomial: RationalPolynomial,
+    slope: Rational,
+    intercept: Rational,
+}
+
+impl PolynomialExponentialPrimitive {
+    pub fn source(&self) -> &DomainExpression {
+        &self.source
+    }
+
+    pub fn variable(&self) -> &Symbol {
+        &self.variable
+    }
+
+    pub const fn domain(&self) -> ScalarDomain {
+        self.domain
+    }
+
+    pub fn primitive(&self) -> &DomainExpression {
+        &self.primitive
+    }
+
+    pub fn conditions(&self) -> &[Condition] {
+        self.primitive.conditions()
+    }
+
+    pub fn input_polynomial(&self) -> &RationalPolynomial {
+        &self.input_polynomial
+    }
+
+    pub fn primitive_polynomial(&self) -> &RationalPolynomial {
+        &self.primitive_polynomial
+    }
+
+    pub fn slope(&self) -> &Rational {
+        &self.slope
+    }
+
+    pub fn intercept(&self) -> &Rational {
+        &self.intercept
+    }
+}
+
+struct ExponentialInput<'a> {
+    polynomial: RationalPolynomial,
+    argument: &'a Expr,
+    slope: Rational,
+    intercept: Rational,
+}
+
+fn exponential_budget(context: &EvaluationContext) -> WorkBudget {
+    let mut limits = context.limits();
+    limits.max_polynomial_degree = limits
+        .max_polynomial_degree
+        .min(MAX_EXPONENTIAL_POLYNOMIAL_DEGREE);
+    WorkBudget::new(limits)
+}
+
+fn exponential_input<'a>(
+    context: &EvaluationContext,
+    source: &'a DomainExpression,
+    variable: &Symbol,
+    domain: ScalarDomain,
+    meter: &mut WorkBudget,
+) -> Result<ExponentialInput<'a>, ElementaryIntegrationError> {
+    check_source(context, source, domain, meter)?;
+    if source.construction_domain() != Some(domain) {
+        return Err(ElementaryIntegrationError::SourceMismatch);
+    }
+    let factors = match source.expression().view() {
+        ExprView::Mul(factors) => factors,
+        _ => std::slice::from_ref(source.expression()),
+    };
+    let mut polynomial = RationalPolynomial::new(vec![Rational::from(Integer::one())]);
+    let mut exponential = None;
+    for factor in factors {
+        meter.charge(1)?;
+        match factor.view() {
+            ExprView::Function { name, argument } if name.name() == "exp" => {
+                if exponential.replace(argument).is_some() {
+                    return Err(ElementaryIntegrationError::UnsupportedForm);
+                }
+            }
+            _ => {
+                let term = meter.convert(factor, variable).map_err(map_conversion)?;
+                polynomial = meter.multiply(&polynomial, &term)?;
+            }
+        }
+    }
+    let argument = exponential.ok_or(ElementaryIntegrationError::UnsupportedForm)?;
+    context.check_polynomial(&polynomial)?;
+    let (slope, intercept) = affine_coefficients(context, argument, variable, meter)?;
+    Ok(ExponentialInput {
+        polynomial,
+        argument,
+        slope,
+        intercept,
+    })
+}
+
+fn exponential_candidate(
+    context: &EvaluationContext,
+    source: &DomainExpression,
+    variable: &Symbol,
+    argument: &Expr,
+    polynomial: &RationalPolynomial,
+) -> Result<DomainExpression, ElementaryIntegrationError> {
+    context.check_polynomial(polynomial)?;
+    let expression = Expr::mul([polynomial.to_expr(variable), Expr::exp(argument.clone())]);
+    context.check_expression(&expression)?;
+    let limits = context.limits();
+    let result = source.rebuild_with_expression(
+        expression,
+        limits.max_expression_nodes,
+        limits.max_rational_conditions,
+    )?;
+    if result.conditions() != source.conditions() {
+        return Err(ElementaryIntegrationError::IncorrectConditions);
+    }
+    Ok(result)
+}
+
+impl EvaluationContext {
+    /// Integrates one bounded Q[x] multiplier times exp(ax+b), where a and b
+    /// are rational and a is nonzero. Only explicitly bound real or complex
+    /// sources are admitted. Degree is limited to 16 (or the smaller context
+    /// limit); work and scalar sizes also obey the context limits.
+    ///
+    /// No additive constant is inserted. This is not a general integration
+    /// algorithm, nor does it evaluate analytic definite integrals.
+    pub fn integrate_polynomial_exponential(
+        &self,
+        source: &DomainExpression,
+        variable: &Symbol,
+        domain: ScalarDomain,
+    ) -> Result<PolynomialExponentialPrimitive, ElementaryIntegrationError> {
+        let mut meter = exponential_budget(self);
+        let input = exponential_input(self, source, variable, domain, &mut meter)?;
+        let coefficients = input.polynomial.coefficients();
+        let zero = Rational::from(Integer::zero());
+        let mut result = vec![zero.clone(); coefficients.len()];
+        let mut next = zero;
+        for (power, coefficient) in coefficients.iter().enumerate().rev() {
+            let derivative =
+                meter.multiply_scalar(&next, &Rational::from(Integer::from(power + 1)))?;
+            let residual = meter.subtract_scalar(coefficient, &derivative)?;
+            next = meter.quotient(&residual, &input.slope)?;
+            self.check_rational(&next)?;
+            result[power] = next.clone();
+        }
+        let primitive_polynomial = RationalPolynomial::new(result);
+        let primitive = exponential_candidate(
+            self,
+            source,
+            variable,
+            input.argument,
+            &primitive_polynomial,
+        )?;
+        let claim = PolynomialExponentialPrimitive {
+            source: source.clone(),
+            variable: variable.clone(),
+            domain,
+            primitive,
+            input_polynomial: input.polynomial,
+            primitive_polynomial,
+            slope: input.slope,
+            intercept: input.intercept,
+        };
+        self.verify_polynomial_exponential_primitive(source, variable, domain, &claim)?;
+        Ok(claim)
+    }
+
+    /// Checks the source factorization, affine argument, exact polynomial
+    /// derivative identity and primitive expression without rerunning the
+    /// coefficient recurrence used by the generator.
+    pub fn verify_polynomial_exponential_primitive(
+        &self,
+        source: &DomainExpression,
+        variable: &Symbol,
+        domain: ScalarDomain,
+        claim: &PolynomialExponentialPrimitive,
+    ) -> Result<(), ElementaryIntegrationError> {
+        if claim.source != *source || &claim.variable != variable || claim.domain != domain {
+            return Err(ElementaryIntegrationError::SourceMismatch);
+        }
+        let mut meter = exponential_budget(self);
+        let input = exponential_input(self, source, variable, domain, &mut meter)?;
+        if claim.input_polynomial != input.polynomial
+            || claim.slope != input.slope
+            || claim.intercept != input.intercept
+        {
+            return Err(ElementaryIntegrationError::IncorrectAffineEvidence);
+        }
+        let polynomial = &claim.primitive_polynomial;
+        if polynomial
+            .degree()
+            .is_some_and(|degree| degree > MAX_EXPONENTIAL_POLYNOMIAL_DEGREE)
+        {
+            return Err(EvaluationError::Limit(ResourceLimitKind::PolynomialDegree).into());
+        }
+        self.check_polynomial(polynomial)?;
+        let derivative = meter.differentiate(polynomial)?;
+        let slope = RationalPolynomial::new(vec![input.slope]);
+        let scaled = meter.multiply(&slope, polynomial)?;
+        if meter.add(&derivative, &scaled)? != input.polynomial {
+            return Err(ElementaryIntegrationError::IncorrectDerivative);
+        }
+        let expected = exponential_candidate(self, source, variable, input.argument, polynomial)?;
+        self.check_expression(claim.primitive.expression())?;
+        if claim.primitive.conditions() != source.conditions()
+            || claim.primitive.construction_domain() != Some(domain)
+        {
+            return Err(ElementaryIntegrationError::IncorrectConditions);
+        }
+        if claim.primitive != expected {
+            return Err(ElementaryIntegrationError::IncorrectPrimitive);
+        }
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod exponential_tests {
+    use super::*;
+    use crate::ResourceLimits;
+
+    fn x() -> Expr {
+        Expr::from(variable())
+    }
+
+    fn variable() -> Symbol {
+        Symbol::new("x").unwrap()
+    }
+
+    fn q(n: i64, d: i64) -> Rational {
+        Rational::new(Integer::from(n), Integer::from(d)).unwrap()
+    }
+
+    fn source(expression: Expr, domain: ScalarDomain) -> DomainExpression {
+        DomainExpression::from_expr_in_domain(expression, domain, 256, 32).unwrap()
+    }
+
+    fn affine(a: Rational, b: Rational) -> Expr {
+        Expr::add([Expr::mul([Expr::from(a), x()]), Expr::from(b)])
+    }
+
+    fn product(polynomial: Expr, argument: Expr) -> Expr {
+        Expr::mul([polynomial, Expr::exp(argument)])
+    }
+
+    fn checked(
+        expression: Expr,
+        domain: ScalarDomain,
+        coefficients: &[(i64, i64)],
+    ) -> PolynomialExponentialPrimitive {
+        let context = EvaluationContext::default();
+        let input = source(expression, domain);
+        let result = context
+            .integrate_polynomial_exponential(&input, &variable(), domain)
+            .unwrap();
+        let expected =
+            RationalPolynomial::new(coefficients.iter().map(|&(n, d)| q(n, d)).collect());
+        assert_eq!(result.primitive_polynomial(), &expected);
+        assert_eq!(result.source(), &input);
+        assert_eq!(result.variable(), &variable());
+        assert_eq!(result.domain(), domain);
+        assert_eq!(result.conditions(), input.conditions());
+        context
+            .verify_polynomial_exponential_primitive(&input, &variable(), domain, &result)
+            .unwrap();
+        result
+    }
+
+    #[test]
+    fn integrates_x_exp_x() {
+        let result = checked(product(x(), x()), ScalarDomain::Real, &[(-1, 1), (1, 1)]);
+        assert_eq!(
+            result.primitive().expression(),
+            &product(Expr::add([x(), Expr::from(-1)]), x())
+        );
+    }
+
+    #[test]
+    fn integrates_x_squared_exp_two_x() {
+        checked(
+            product(Expr::pow(x(), Expr::from(2)), affine(q(2, 1), q(0, 1))),
+            ScalarDomain::Real,
+            &[(1, 4), (-1, 2), (1, 2)],
+        );
+    }
+
+    #[test]
+    fn integrates_negative_fractional_slope_with_offset() {
+        let result = checked(
+            product(x(), affine(q(-1, 2), q(3, 2))),
+            ScalarDomain::Complex,
+            &[(-4, 1), (-2, 1)],
+        );
+        assert_eq!(result.slope(), &q(-1, 2));
+        assert_eq!(result.intercept(), &q(3, 2));
+    }
+
+    #[test]
+    fn integrates_factored_polynomial_without_expanding_analytic_terms() {
+        let polynomial = Expr::mul([
+            Expr::add([x(), Expr::from(1)]),
+            Expr::add([x(), Expr::from(-1)]),
+        ]);
+        let result = checked(
+            product(polynomial, x()),
+            ScalarDomain::Real,
+            &[(1, 1), (-2, 1), (1, 1)],
+        );
+        assert_eq!(
+            result.input_polynomial(),
+            &RationalPolynomial::new(vec![q(-1, 1), q(0, 1), q(1, 1)])
+        );
+    }
+
+    #[test]
+    fn integrates_rational_coefficients_and_constant_multiplier() {
+        checked(
+            product(Expr::mul([Expr::from(q(2, 3)), x()]), x()),
+            ScalarDomain::Real,
+            &[(-2, 3), (2, 3)],
+        );
+        checked(
+            Expr::exp(affine(q(3, 1), q(2, 1))),
+            ScalarDomain::Real,
+            &[(1, 3)],
+        );
+    }
+
+    #[test]
+    fn accepts_degree_boundary_deterministically() {
+        let context = EvaluationContext::default();
+        let domain = ScalarDomain::Real;
+        let input = source(product(Expr::pow(x(), Expr::from(16)), x()), domain);
+        let first = context
+            .integrate_polynomial_exponential(&input, &variable(), domain)
+            .unwrap();
+        let second = context
+            .integrate_polynomial_exponential(&input, &variable(), domain)
+            .unwrap();
+        assert_eq!(first, second);
+        assert_eq!(first.primitive_polynomial().degree(), Some(16));
+        assert_eq!(first.primitive_polynomial().coefficients()[16], q(1, 1));
+    }
+
+    #[test]
+    fn preserves_historical_hole_and_rejects_erased_conditions() {
+        let context = EvaluationContext::default();
+        let domain = ScalarDomain::Real;
+        let hole = DomainExpression::multiply(
+            [
+                source(Expr::from(0), domain),
+                source(Expr::pow(x(), Expr::from(-1)), domain),
+            ],
+            32,
+        )
+        .unwrap();
+        let input = DomainExpression::add([hole, source(product(x(), x()), domain)], 32).unwrap();
+        let mut result = context
+            .integrate_polynomial_exponential(&input, &variable(), domain)
+            .unwrap();
+        assert_eq!(result.conditions(), &[Condition::NonZero(x())]);
+        assert_eq!(result.primitive().construction_domain(), Some(domain));
+        result.primitive = source(result.primitive().expression().clone(), domain);
+        assert_eq!(
+            context.verify_polynomial_exponential_primitive(&input, &variable(), domain, &result),
+            Err(ElementaryIntegrationError::IncorrectConditions)
+        );
+    }
+
+    #[test]
+    fn rejects_nonlinear_and_zero_slope_arguments() {
+        let context = EvaluationContext::default();
+        let domain = ScalarDomain::Real;
+        for (argument, error) in [
+            (
+                Expr::pow(x(), Expr::from(2)),
+                ElementaryIntegrationError::NonAffineArgument,
+            ),
+            (Expr::from(3), ElementaryIntegrationError::ZeroSlope),
+        ] {
+            let input = source(product(x(), argument), domain);
+            assert_eq!(
+                context.integrate_polynomial_exponential(&input, &variable(), domain),
+                Err(error)
+            );
+        }
+    }
+
+    #[test]
+    fn rejects_other_symbols_mixed_functions_and_reciprocals() {
+        let context = EvaluationContext::default();
+        let domain = ScalarDomain::Real;
+        for expression in [
+            product(Expr::from(Symbol::new("y").unwrap()), x()),
+            product(Expr::sin(x()), x()),
+            product(Expr::exp(Expr::add([x(), Expr::from(1)])), x()),
+            product(Expr::pow(x(), Expr::from(-1)), x()),
+            Expr::add([x(), Expr::exp(x())]),
+        ] {
+            let input = source(expression, domain);
+            assert!(
+                context
+                    .integrate_polynomial_exponential(&input, &variable(), domain)
+                    .is_err()
+            );
+        }
+    }
+
+    #[test]
+    fn rejects_unbound_and_reinterpreted_sources() {
+        let context = EvaluationContext::default();
+        let unbound = DomainExpression::from_expr(x(), 256).unwrap();
+        assert_eq!(
+            context.integrate_polynomial_exponential(&unbound, &variable(), ScalarDomain::Real),
+            Err(ElementaryIntegrationError::SourceMismatch)
+        );
+        let real = source(product(x(), x()), ScalarDomain::Real);
+        assert!(
+            context
+                .integrate_polynomial_exponential(&real, &variable(), ScalarDomain::Complex)
+                .is_err()
+        );
+        assert_eq!(
+            context.integrate_polynomial_exponential(&real, &variable(), ScalarDomain::Rational),
+            Err(ElementaryIntegrationError::UnsupportedScalarDomain)
+        );
+    }
+
+    #[test]
+    fn rejects_degree_and_work_limits() {
+        let domain = ScalarDomain::Real;
+        let input = source(product(Expr::pow(x(), Expr::from(17)), x()), domain);
+        assert_eq!(
+            EvaluationContext::default().integrate_polynomial_exponential(
+                &input,
+                &variable(),
+                domain
+            ),
+            Err(ElementaryIntegrationError::Evaluation(
+                EvaluationError::Limit(ResourceLimitKind::PolynomialDegree)
+            ))
+        );
+        let work = EvaluationContext::new(ResourceLimits {
+            max_work_units: 0,
+            ..ResourceLimits::default()
+        });
+        let input = source(product(x(), x()), domain);
+        assert_eq!(
+            work.integrate_polynomial_exponential(&input, &variable(), domain),
+            Err(ElementaryIntegrationError::Evaluation(
+                EvaluationError::Limit(ResourceLimitKind::WorkUnits)
+            ))
+        );
+    }
+
+    #[test]
+    fn rejects_forged_coefficient_identity_even_with_matching_expression() {
+        let context = EvaluationContext::default();
+        let domain = ScalarDomain::Real;
+        let input = source(product(x(), x()), domain);
+        let mut claim = context
+            .integrate_polynomial_exponential(&input, &variable(), domain)
+            .unwrap();
+        claim.primitive_polynomial = RationalPolynomial::new(vec![q(0, 1), q(1, 1)]);
+        claim.primitive = source(product(x(), x()), domain);
+        assert_eq!(
+            context.verify_polynomial_exponential_primitive(&input, &variable(), domain, &claim),
+            Err(ElementaryIntegrationError::IncorrectDerivative)
+        );
+    }
+
+    #[test]
+    fn rejects_forged_affine_data_primitive_and_source() {
+        let context = EvaluationContext::default();
+        let domain = ScalarDomain::Real;
+        let input = source(product(x(), x()), domain);
+        let claim = context
+            .integrate_polynomial_exponential(&input, &variable(), domain)
+            .unwrap();
+        let mut forged = claim.clone();
+        forged.slope = q(2, 1);
+        assert_eq!(
+            context.verify_polynomial_exponential_primitive(&input, &variable(), domain, &forged),
+            Err(ElementaryIntegrationError::IncorrectAffineEvidence)
+        );
+        let mut forged = claim.clone();
+        forged.primitive = source(Expr::exp(x()), domain);
+        assert_eq!(
+            context.verify_polynomial_exponential_primitive(&input, &variable(), domain, &forged),
+            Err(ElementaryIntegrationError::IncorrectPrimitive)
+        );
+        let other = source(product(x(), affine(q(1, 1), q(2, 1))), domain);
+        assert_eq!(
+            context.verify_polynomial_exponential_primitive(&other, &variable(), domain, &claim),
+            Err(ElementaryIntegrationError::SourceMismatch)
+        );
     }
 }
 

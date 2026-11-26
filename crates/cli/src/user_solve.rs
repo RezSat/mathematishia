@@ -444,6 +444,13 @@ pub(super) fn integrate(
                 certificate.rule().stable_id()
             )
             .expect("writing to String is infallible");
+        } else if term.polynomial_exponential_certificate().is_some() {
+            write!(
+                &mut output,
+                "\nterm {}: calculus.integrate_polynomial_exponential",
+                index + 1
+            )
+            .expect("writing to String is infallible");
         } else {
             write!(
                 &mut output,

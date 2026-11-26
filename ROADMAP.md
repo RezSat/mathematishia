@@ -41,7 +41,7 @@ This file tracks implemented areas and the next domain extensions. See [CAPABILI
 - Public typed problem results distinguishing solved, conditional, partial, unsupported, undefined and resource refusal outcomes.
 - CLI automatic equation dispatch, checked root sets, full bounded polynomial expansion, supported integral sums and exact constant evaluation; Python typed roots, Sturm counts, expansion, integral sums and analytic identities.
 - Shared versioned result adapter in the CLI and Python, with matched affine-system, ordered multivariate division, Sturm and root-refinement interfaces.
-- Permanent compiled CLI benchmark (169 cases), independent metamorphic and forged-certificate tests.
+- Permanent compiled CLI benchmark (170 cases), independent metamorphic and forged-certificate tests.
 - Experimental Python bindings, platform wheel tests and source-distribution rebuild.
 
 ## In progress / next
@@ -49,7 +49,7 @@ This file tracks implemented areas and the next domain extensions. See [CAPABILI
 1. Extend the checked bounded Buchberger implementation to wider ideals and resource limits; expand exact algebra simplification without assuming arbitrary generators give unique normal forms.
 2. Extend analytic domain contracts to safe symbolic rewriting, additional derivatives and explicit complex branch handling.
 3. Extend nonlinear equations, higher-degree inequalities and non-affine systems. Extend certified root isolation to repeated factors and source-restricted equations.
-4. Add truthful per-reduction multivariate division traces and additional checked algebra/calculus rendering, then stable frontend-oriented serialization.
+4. Extend the implemented checked division traces and structural JSON with step evidence for additional equation, algebra and calculus methods.
 5. Extend limits beyond finite-point rational functions, and broaden elementary integration and series with explicit supported domains and unresolved results.
 6. Expand rational factorization beyond the bounded reconstruction path; improve algebraic embeddings and general arithmetic.
 7. Add exact linear-algebra extensions, targeted symbolic matrix operations and certified algebraic root representations beyond quadratic factors.
@@ -58,3 +58,8 @@ This file tracks implemented areas and the next domain extensions. See [CAPABILI
 The implemented proof graph checks dependencies and supported rule evidence; it is not a general theorem prover.
 
 Bounded Gröbner certificates, affine absolute-value equations, exact special angles, domain-selected polynomial roots, rational calculus checks and structural step records are implemented. Remaining work includes general periodic solution families, more general piecewise expressions, full domain-provenance adoption and more structured result types.
+
+
+## A/L release priority
+
+Keep Mathematishia a general-purpose, fully native Rust CAS. Prioritize broader school and advanced-level mathematics: radicals, powers and logarithms; general periodic trigonometric equations; nonlinear and piecewise equations; integration methods; analytic and infinite limits; series, vectors, complex numbers, and coordinate geometry. Introduce bounded strategy selection and genuinely distinct checked alternative methods where useful. Every new operation should preserve source domains, expose precise partial/unsupported outcomes, and include checked evidence and executable frontend regressions. External CAS software is permitted only for independent test references, never runtime solving. Coverage and performance measurements must distinguish complete solutions, partial results, refusals, and invalid inputs.

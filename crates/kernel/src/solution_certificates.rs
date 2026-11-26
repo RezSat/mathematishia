@@ -54,7 +54,9 @@ impl fmt::Display for SolutionCertificateError {
         match self {
             Self::Evaluation(error) => write!(f, "{error}"),
             Self::Expression(error) => write!(f, "{error}"),
-            Self::UnsupportedDomain => f.write_str("solution certificates require Q, R or C"),
+            Self::UnsupportedDomain => {
+                f.write_str("unsupported or mismatched solution-certificate domain")
+            }
             Self::IncorrectCertificate => f.write_str("incorrect solution-set certificate"),
         }
     }
@@ -82,6 +84,51 @@ fn check_domain(domain: ScalarDomain) -> Result<(), SolutionCertificateError> {
         ScalarDomain::Rational | ScalarDomain::Real | ScalarDomain::Complex => Ok(()),
         ScalarDomain::Integer => Err(SolutionCertificateError::UnsupportedDomain),
     }
+}
+
+fn check_source_domain(
+    left: &DomainExpression,
+    right: &DomainExpression,
+    domain: ScalarDomain,
+) -> Result<(), SolutionCertificateError> {
+    check_domain(domain)?;
+    for source in [left, right] {
+        source
+            .check_construction_domain(domain)
+            .map_err(|_| SolutionCertificateError::UnsupportedDomain)?;
+    }
+    Ok(())
+}
+
+// Check the reduced residual against the original partial functions without
+// rerunning rational-function subtraction or trusting its cancellation.
+fn check_residual(
+    work: &mut WorkBudget,
+    left: &RationalFunction,
+    right: &RationalFunction,
+    residual: &RationalFunction,
+) -> Result<(), SolutionCertificateError> {
+    let mut exclusions = left.excluded_zero_sets().to_vec();
+    exclusions.extend_from_slice(right.excluded_zero_sets());
+    work.charge(exclusions.len() as u64)?;
+    exclusions.sort_by(crate::rational_function::condition_order);
+    exclusions.dedup();
+    if exclusions != residual.excluded_zero_sets() {
+        return Err(SolutionCertificateError::IncorrectCertificate);
+    }
+
+    let common = work.multiply(left.denominator(), right.denominator())?;
+    let (scale, remainder) = work.divide(&common, residual.denominator())?;
+    if scale.is_zero() || !remainder.is_zero() {
+        return Err(SolutionCertificateError::IncorrectCertificate);
+    }
+    let lhs = work.multiply(left.numerator(), right.denominator())?;
+    let rhs = work.multiply(right.numerator(), left.denominator())?;
+    let difference = work.subtract(&lhs, &rhs)?;
+    if work.multiply(residual.numerator(), &scale)? != difference {
+        return Err(SolutionCertificateError::IncorrectCertificate);
+    }
+    Ok(())
 }
 
 fn in_domain(root: &ExactQuadraticRoot, domain: ScalarDomain) -> bool {
@@ -211,6 +258,7 @@ fn classify(
     use SolutionCertificateError::IncorrectCertificate;
     let mut work = WorkBudget::new(context.limits());
     work.charge(1)?;
+    check_residual(&mut work, left, right, residual)?;
     let numerator = residual.numerator();
     let Some(degree) = numerator.degree() else {
         return if factors.is_empty() {
@@ -325,6 +373,8 @@ fn classify(
 /// degree-one/two cofactor is handled automatically. Higher degrees are partial.
 /// Unsupported expressions/conditions (including arbitrary parameter families)
 /// produce typed errors, not empty solution sets.
+/// A bound operand must match the requested scalar domain. Unbound operands
+/// retain their explicit restrictions, but cannot recover erased source history.
 pub fn certify_solution_set(
     context: &EvaluationContext,
     left: &DomainExpression,
@@ -333,7 +383,7 @@ pub fn certify_solution_set(
     domain: ScalarDomain,
     factor_hints: &[RationalPolynomial],
 ) -> Result<SolutionSetCertificate, SolutionCertificateError> {
-    check_domain(domain)?;
+    check_source_domain(left, right, domain)?;
     let lhs = context.rational_expression(left, variable)?;
     let rhs = context.rational_expression(right, variable)?;
     let residual = context.subtract_rational_functions(&lhs, &rhs)?;
@@ -386,7 +436,7 @@ pub fn verify_solution_set(
     domain: ScalarDomain,
     proposed: &SolutionSetCertificate,
 ) -> Result<bool, SolutionCertificateError> {
-    check_domain(domain)?;
+    check_source_domain(left, right, domain)?;
     let lhs = context.rational_expression(left, variable)?;
     let rhs = context.rational_expression(right, variable)?;
     let residual = context.subtract_rational_functions(&lhs, &rhs)?;

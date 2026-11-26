@@ -67,3 +67,66 @@ should present unsupported and partial outcomes explicitly, never as success
 without qualification.
 
 The `polynomial.equation` operation accepts `PolynomialZero` over Q, R or C. Its answer uses the existing exact root representation (including multiplicities); `result_domain` specifies which roots are admitted. The `source_bound_polynomial` evidence marker denotes independently checked solution-set and factor-search evidence. Bound domain expressions include `construction_domain`; an absent field denotes legacy unbound provenance.
+
+## Additive native contracts
+
+Existing operation IDs and version-1 request/result fields are unchanged.
+Consumers should discriminate by operation and structural kind, and reject
+unknown kinds rather than interpreting them as a complete answer. New native
+operations do not parse source text or establish missing construction history.
+
+| Operation ID | Statement kind | Scope |
+| --- | --- | --- |
+| `equation.absolute_affine` | `absolute_affine` | R, total native affine absolute chains, one matching variable |
+| `trig.special_angle` | `special_angle` | R, no variables; explicit rational multiple of pi |
+| `trig.zeros_partial` | `trig_zeros` | R, one angle variable; sine and cosine only |
+| `polynomial.groebner_basis` | `ideal` with null target | Q-polynomial ring, native bounded lexicographic basis |
+| `polynomial.ideal_membership` | `ideal` with target | Q-polynomial ideal membership, not radical membership or geometric solving |
+
+Absolute expressions carry the base affine map and ordered inner-to-outer
+layers. Solution intervals are closed at finite endpoints; null lower/upper
+bounds mean negative/positive infinity respectively. Sign cases include their
+exact interval, signs and optional solution. No solutions retain the verified
+empty union under `evidence.detail`. Parsed restricted expressions must not be
+lowered to this total-function input by discarding source conditions.
+
+Special-angle certificates retain the original rational pi multiple, function,
+domain, reduced tick and exact rational or algebraic root (including branch).
+Tangent poles are checked undefined results with `reason: tangent_pole` and
+certificate under `evidence.detail`. Partial trig zeros contain two verified
+special-angle certificates, never a general integer-parameter solution set.
+The reason is `periodic_completeness_unavailable`. Other angles, domains and
+tangent equations are unsupported; the native scalar limit is retained.
+
+Ideal inputs are original domain expressions; historical restrictions are
+retained and refused, never silently discarded. Sparse polynomials carry
+canonical variable order and exact coefficient/power pairs. Basis certificates
+include both ideal inclusions (representations and generator reductions) and
+all final S-pair reductions. Membership contains the checked basis certificate,
+exact reduction and a boolean member status. A false member status establishes
+nonmembership only in that Q-polynomial ideal. Native resource limits and the
+context's tighter limits apply. Malformed evidence cannot acquire a proof marker.
+
+The version-1 evidence object retains its existing `checked_by` and `steps`
+fields. Only native empty absolute solutions and checked tangent poles add
+`detail`. Ordinary unsupported, undefined and resource-refusal outcomes still
+have null evidence. Complete native results carry certificates as answer data;
+a proof marker alone remains insufficient to reconstruct a trusted result.
+
+### Checked structural records
+
+`StepRecords::to_checked_json(evidence, limits)` independently rechecks the
+records against the supplied original native evidence before projecting a
+separate version-1 envelope: `kind: checked_step_records`, `domain`,
+`source_conditions`, `steps`, `conclusion`. Claims preserve their relation
+and structural operands, not prose. Premise order, stable rule IDs, source
+condition indices, exact proved nonzero coefficients and evidence indices are
+retained. Existing distribution, linear, derivative and both polynomial
+division record kinds are supported. This is not a decoder or a standalone
+proof; record verification and serialization errors remain distinct. New
+worker-specific record variants require explicit adapter agreement.
+
+
+`equation.source_bound` accepts original source equations over Q, R or C. It independently checks denominator exclusions, reduced residual identity and admitted root sets; higher-degree unresolved cofactors stay partial. The public `solvefield` command selects this operation, without changing the legacy `equation.auto` contract.
+
+`OrderedDivisionTrace::to_checked_json` rechecks actual ordered polynomial division transitions against the original dividend and ordered divisors. Its separate envelope has kind `checked_ordered_division`, domain Q, original operands, steps, quotients and remainder. Each step contains its index, previous premise (null at the first step), stable rule ID, optional divisor index, pending polynomials before and after, and exact monomial factor. A reduction means before = after + factor * divisor, whereas moving a term to the remainder means before = after + factor. These are not simple expression equalities. The trace cannot be inferred from a final-only certificate.

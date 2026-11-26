@@ -9,7 +9,7 @@ use mathematishia_kernel::{
 use super::checked_results::request_error;
 use super::{CliError, CliErrorKind, problem_error};
 
-fn error(error: AdvancedError) -> CliError {
+pub(super) fn error(error: AdvancedError) -> CliError {
     match error {
         AdvancedError::Input(error) => request_error(error),
         AdvancedError::Resource(message) => problem_error(CliErrorKind::Resource, message),

@@ -1933,6 +1933,7 @@ type PyIntegrationTerm = (
     Option<(PyPolynomialData, PyPolynomialData)>,
     Option<(String, String, String)>,
     Vec<String>,
+    Option<(PyPolynomialData, PyPolynomialData, String, String)>,
 );
 
 type PyIntegrationDispatch = (
@@ -1986,6 +1987,7 @@ fn py_integrate_expression_dispatch(
                 )),
                 None,
                 Vec::new(),
+                None,
             ),
             IntegrationTermEvidence::Elementary(certificate) => (
                 "elementary".to_owned(),
@@ -2004,6 +2006,22 @@ fn py_integrate_expression_dispatch(
                     .iter()
                     .map(|step| step.rule().stable_id().to_owned())
                     .collect(),
+                None,
+            ),
+            IntegrationTermEvidence::PolynomialExponential(certificate) => (
+                "polynomial_exponential".to_owned(),
+                certificate.source().expression().to_string(),
+                certificate.primitive().expression().to_string(),
+                Some("calculus.integrate_polynomial_exponential".to_owned()),
+                None,
+                None,
+                Vec::new(),
+                Some((
+                    poly_data(certificate.input_polynomial(), &symbol),
+                    poly_data(certificate.primitive_polynomial(), &symbol),
+                    certificate.slope().to_string(),
+                    certificate.intercept().to_string(),
+                )),
             ),
         })
         .collect();

@@ -4,7 +4,7 @@ use std::{cmp::Ordering, error::Error, fmt};
 
 use mathema::{
     Condition, DefinednessError, DomainExpression, Expr, ExprView, Integer, ScalarDomain,
-    definedness_obligations_in_domain,
+    definedness_obligations, definedness_obligations_in_domain,
 };
 
 use crate::{Assumptions, ConditionStatus};
@@ -18,6 +18,7 @@ const MAX_NAME_BYTES: usize = 4_096;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum DomainPreconditionError {
     UnsupportedDomain,
+    UnboundSource,
     Definedness(DefinednessError),
     DepthLimit,
     ScalarLimit,
@@ -28,6 +29,7 @@ impl fmt::Display for DomainPreconditionError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::UnsupportedDomain => f.write_str("unsupported scalar domain"),
+            Self::UnboundSource => f.write_str("source has unbound or externally supplied history"),
             Self::Definedness(error) => error.fmt(f),
             Self::DepthLimit => f.write_str("domain precondition depth limit exceeded"),
             Self::ScalarLimit => f.write_str("domain precondition scalar limit exceeded"),
@@ -57,12 +59,38 @@ pub enum DomainPreconditionStatus {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DomainPreconditionReport {
     status: DomainPreconditionStatus,
+    construction_domain: Option<ScalarDomain>,
+    external_history: bool,
     conditions: Vec<(Condition, ConditionStatus)>,
 }
 
 impl DomainPreconditionReport {
     pub fn status(&self) -> DomainPreconditionStatus {
         self.status
+    }
+
+    /// The domain declared during construction, not the caller's requested domain.
+    pub fn construction_domain(&self) -> Option<ScalarDomain> {
+        self.construction_domain
+    }
+
+    pub fn has_external_history(&self) -> bool {
+        self.external_history
+    }
+
+    /// Requires a declared construction domain without externally supplied
+    /// restrictions. This cannot recover history erased in a raw Expr before
+    /// DomainExpression construction, or prove transformation equivalence.
+    pub fn check_bound(
+        source: &DomainExpression,
+        domain: ScalarDomain,
+        assumptions: &Assumptions,
+    ) -> Result<Self, DomainPreconditionError> {
+        source.check_construction_domain(domain)?;
+        if source.construction_domain().is_none() || source.has_external_history() {
+            return Err(DomainPreconditionError::UnboundSource);
+        }
+        check_domain_preconditions(source, domain, assumptions)
     }
 
     pub fn conditions(&self) -> &[(Condition, ConditionStatus)] {
@@ -132,10 +160,14 @@ fn append(
 
 fn collect(
     expression: &Expr,
-    domain: ScalarDomain,
+    domain: Option<ScalarDomain>,
     conditions: &mut Vec<Condition>,
 ) -> Result<(), DomainPreconditionError> {
-    for condition in definedness_obligations_in_domain(expression, MAX_NODES, domain)? {
+    let required = match domain {
+        Some(domain) => definedness_obligations_in_domain(expression, MAX_NODES, domain),
+        None => definedness_obligations(expression, MAX_NODES),
+    }?;
+    for condition in required {
         append(conditions, condition)?;
     }
     Ok(())
@@ -226,6 +258,29 @@ pub fn check_domain_preconditions(
         return Err(DomainPreconditionError::UnsupportedDomain);
     }
     source.check_construction_domain(domain)?;
+    check_preconditions(source, Some(domain), assumptions)
+}
+
+/// The legacy rewrite API has no domain argument. Unbound sources must use
+/// the domain-independent algebraic grammar, including historical conditions.
+pub(crate) fn check_rewrite_preconditions(
+    source: &DomainExpression,
+    assumptions: &Assumptions,
+) -> Result<DomainPreconditionReport, DefinednessError> {
+    let domain = source
+        .construction_domain()
+        .filter(|domain| matches!(domain, ScalarDomain::Real | ScalarDomain::Complex));
+    check_preconditions(source, domain, assumptions).map_err(|error| match error {
+        DomainPreconditionError::Definedness(error) => error,
+        _ => DefinednessError::NodeLimitExceeded,
+    })
+}
+
+fn check_preconditions(
+    source: &DomainExpression,
+    domain: Option<ScalarDomain>,
+    assumptions: &Assumptions,
+) -> Result<DomainPreconditionReport, DomainPreconditionError> {
     if source
         .conditions()
         .len()
@@ -266,5 +321,10 @@ pub fn check_domain_preconditions(
         DomainPreconditionStatus::Proven
     };
 
-    Ok(DomainPreconditionReport { status, conditions })
+    Ok(DomainPreconditionReport {
+        status,
+        construction_domain: source.construction_domain(),
+        external_history: source.has_external_history(),
+        conditions,
+    })
 }

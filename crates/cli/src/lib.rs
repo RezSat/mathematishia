@@ -37,13 +37,16 @@ Usage:
   mathematishia expandall <EXPRESSION> [VARIABLE ...]  (infer variables if omitted)
   mathematishia isolate <POLYNOMIAL> <VARIABLE> <WIDTH>
   mathematishia rootsfield <POLYNOMIAL> <VARIABLE> <Q|R|C> [--json]
+  mathematishia solvefield <EQUATION> <VARIABLE> <Q|R|C> [--json]
+  mathematishia natural <EXPRESSION_OR_EQUATION> [VARIABLE] [--json]
   mathematishia groebner <VARIABLES_CSV> <GENERATOR> ...
   mathematishia idealmember <VARIABLES_CSV> <TARGET> <GENERATOR> ...
   mathematishia trig <sin|cos|tan> <PI_COEFFICIENT>
   mathematishia trigzeros <sin|cos>
   mathematishia abssolve <EQUATION> [VARIABLE]
   mathematishia checkcalculus <identity|derivative> <SOURCE> <CANDIDATE> <VARIABLE>
-  mathematishia steps <linear|derivative|expand> <SOURCE> <VARIABLE>
+  mathematishia steps <linear|derivative|expand> <SOURCE> <VARIABLE> [--json]
+  mathematishia divisiontrace <VARIABLES_CSV> <DIVIDEND> <DIVISORS...> [--json]
   mathematishia solve <EQUATION> <VARIABLE>
   mathematishia solveauto <EQUATION> [VARIABLE]  (defaults to x)
   mathematishia roots <POLYNOMIAL> [VARIABLE]
@@ -152,7 +155,7 @@ status explicitly; polynomial roots are complex, rational-function roots Q-only.
 Expansion uses Q[variables] and preserves inherited domain conditions.
 Integration sums use independently checked term certificates and a zero constant.
 Append --json to solveauto, roots, expandall, integrate (indefinite), limit, inequality,
-evalexact, diffreal or diffexpr for the shared versioned result.";
+evalexact, diffreal, diffexpr, abssolve, trig, trigzeros, groebner or idealmember\nfor the shared versioned result.";
 
 const MAX_DISTRIBUTION_STEPS: usize = 12;
 
@@ -417,7 +420,9 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
         [commands @ .., "--json"] => checked_results::json(commands),
         [..] if args.contains(&"--json") => Err(invalid("--json must be the final argument")),
         ["isolate", input, name, width] => checked_results::isolate(input, name, width),
-        ["rootsfield", _, _, _] => checked_results::json(args),
+        ["rootsfield" | "solvefield", _, _, _] => checked_results::json(args),
+        ["natural", _] | ["natural", _, _] => checked_results::json(args),
+        ["divisiontrace", _, _, ..] => checked_results::json(args),
         ["groebner", names, generators @ ..] => advanced_operations::basis(names, generators),
         ["idealmember", names, target, generators @ ..] => {
             advanced_operations::membership(names, generators, target)

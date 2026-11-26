@@ -17,7 +17,7 @@ use crate::budget::WorkBudget;
 use crate::{
     DefinitePolynomialIntegral, ElementaryAntiderivative, ElementaryIntegrationError,
     EvaluationContext, EvaluationError, IntegrationError, PolynomialConversionError,
-    PolynomialPrimitive,
+    PolynomialExponentialPrimitive, PolynomialPrimitive,
 };
 
 const MAX_TERMS: usize = 64;
@@ -104,6 +104,7 @@ pub enum IntegrationTermEvidence {
         certificate: PolynomialPrimitive,
     },
     Elementary(Box<ElementaryAntiderivative>),
+    PolynomialExponential(Box<PolynomialExponentialPrimitive>),
 }
 
 impl IntegrationTermEvidence {
@@ -111,20 +112,28 @@ impl IntegrationTermEvidence {
         match self {
             Self::Polynomial { integrand, .. } => integrand,
             Self::Elementary(certificate) => certificate.source().expression(),
+            Self::PolynomialExponential(certificate) => certificate.source().expression(),
         }
     }
 
     pub fn polynomial_certificate(&self) -> Option<&PolynomialPrimitive> {
         match self {
             Self::Polynomial { certificate, .. } => Some(certificate),
-            Self::Elementary(_) => None,
+            Self::Elementary(_) | Self::PolynomialExponential(_) => None,
         }
     }
 
     pub fn elementary_certificate(&self) -> Option<&ElementaryAntiderivative> {
         match self {
-            Self::Polynomial { .. } => None,
+            Self::Polynomial { .. } | Self::PolynomialExponential(_) => None,
             Self::Elementary(certificate) => Some(certificate),
+        }
+    }
+
+    pub fn polynomial_exponential_certificate(&self) -> Option<&PolynomialExponentialPrimitive> {
+        match self {
+            Self::PolynomialExponential(certificate) => Some(certificate),
+            _ => None,
         }
     }
 }
@@ -271,9 +280,22 @@ fn dispatch_term(
         }),
         Err(EvaluationError::Polynomial(PolynomialConversionError::UnsupportedFunction)) => {
             let term_source = make_term_source(context, source, term, domain)?;
-            Ok(IntegrationTermEvidence::Elementary(Box::new(
-                context.integrate_elementary_affine(&term_source, variable, domain)?,
-            )))
+            match context.integrate_elementary_affine(&term_source, variable, domain) {
+                Ok(certificate) => Ok(IntegrationTermEvidence::Elementary(Box::new(certificate))),
+                Err(ElementaryIntegrationError::UnsupportedForm) => {
+                    match context.integrate_polynomial_exponential(&term_source, variable, domain) {
+                        Ok(certificate) => Ok(IntegrationTermEvidence::PolynomialExponential(
+                            Box::new(certificate),
+                        )),
+                        Err(
+                            ElementaryIntegrationError::UnsupportedForm
+                            | ElementaryIntegrationError::UnsupportedArgument(_),
+                        ) => Err(ElementaryIntegrationError::UnsupportedForm.into()),
+                        Err(error) => Err(error.into()),
+                    }
+                }
+                Err(error) => Err(error.into()),
+            }
         }
         Err(EvaluationError::Polynomial(reason)) => {
             Err(IntegrationError::UnsupportedIntegrand(reason).into())
@@ -322,6 +344,17 @@ fn term_primitive(
                 certificate,
             )?;
             work.charge(certificate.derivative_evidence().steps().len() as u64)?;
+            certificate.primitive().clone()
+        }
+        IntegrationTermEvidence::PolynomialExponential(certificate) => {
+            let term_source = make_term_source(context, source, term, domain)?;
+            work.charge(128 * certificate.input_polynomial().coefficients().len() as u64)?;
+            context.verify_polynomial_exponential_primitive(
+                &term_source,
+                variable,
+                domain,
+                certificate,
+            )?;
             certificate.primitive().clone()
         }
     };
@@ -401,7 +434,8 @@ fn definite_polynomial(
 
 impl EvaluationContext {
     /// Integrates a polynomial or a top-level sum of rational polynomials and
-    /// certified rational-affine sin/cos/exp terms. An unexpanded product of a
+    /// certified rational-affine sin/cos/exp terms and bounded polynomial times exp.
+    /// An unexpanded product of a
     /// sum, a mixed-function product, log, tan and nonlinear analytic arguments
     /// remain unsupported. Conditions are unproved, retained prerequisites.
     ///

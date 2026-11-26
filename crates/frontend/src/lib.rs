@@ -4,6 +4,7 @@
 //! Mathema's syntax-independent immutable semantic values.
 
 pub mod advanced;
+pub mod natural;
 pub mod problem;
 
 use std::error::Error;

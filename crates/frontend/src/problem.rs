@@ -4,9 +4,9 @@ use std::{collections::BTreeSet, error::Error, fmt};
 
 use mathema::{DomainExpression, Expr, ExprView, Rational, ScalarDomain, Symbol};
 use mathematishia_kernel::{
-    ComparisonOperator, EvaluationContext, EvaluationError, LimitDirection, ProblemError,
-    ProblemOperation, ProblemRequest, ProblemResult, ProblemStatement, ProblemWireError,
-    dispatch_problem,
+    ComparisonOperator, EvaluationContext, EvaluationError, LimitDirection, PiMultiple,
+    ProblemError, ProblemOperation, ProblemRequest, ProblemResult, ProblemStatement,
+    ProblemWireError, TrigFunction, dispatch_problem,
 };
 
 use crate::{
@@ -22,6 +22,7 @@ pub enum RequestError {
     Evaluation(EvaluationError),
     Problem(ProblemError),
     Wire(ProblemWireError),
+    Advanced(Box<crate::advanced::AdvancedError>),
 }
 
 impl fmt::Display for RequestError {
@@ -32,6 +33,7 @@ impl fmt::Display for RequestError {
             Self::Evaluation(error) => error.fmt(f),
             Self::Problem(error) => error.fmt(f),
             Self::Wire(error) => error.fmt(f),
+            Self::Advanced(error) => error.fmt(f),
         }
     }
 }
@@ -212,10 +214,144 @@ fn limit(
     })
 }
 
+fn advanced_error(error: crate::advanced::AdvancedError) -> RequestError {
+    RequestError::Advanced(Box::new(error))
+}
+
+fn natural_request(
+    context: &EvaluationContext,
+    input: &str,
+    name: &str,
+) -> Result<ProblemRequest, RequestError> {
+    use crate::natural::NaturalRequest;
+    let (operation, statement, variables) =
+        match crate::natural::parse_v1(context, input, name).map_err(advanced_error)? {
+            NaturalRequest::SpecialAngle { function, angle } => (
+                ProblemOperation::EvaluateSpecialAngle,
+                ProblemStatement::SpecialAngle { angle, function },
+                vec![],
+            ),
+            NaturalRequest::AbsoluteEquation(equation) => (
+                ProblemOperation::SolveAbsolute,
+                ProblemStatement::Absolute(equation),
+                vec![variable(context, name)?],
+            ),
+        };
+    Ok(ProblemRequest {
+        operation,
+        statement,
+        variables,
+        domain: ScalarDomain::Real,
+    })
+}
+
+fn trig_function(name: &str) -> Result<TrigFunction, RequestError> {
+    match name {
+        "sin" => Ok(TrigFunction::Sin),
+        "cos" => Ok(TrigFunction::Cos),
+        "tan" => Ok(TrigFunction::Tan),
+        _ => Err(RequestError::Invalid("expected sin, cos or tan")),
+    }
+}
+
+fn ideal_request(
+    context: &EvaluationContext,
+    names: &str,
+    generators: &[&str],
+    target: Option<&str>,
+) -> Result<ProblemRequest, RequestError> {
+    if generators.len() > 8 || names.split(',').count() > 3 {
+        return Err(RequestError::Evaluation(EvaluationError::Limit(
+            mathematishia_kernel::ResourceLimitKind::ExpressionNodes,
+        )));
+    }
+    let variables = names
+        .split(',')
+        .map(|name| variable(context, name))
+        .collect::<Result<Vec<_>, _>>()?;
+    if variables.iter().collect::<BTreeSet<_>>().len() != variables.len() {
+        return Err(RequestError::Invalid("variables must be distinct"));
+    }
+    let domain = ScalarDomain::Rational;
+    Ok(ProblemRequest {
+        operation: if target.is_some() {
+            ProblemOperation::IdealMembership
+        } else {
+            ProblemOperation::GroebnerBasis
+        },
+        statement: ProblemStatement::Ideal {
+            generators: generators
+                .iter()
+                .map(|input| source(input, domain))
+                .collect::<Result<Vec<_>, _>>()?,
+            target: target.map(|input| source(input, domain)).transpose()?,
+        },
+        variables,
+        domain,
+    })
+}
+
+fn absolute_request(
+    context: &EvaluationContext,
+    input: &str,
+    name: &str,
+) -> Result<ProblemRequest, RequestError> {
+    let equation =
+        crate::advanced::absolute_request(context, input, name).map_err(advanced_error)?;
+    Ok(ProblemRequest {
+        operation: ProblemOperation::SolveAbsolute,
+        statement: ProblemStatement::Absolute(Box::new(equation)),
+        variables: vec![variable(context, name)?],
+        domain: ScalarDomain::Real,
+    })
+}
+
 /// Commands accepted by the versioned result adapter. Legacy text and typed
 /// interfaces remain available independently of this bounded schema.
 pub fn request(context: &EvaluationContext, args: &[&str]) -> Result<ProblemRequest, RequestError> {
     match args {
+        ["natural", input] => natural_request(context, input, "x"),
+        ["natural", input, name] => natural_request(context, input, name),
+        ["abssolve", input] => absolute_request(context, input, "x"),
+        ["abssolve", input, name] => absolute_request(context, input, name),
+        ["trig", function, coefficient] => Ok(ProblemRequest {
+            operation: ProblemOperation::EvaluateSpecialAngle,
+            statement: ProblemStatement::SpecialAngle {
+                function: trig_function(function)?,
+                angle: PiMultiple::new(scalar(context, coefficient)?),
+            },
+            variables: vec![],
+            domain: ScalarDomain::Real,
+        }),
+        ["trigzeros", function] => Ok(ProblemRequest {
+            operation: ProblemOperation::TrigZeros,
+            statement: ProblemStatement::TrigZeros(trig_function(function)?),
+            variables: vec![variable(context, "x")?],
+            domain: ScalarDomain::Real,
+        }),
+        ["groebner", names, generators @ ..] => ideal_request(context, names, generators, None),
+        ["idealmember", names, target, generators @ ..] => {
+            ideal_request(context, names, generators, Some(target))
+        }
+        ["solvefield", input, name, field] => {
+            let domain = match *field {
+                "Q" => ScalarDomain::Rational,
+                "R" => ScalarDomain::Real,
+                "C" => ScalarDomain::Complex,
+                _ => return Err(RequestError::Invalid("expected Q, R or C")),
+            };
+            let statement =
+                parse_domain_statement_in_domain(input, domain).map_err(RequestError::Parse)?;
+            let DomainStatement::Equation { left, right } = statement else {
+                return Err(RequestError::Invalid("expected an equation containing '='"));
+            };
+            Ok(ProblemRequest {
+                operation: ProblemOperation::SolveSourceEquation,
+                statement: ProblemStatement::SourceEquation { left, right },
+                variables: vec![variable(context, name)?],
+                domain,
+            })
+        }
         ["solveauto", input] => equation(context, input, "x"),
         ["solveauto", input, name] => equation(context, input, name),
         ["inequality", input] => comparison(context, input, "x"),

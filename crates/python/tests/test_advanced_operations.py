@@ -1,4 +1,5 @@
 import unittest
+import json
 from fractions import Fraction
 
 import mathematishia as m
@@ -35,6 +36,18 @@ class AdvancedOperationTests(unittest.TestCase):
         self.assertEqual(m.solve_absolute("abs(x)=-1"), ())
         with self.assertRaises(m.UndefinedAtPointError):
             m.solve_absolute("abs(x+0/x)=3")
+
+    def test_checked_trace_wire(self):
+        linear = json.loads(m.derivation_records_json("linear", "2*x+4=10"))
+        self.assertEqual(linear["kind"], "checked_step_records")
+        self.assertTrue(linear["steps"])
+        trace = json.loads(m.division_trace_json("x^2+x*y+y^2+1", ("x+y", "x"), ("x", "y")))
+        self.assertEqual(trace["kind"], "checked_ordered_division")
+        self.assertEqual(len(trace["steps"]), 3)
+        self.assertEqual(trace["steps"][0]["divisor_index"], 0)
+        self.assertEqual(trace["steps"][1]["premise"], 0)
+        with self.assertRaises(m.UndefinedAtPointError):
+            m.division_trace_json("x+0/x", ("x",), ("x",))
 
     def test_calculus_and_records(self):
         self.assertTrue(m.check_calculus("(x^2-1)/(x-1)", "x+1"))

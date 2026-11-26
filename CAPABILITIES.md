@@ -68,14 +68,14 @@ The Rust kernel now has independently checked positive-integer polynomial expans
 
 The kernel computes finite rational-point limits of univariate rational functions, with exact factor orders, signed one-sided infinities, two-sided nonexistence and retained source exclusions. Real inequalities compare a checked rational function against zero; numerator, denominator and inherited restriction polynomials must each have degree at most two. Exact rational and certified quadratic-algebraic endpoints form canonical interval unions, with poles and removable holes excluded. Both operations are exposed through CLI `limit` and `inequality` (also `solve` / `solveauto` comparisons) and Python `limit` and `solve_inequality`. They preserve source exclusions; limit answers do not fill holes, and inequality intervals include only admissible points. Transcendental limits and higher-degree inequalities are not claimed.
 
-The compiled CLI corpus contains 169 cases: 115 solved, 11 partial, 26 unsupported, and 17 explicit domain, input or resource refusals. These are regression sample counts, not universal mathematical coverage.
+The compiled CLI corpus contains 170 cases: 116 solved, 11 partial, 26 unsupported, and 17 explicit domain, input or resource refusals. These are regression sample counts, not universal mathematical coverage.
 
 
 Analytic calls support `sin`, `cos`, `tan`, `exp` and natural `log` as unevaluated expressions. The domain-aware parser preserves restrictions through nested calls and structural normalization, with real or complex domain selection. The derivative verifier supports chain rules for sine, cosine and exponential. Tangent requires `cos(argument) != 0`; real logarithm requires a positive argument. Complex principal-log derivatives are not admitted because the current domain model does not encode its branch cut. Conditions remain unproved prerequisites, not claims of validity. CLI `diffreal` and Python `differentiate_expression_real` expose the checked real-domain result. The existing polynomial converter rejects function calls. A separate bounded one-step rewrite supports exactly `sin(0)=0`, `cos(0)=1`, `tan(0)=0`, `exp(0)=1` and `log(1)=0`, with independent rule checking and preserved input domain conditions; this is not arbitrary analytic evaluation.
 
 Sparse multivariate polynomials store exact rational coefficients in a fixed, explicitly named ambient ring. Arithmetic, partial differentiation, evaluation and substitution have bounded input and work limits. Ordered lexicographic division returns a quotient for each divisor and a remainder, checked against the original polynomial by exact recomposition and leading-term nondivisibility. Divisor order affects results. No unique normal form is claimed for arbitrary divisors; bounded independently checked Gröbner bases establish formal ideal membership. An explicit bounded `Expr` ↔ multivariate bridge now handles exact scalar and declared-symbol sums, products and strictly positive integer powers in a caller-selected ring, with inherited `DomainExpression` conditions retained. Zero, negative, noninteger and symbolic powers, undeclared symbols and function calls are rejected. The reverse `Expr` conversion preserves polynomial value, not original syntax.
 
-Exact polynomial integration returns zero-constant primitives or definite rational values at rational bounds. Primitives and integral values are independently checked. A separate elementary integrator returns exact rational-multiple primitives for only `sin(ax+b)`, `cos(ax+b)` and `exp(ax+b)` with nonzero rational slope, retained source conditions and independently verified derivative evidence. General transcendental integration remains unsupported. Multivariable affine equation solving classifies empty, unique and affine-family solution sets, restricted to 16 equations and 16 variables.
+Exact polynomial integration returns zero-constant primitives or definite rational values at rational bounds. Primitives and integral values are independently checked. A separate elementary integrator returns exact rational-multiple primitives for only `sin(ax+b)`, `cos(ax+b)` and `exp(ax+b)` with nonzero rational slope, retained source conditions and independently verified derivative evidence. Bounded polynomial times affine exponential integration additionally uses exact polynomial identity verification, exposed by the same dispatcher. General transcendental integration remains unsupported. Multivariable affine equation solving classifies empty, unique and affine-family solution sets, restricted to 16 equations and 16 variables.
 
 Exact rational root-bracket refinement certifies a rational root or existence within an opposite-sign interval; same-sign intervals are unresolved. An exact bounded Sturm certificate now counts distinct real roots of square-free nonzero Q[x] inside rational intervals with non-root endpoints; repeated factors and root endpoints are explicitly rejected in this first increment. Neither of those operations isolates all roots. The separate `isolate` command and Python `isolate_real_roots` return sorted, strictly disjoint dyadic brackets containing exactly one root each, with certified global coverage and exact midpoint error bounds, for unrestricted nonzero square-free Q[x]. Repeated factors and retained restrictions are refused. CLI `sturm`, `rootbracket`, `linsystem` and `mvdivide` have matched Python APIs. The derivation renderer checks supplied proof evidence before producing structured steps; it does not establish new mathematical rules. A separate bounded renderer checks multivariate division certificates and explains the final recomposition and reduced remainder, not unrecorded intermediate division steps or Gröbner uniqueness.
 
@@ -115,17 +115,23 @@ Update this index when a module is added or its supported scope changes.
 | `trig`, `trigzeros` | `special_angle`, `trig_zero_examples` | Exact rational multiples of pi, supported unit-circle angles; tangent poles undefined, sine/cosine zero examples partial. |
 | `abssolve` | `solve_absolute` | One total real affine absolute-value chain per side, at most 8 layers total; complete closed interval unions. |
 | `checkcalculus` | `check_calculus` | Verify rational identities or derivatives with retained exclusions; candidate must cover the source domain. |
-| `steps` | `derivation_records` | Checked linear, derivative and distribution records; source restrictions and actual dependencies. |
+| `steps` | `derivation_records`, `derivation_records_json` | Checked linear, derivative and distribution records; source restrictions and actual dependencies. |
+| `divisiontrace` | `division_trace_json` | Actual ordered polynomial reduction trace, independently verified against the source. |
+| `solvefield` | `problem('solvefield', ...)` | Source-bound rational equations over Q/R/C, complete through quadratic residuals; higher-degree unresolved cofactors remain partial. |
+| `natural` | `problem('natural', ...)` | Opt-in special angles and affine absolute-value equations; radicals not yet admitted. |
 
-`rootsfield` uses the shared versioned JSON schema. The other new commands
-use checked native results and dedicated text/typed interfaces. Structured
-division certificates remain internal; existing division commands expose
-their final quotient and remainder, not an invented reduction history.
+`rootsfield`, `solvefield`, `natural`, `groebner`, `idealmember`,
+`trig`, `trigzeros` and `abssolve` expose the shared checked result schema
+through CLI JSON and Python `problem(*args)`. Existing text/typed interfaces
+remain available. `steps --json` and `divisiontrace` expose separately
+verified version-1 trace envelopes; the legacy division result is still final-only.
+The ordered trace records actual reductions and remainder moves over unrestricted
+Q-polynomials (at most 8 variables/divisors, degree 32, 64 terms and 128 steps).
+It does not claim a unique normal form for arbitrary divisors.
 
 Explicit construction-domain provenance is retained on bound values and
 checked in the shared dispatcher and selected calculus, substitution and
-rewrite paths. Legacy unbound expressions cannot attest a lost construction
-domain. The ordinary symbol pi is not silently reinterpreted. Use explicit
-angle coefficients. General periodic solution families, arbitrary piecewise
+rewrite paths. Strict source-bound provenance rejects external or unbound history; legacy unbound expressions cannot attest a lost construction domain. Cancellation requires checked source conditions. The ordinary symbol pi is not silently reinterpreted. Opt-in natural input
+supports selected special angles and total affine absolute-value equations. General periodic solution families, arbitrary piecewise
 or absolute-value expressions, general analytic calculus and universal result
 serialization remain unsupported.

@@ -5,10 +5,12 @@ use std::fmt;
 
 use mathema::{Condition, DefinednessError, DomainExpression, Expr, ExprView, Symbol};
 
+use crate::analytic_semantics::check_rewrite_preconditions;
 use crate::{
-    Assumptions, ConditionStatus, ConditionalRewriteOutcome, GuardedRewriteOutcome, ProofGraph,
-    ProofGraphBuildError, ProofGraphVerificationError, ProofNodeId, cancel_composite_inverse_once,
-    cancel_symbol_inverse_once, substitute_symbol, verify_proof_graph,
+    Assumptions, ConditionStatus, ConditionalRewriteOutcome, DomainPreconditionReport,
+    GuardedRewriteOutcome, ProofGraph, ProofGraphBuildError, ProofGraphVerificationError,
+    ProofNodeId, cancel_composite_inverse_once, cancel_symbol_inverse_once, substitute_symbol,
+    verify_proof_graph,
 };
 
 const MAX_NODES: usize = 2_048;
@@ -56,11 +58,17 @@ impl From<ProofGraphVerificationError> for DomainOperationError {
 pub struct DomainRewrite {
     result: DomainExpression,
     proof: ProofGraph,
+    preconditions: DomainPreconditionReport,
 }
 
 impl DomainRewrite {
     pub fn result(&self) -> &DomainExpression {
         &self.result
+    }
+
+    /// Checked source conditions and premises, distinct from the rule graph.
+    pub fn preconditions(&self) -> &DomainPreconditionReport {
+        &self.preconditions
     }
 
     pub fn proof(&self) -> &ProofGraph {
@@ -93,9 +101,10 @@ pub fn rewrite_domain_once(
     source: &DomainExpression,
     assumptions: &Assumptions,
 ) -> Result<DomainRewriteOutcome, DomainOperationError> {
+    let preconditions = check_rewrite_preconditions(source, assumptions)?;
     let mut missing = Vec::new();
-    for condition in source.conditions() {
-        match assumptions.assess(condition) {
+    for (condition, status) in preconditions.conditions() {
+        match status {
             ConditionStatus::Refuted => {
                 return Ok(DomainRewriteOutcome::Refuted(condition.clone()));
             }
@@ -124,6 +133,7 @@ pub fn rewrite_domain_once(
             return Ok(DomainRewriteOutcome::Applied(DomainRewrite {
                 result,
                 proof: graph,
+                preconditions,
             }));
         }
         ConditionalRewriteOutcome::Blocked(conditions) => {
@@ -147,6 +157,7 @@ pub fn rewrite_domain_once(
             Ok(DomainRewriteOutcome::Applied(DomainRewrite {
                 result,
                 proof: graph,
+                preconditions,
             }))
         }
         GuardedRewriteOutcome::Blocked(condition) => {

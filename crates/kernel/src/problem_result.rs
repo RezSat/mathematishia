@@ -4,6 +4,7 @@
 //! Inputs are already-normalized mathematical statements; conditions inherited
 //! from construction must be carried by `DomainExpression` or `RationalFunction`.
 
+mod native;
 mod wire;
 pub use wire::ProblemWireError;
 
@@ -15,6 +16,10 @@ use mathema::{
     ScalarDomain, Symbol,
 };
 
+use crate::{
+    AbsoluteEquation, AbsoluteEquationResult, GroebnerCertificate, IdealMembership, PiMultiple,
+    SpecialAngleCertificate, TrigFunction,
+};
 use crate::{
     AnalyticConstantError, AnalyticConstantLimit, AnalyticConstantLimits, AnalyticConstantOutcome,
     Assumptions, ComparisonOperator, ConditionStatus, DispatchedAntiderivative,
@@ -47,7 +52,13 @@ pub enum ProblemOperation {
     Limit,
     Inequality,
     SolveAuto,
+    SolveSourceEquation,
     EvaluateExact,
+    SolveAbsolute,
+    EvaluateSpecialAngle,
+    TrigZeros,
+    GroebnerBasis,
+    IdealMembership,
 }
 
 impl ProblemOperation {
@@ -65,7 +76,13 @@ impl ProblemOperation {
             Self::Limit => "calculus.rational_limit",
             Self::Inequality => "inequality.rational",
             Self::SolveAuto => "equation.auto",
+            Self::SolveSourceEquation => "equation.source_bound",
             Self::EvaluateExact => "analytic.evaluate_exact",
+            Self::SolveAbsolute => "equation.absolute_affine",
+            Self::EvaluateSpecialAngle => "trig.special_angle",
+            Self::TrigZeros => "trig.zeros_partial",
+            Self::GroebnerBasis => "polynomial.groebner_basis",
+            Self::IdealMembership => "polynomial.ideal_membership",
         }
     }
 }
@@ -74,6 +91,16 @@ impl ProblemOperation {
 pub enum ProblemStatement {
     Equation(Equation),
     PolynomialZero(RationalPolynomial),
+    Absolute(Box<AbsoluteEquation>),
+    SpecialAngle {
+        angle: PiMultiple,
+        function: TrigFunction,
+    },
+    TrigZeros(TrigFunction),
+    Ideal {
+        generators: Vec<DomainExpression>,
+        target: Option<DomainExpression>,
+    },
     RationalEquation {
         left: RationalFunction,
         right: RationalFunction,
@@ -124,6 +151,14 @@ pub enum ExactAnswer {
     Limit(LimitValue),
     Intervals(Vec<RealInterval>),
     AllAdmissibleValues,
+    Absolute(AbsoluteEquationResult),
+    SpecialAngle(Box<SpecialAngleCertificate>),
+    TrigZeros(Vec<SpecialAngleCertificate>),
+    Groebner(Box<GroebnerCertificate>),
+    Membership {
+        basis: Box<GroebnerCertificate>,
+        membership: Box<IdealMembership>,
+    },
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -134,12 +169,14 @@ pub enum UnsupportedReason {
     ExpressionOutsideAlgorithm,
     DegreeOutsideAlgorithm,
     RewriteStepLimit,
+    PeriodicCompletenessUnavailable,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum UndefinedReason {
     ExcludedPoint,
     ContradictedDomainCondition,
+    TangentPole,
 }
 
 /// `NoSolutions` is always relative to `result_domain`; in particular a
@@ -170,6 +207,7 @@ pub enum CheckedBy {
     RationalEquationDomain,
     PartialComplexFactorization,
     SourceBoundPolynomial,
+    SourceBoundRationalEquation,
     SymbolicDerivativeRules,
     RationalEvaluation,
     IntegrationTerms,
@@ -179,6 +217,11 @@ pub enum CheckedBy {
     RationalQuadraticEquation,
     AnalyticConstantRules,
     RationalLiteral,
+    AbsoluteSignCases,
+    SpecialAngleIdentity,
+    TrigZeroSubstitution,
+    GroebnerCriterion,
+    IdealReduction,
 }
 
 /// An index into a verified source proof, not a reconstructed prose step.
@@ -195,6 +238,7 @@ pub struct ProblemResult {
     outcome: ProblemOutcome,
     restrictions: Vec<ProblemRestriction>,
     proof: Option<CheckedBy>,
+    detail: Option<ExactAnswer>,
     steps: Vec<StepReference>,
 }
 
@@ -219,6 +263,11 @@ impl ProblemResult {
     /// Only successful independent verification produces a proof marker.
     pub const fn checked_by(&self) -> Option<CheckedBy> {
         self.proof
+    }
+
+    /// Checked evidence retained for outcomes without an answer (for example a pole).
+    pub fn evidence_detail(&self) -> Option<&ExactAnswer> {
+        self.detail.as_ref()
     }
 
     pub fn steps(&self) -> &[StepReference] {
@@ -260,12 +309,18 @@ pub enum ProblemEvidence<'a> {
     RationalEquation(&'a RationalEquationResult),
     ComplexRoots(&'a PartialPolynomialRootResult),
     PolynomialEquation(&'a crate::PolynomialEquationResult),
+    SourceEquation(&'a crate::SolutionSetCertificate),
     Derivative(&'a SymbolicDerivative),
     RationalEvaluation(&'a Rational),
     Integration(&'a DispatchedAntiderivative),
     Expansion(&'a PolynomialExpansion),
     Limit(&'a RationalLimit),
     Inequality(&'a InequalityResult),
+    Absolute(&'a AbsoluteEquationResult),
+    SpecialAngle(&'a SpecialAngleCertificate),
+    TrigZeros(&'a [SpecialAngleCertificate]),
+    Groebner(&'a GroebnerCertificate),
+    Membership(&'a GroebnerCertificate, &'a IdealMembership),
 }
 
 fn restrictions(statement: &ProblemStatement) -> Vec<ProblemRestriction> {
@@ -307,7 +362,23 @@ fn restrictions(statement: &ProblemStatement) -> Vec<ProblemRestriction> {
             }
             conditions
         }
-        ProblemStatement::Equation(_) | ProblemStatement::PolynomialZero(_) => Vec::new(),
+        ProblemStatement::Ideal { generators, target } => {
+            let mut conditions = Vec::new();
+            for source in generators.iter().chain(target.iter()) {
+                for condition in source.conditions() {
+                    let restriction = ProblemRestriction::Condition(condition.clone());
+                    if !conditions.contains(&restriction) {
+                        conditions.push(restriction);
+                    }
+                }
+            }
+            conditions
+        }
+        ProblemStatement::Equation(_)
+        | ProblemStatement::PolynomialZero(_)
+        | ProblemStatement::Absolute(_)
+        | ProblemStatement::SpecialAngle { .. }
+        | ProblemStatement::TrigZeros(_) => Vec::new(),
     }
 }
 
@@ -318,6 +389,7 @@ fn result(request: &ProblemRequest, outcome: ProblemOutcome) -> ProblemResult {
         outcome,
         restrictions: restrictions(&request.statement),
         proof: None,
+        detail: None,
         steps: Vec::new(),
     }
 }
@@ -582,6 +654,10 @@ fn admit_request(
         return Err(EvaluationError::Limit(ResourceLimitKind::ExpressionNodes));
     }
     match &request.statement {
+        ProblemStatement::Absolute(_)
+        | ProblemStatement::SpecialAngle { .. }
+        | ProblemStatement::TrigZeros(_)
+        | ProblemStatement::Ideal { .. } => native::admit(context, &request.statement),
         ProblemStatement::Equation(equation) => context.check_equation(equation),
         ProblemStatement::PolynomialZero(polynomial) => context.check_polynomial(polynomial),
         ProblemStatement::RationalEquation { left, right } => {
@@ -616,6 +692,9 @@ fn validate_request(request: &ProblemRequest) -> Result<Option<ProblemResult>, P
         | ProblemStatement::Comparison { left, right, .. } => {
             matches_domain(left) && matches_domain(right)
         }
+        ProblemStatement::Ideal { generators, target } => {
+            generators.iter().chain(target.iter()).all(matches_domain)
+        }
         _ => true,
     };
     if !compatible {
@@ -624,14 +703,22 @@ fn validate_request(request: &ProblemRequest) -> Result<Option<ProblemResult>, P
     if request.variables.is_empty()
         && !matches!(
             request.operation,
-            ProblemOperation::Expand | ProblemOperation::EvaluateExact
+            ProblemOperation::Expand
+                | ProblemOperation::EvaluateExact
+                | ProblemOperation::EvaluateSpecialAngle
+                | ProblemOperation::GroebnerBasis
+                | ProblemOperation::IdealMembership
         )
     {
         return Err(ProblemError::MissingVariable);
     }
     if match request.operation {
-        ProblemOperation::Expand => false,
-        ProblemOperation::EvaluateExact => !request.variables.is_empty(),
+        ProblemOperation::Expand
+        | ProblemOperation::GroebnerBasis
+        | ProblemOperation::IdealMembership => false,
+        ProblemOperation::EvaluateExact | ProblemOperation::EvaluateSpecialAngle => {
+            !request.variables.is_empty()
+        }
         _ => request.variables.len() != 1,
     } {
         return Ok(Some(unsupported(
@@ -641,7 +728,25 @@ fn validate_request(request: &ProblemRequest) -> Result<Option<ProblemResult>, P
     }
     let matched = matches!(
         (&request.operation, &request.statement),
-        (ProblemOperation::SolveLinear, ProblemStatement::Equation(_))
+        (
+            ProblemOperation::SolveAbsolute,
+            ProblemStatement::Absolute(_)
+        ) | (
+            ProblemOperation::EvaluateSpecialAngle,
+            ProblemStatement::SpecialAngle { .. }
+        ) | (ProblemOperation::TrigZeros, ProblemStatement::TrigZeros(_))
+            | (
+                ProblemOperation::GroebnerBasis,
+                ProblemStatement::Ideal { target: None, .. }
+            )
+            | (
+                ProblemOperation::IdealMembership,
+                ProblemStatement::Ideal {
+                    target: Some(_),
+                    ..
+                }
+            )
+            | (ProblemOperation::SolveLinear, ProblemStatement::Equation(_))
             | (
                 ProblemOperation::SolveRational,
                 ProblemStatement::RationalEquation { .. }
@@ -674,7 +779,7 @@ fn validate_request(request: &ProblemRequest) -> Result<Option<ProblemResult>, P
                 ProblemStatement::Comparison { .. }
             )
             | (
-                ProblemOperation::SolveAuto,
+                ProblemOperation::SolveAuto | ProblemOperation::SolveSourceEquation,
                 ProblemStatement::SourceEquation { .. }
             )
     );
@@ -709,10 +814,27 @@ fn validate_request(request: &ProblemRequest) -> Result<Option<ProblemResult>, P
             request.domain,
             ScalarDomain::Rational | ScalarDomain::Complex
         ),
-        ProblemOperation::EvaluateExact => request.domain == ScalarDomain::Real,
+        ProblemOperation::SolveSourceEquation => matches!(
+            request.domain,
+            ScalarDomain::Rational | ScalarDomain::Real | ScalarDomain::Complex
+        ),
+        ProblemOperation::EvaluateExact
+        | ProblemOperation::SolveAbsolute
+        | ProblemOperation::EvaluateSpecialAngle
+        | ProblemOperation::TrigZeros => request.domain == ScalarDomain::Real,
+        ProblemOperation::GroebnerBasis | ProblemOperation::IdealMembership => {
+            request.domain == ScalarDomain::Rational
+        }
     };
     if !domain_supported {
         return Ok(Some(unsupported(request, UnsupportedReason::Domain)));
+    }
+    if let ProblemStatement::Absolute(equation) = &request.statement
+        && (equation.domain != request.domain
+            || request.variables.first() != Some(&equation.left.variable)
+            || equation.left.variable != equation.right.variable)
+    {
+        return Err(ProblemError::StatementMismatch);
     }
     Ok(None)
 }
@@ -742,6 +864,9 @@ pub fn adapt_verified_problem(
     }
     if let Some(rejection) = validate_request(request)? {
         return Ok(rejection);
+    }
+    if native::is_native(request.operation) {
+        return native::adapt(context, request, evidence);
     }
     let variable = request.variables.first();
     let limits = context.limits();
@@ -1153,6 +1278,9 @@ pub fn dispatch_problem(
     if let Some(rejection) = validate_request(request)? {
         return Ok(rejection);
     }
+    if native::is_native(request.operation) {
+        return native::dispatch(context, request);
+    }
     let variable = request.variables.first();
     match (&request.operation, &request.statement) {
         (ProblemOperation::SolveLinear, ProblemStatement::Equation(equation)) => {
@@ -1414,8 +1542,8 @@ fn solve_auto(
         return Err(ProblemError::InvalidEvidence);
     }
     // Check the rational solution set against both original operands, not only
-    // the reduced numerator. A complex request still has only rational scope
-    // on this fallback path.
+    // the reduced numerator. Verify in the source domain before projecting
+    // onto the legacy rational-only fallback scope.
     use crate::{
         CertifiedSolutionSet, SolutionCertificateError, certify_solution_set, verify_solution_set,
     };
@@ -1424,7 +1552,7 @@ fn solve_auto(
         original_left,
         original_right,
         variable,
-        ScalarDomain::Rational,
+        request.domain,
         &[],
     ) {
         Ok(value) => value,
@@ -1441,7 +1569,7 @@ fn solve_auto(
         original_left,
         original_right,
         variable,
-        ScalarDomain::Rational,
+        request.domain,
         &certificate,
     ) {
         Ok(true) => {}
@@ -1457,11 +1585,15 @@ fn solve_auto(
     let agrees = match (&certificate.solutions, checked.roots()) {
         (CertifiedSolutionSet::None, RationalQuadraticRoots::Finite(values)) => values.is_empty(),
         (CertifiedSolutionSet::Finite(roots), RationalQuadraticRoots::Finite(values)) => {
-            roots.len() == values.len()
-                && roots.iter().all(|root| match root.root() {
-                    crate::ExactQuadraticRoot::Rational(value) => values.contains(value),
-                    _ => false,
+            let rational_roots: Vec<_> = roots
+                .iter()
+                .filter_map(|root| match root.root() {
+                    crate::ExactQuadraticRoot::Rational(value) => Some(value),
+                    _ => None,
                 })
+                .collect();
+            rational_roots.len() == values.len()
+                && rational_roots.iter().all(|value| values.contains(value))
         }
         (CertifiedSolutionSet::AllAdmissible, RationalQuadraticRoots::AllAdmissibleRationals) => {
             true

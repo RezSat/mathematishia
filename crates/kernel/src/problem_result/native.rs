@@ -148,7 +148,11 @@ pub(super) fn dispatch(
                 request.domain,
                 &[],
             ) {
-                Ok(candidate) => adapt(context, request, ProblemEvidence::SourceEquation(&candidate)),
+                Ok(candidate) => adapt(
+                    context,
+                    request,
+                    ProblemEvidence::SourceEquation(&candidate),
+                ),
                 Err(error) => source_equation_failure(request, error),
             }
         }
@@ -220,7 +224,9 @@ fn source_equation_failure(
     error: crate::SolutionCertificateError,
 ) -> Result<ProblemResult, ProblemError> {
     match error {
-        crate::SolutionCertificateError::Evaluation(error) => handle_evaluation_error(request, error),
+        crate::SolutionCertificateError::Evaluation(error) => {
+            handle_evaluation_error(request, error)
+        }
         crate::SolutionCertificateError::Expression(error) => conversion_failure(request, error),
         crate::SolutionCertificateError::UnsupportedDomain => {
             Ok(unsupported(request, UnsupportedReason::Domain))

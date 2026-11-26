@@ -441,13 +441,15 @@ fn deterministic_repeated_invocations_preserve_original_expression() {
 #[test]
 fn dispatches_checked_polynomial_exponential_terms() {
     let ctx = EvaluationContext::default();
-    let input = source(
-        Expr::mul([x(), Expr::exp(x())]),
-        ScalarDomain::Real,
-    );
+    let input = source(Expr::mul([x(), Expr::exp(x())]), ScalarDomain::Real);
     let result = checked(&ctx, &input, ScalarDomain::Real);
-    let proof = result.terms()[0].polynomial_exponential_certificate().unwrap();
-    assert_eq!(proof.primitive_polynomial().coefficients(), &[q(-1, 1), q(1, 1)]);
+    let proof = result.terms()[0]
+        .polynomial_exponential_certificate()
+        .unwrap();
+    assert_eq!(
+        proof.primitive_polynomial().coefficients(),
+        &[q(-1, 1), q(1, 1)]
+    );
     assert_eq!(
         result.primitive().expression(),
         &Expr::mul([Expr::add([x(), Expr::from(-1)]), Expr::exp(x())])

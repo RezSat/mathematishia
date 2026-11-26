@@ -4,9 +4,9 @@ use std::{collections::BTreeSet, error::Error, fmt};
 
 use mathema::{DomainExpression, Expr, ExprView, Rational, ScalarDomain, Symbol};
 use mathematishia_kernel::{
-    ComparisonOperator, EvaluationContext, EvaluationError, LimitDirection, ProblemError,
-    PiMultiple, ProblemOperation, ProblemRequest, ProblemResult, ProblemStatement, ProblemWireError,
-    TrigFunction, dispatch_problem,
+    ComparisonOperator, EvaluationContext, EvaluationError, LimitDirection, PiMultiple,
+    ProblemError, ProblemOperation, ProblemRequest, ProblemResult, ProblemStatement,
+    ProblemWireError, TrigFunction, dispatch_problem,
 };
 
 use crate::{
@@ -296,7 +296,8 @@ fn absolute_request(
     input: &str,
     name: &str,
 ) -> Result<ProblemRequest, RequestError> {
-    let equation = crate::advanced::absolute_request(context, input, name).map_err(advanced_error)?;
+    let equation =
+        crate::advanced::absolute_request(context, input, name).map_err(advanced_error)?;
     Ok(ProblemRequest {
         operation: ProblemOperation::SolveAbsolute,
         statement: ProblemStatement::Absolute(Box::new(equation)),
@@ -339,8 +340,8 @@ pub fn request(context: &EvaluationContext, args: &[&str]) -> Result<ProblemRequ
                 "C" => ScalarDomain::Complex,
                 _ => return Err(RequestError::Invalid("expected Q, R or C")),
             };
-            let statement = parse_domain_statement_in_domain(input, domain)
-                .map_err(RequestError::Parse)?;
+            let statement =
+                parse_domain_statement_in_domain(input, domain).map_err(RequestError::Parse)?;
             let DomainStatement::Equation { left, right } = statement else {
                 return Err(RequestError::Invalid("expected an equation containing '='"));
             };

@@ -287,10 +287,10 @@ fn dispatch_term(
                         Ok(certificate) => Ok(IntegrationTermEvidence::PolynomialExponential(
                             Box::new(certificate),
                         )),
-                        Err(ElementaryIntegrationError::UnsupportedForm
-                            | ElementaryIntegrationError::UnsupportedArgument(_)) => {
-                            Err(ElementaryIntegrationError::UnsupportedForm.into())
-                        }
+                        Err(
+                            ElementaryIntegrationError::UnsupportedForm
+                            | ElementaryIntegrationError::UnsupportedArgument(_),
+                        ) => Err(ElementaryIntegrationError::UnsupportedForm.into()),
                         Err(error) => Err(error.into()),
                     }
                 }

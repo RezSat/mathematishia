@@ -61,7 +61,10 @@ fn checked_school_math_operations_are_available_through_shared_requests() {
         &["idealmember", "x", "x^2", "x", "--json"],
     ] {
         let output = run(args).unwrap();
-        assert!(output.contains(r#""status":"complete""#), "{args:?}: {output}");
+        assert!(
+            output.contains(r#""status":"complete""#),
+            "{args:?}: {output}"
+        );
         assert_eq!(output, run(args).unwrap());
     }
     let excluded = run(&["solvefield", "(x^2-1)/(x-1)=2", "x", "R", "--json"]).unwrap();

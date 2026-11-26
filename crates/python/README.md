@@ -360,3 +360,83 @@ assert intervals[0].upper.root.rational == Fraction(-2)
 `limit(source, variable, at, direction="two-sided")` returns a frozen `LimitResult` with exact finite value or explicit signed infinity/nonexistence, source rational function, factor evidence and retained exclusions. The target is an exact rational string; infinite targets and transcendental limits are unsupported.
 
 `solve_inequality(source, variable="x")` returns a frozen `InequalityResult` with exact real interval endpoints (rational or certified quadratic roots), open/closed flags, original-domain exclusions in the residual, and critical point multiplicities. Only one comparison and rational factors of degree at most two are supported. Both operands' exclusions survive cancellation. Existing equation APIs are unchanged.
+
+## Affine systems, polynomial division and root refinement
+
+The following APIs use the existing bounded Rust kernel, with no numerical
+approximation or independent Python solver. Existing API signatures are unchanged; Sturm admission now rejects source-restricted endpoints and normalized non-identifiers.
+
+| Python API | Supported domain | Explicit limitations |
+| --- | --- | --- |
+| solve_linear_system(equations, variables) | Rational affine equalities, at most 16 equations and 16 explicitly ordered distinct variables | No nonlinear terms, unknown symbols or unresolved source restrictions. Exact unique, inconsistent or affine family. |
+| divide_multivariate(dividend, divisors, variables) | Ordered lexicographic division over Q in a declared ring of at most 16 variables, 32 divisors, degree 128, bounded terms/scalars/work | No symbolic denominators, source-domain restrictions, zero divisors or undeclared symbols. Quotient order is significant; exponent vectors use the returned sorted-symbol ring. Reduced remainder is not a Groebner normal form. |
+| refine_real_root_bracket(source, variable, lower, upper, target_width, max_bisections) | Nonzero Q[x], unrestricted polynomial source, exact rational endpoints and positive width, bounded work | Same-sign intervals are unresolved; a sign change certifies existence only, never uniqueness. Exhausting the bisection count can leave precision_met false. |
+
+Results are frozen dataclasses with tuples and Fraction coefficients, not
+floats. For example, solve_linear_system(("x+y=1",), ("x", "y")) returns an
+affine family indexed by the declared variable order. Root brackets are
+independently replayed; division recomposition and reduced remainder are
+checked by the kernel. Original source restrictions are rejected instead of
+being silently removed.
+
+The automatic equation dispatcher and bounded exact evaluation are available
+as `solveauto` and `evalexact` through the shared versioned result. The existing
+individual equation solvers and one-step `analytic_constant` API remain
+available. The matched CLI commands are `linsystem`, `mvdivide`,
+`rootbracket` and `sturm`.
+
+### CLI/Python interface audit
+
+The table compares the checked mathematical domains, not identical presentation
+or command syntax. Existing narrower APIs are intentionally retained.
+
+| CLI | Python | Domain or delivery gap |
+| --- | --- | --- |
+| expr, domain, subdomain, rewrite, expand | expression, domain_expression, domain_equation, substitute_domain, rewrite_domain, expand | Parsed expressions, retained integer-power conditions, guarded single rewrites, bounded distribution. Plain expression display is not a domain certificate. |
+| expandall | expandall, expand_polynomial | Bounded Q-polynomial ring with inherited restrictions; Python requires the ambient variables explicitly, CLI can infer them. |
+| solve, solveq, roots2, roots | solve, solve_quadratic, algebraic_roots, polynomial_roots, solve_polynomial_equation | Rational linear, rational degree-two, exact complex degree-two, partial complex polynomial roots. Higher-degree unresolved cofactors remain explicit. |
+| solveauto --json | solveauto, problem | Shared checked dispatch, with explicit result domain and partial scope. |
+| evalexact --json | evalexact, analytic_constant | Shared bounded multi-identity traversal; the legacy one-step API remains available. |
+| integrate | integrate, integrate_expression_dispatch, integrate_polynomial, integrate_polynomial_between, integrate_elementary | Exact Q-polynomial primitives/definite integrals and affine sin/cos/exp sums; general transcendental integration unsupported. Python uses separate definite-integral API and explicit variable. |
+| limit, inequality | limit, solve_inequality | Finite rational point limits of Q(x), real rational comparisons with degree-two factors/exclusions; not arbitrary transcendental limits or inequalities. |
+| poly, eval, divide, gcd, egcd, modinv, modreduce, modop, modpow, diff, sqfree, factor | polynomial, evaluate, divide, gcd, extended_gcd, modular_inverse, modular_reduce, modular_operation, modular_power, differentiate, square_free, factor_polynomial | Bounded Q[x] arithmetic, quotient rings, verified derivative and factorization with unresolved factors where required. |
+| qvalue, qop, qinv, fieldmin, fieldpow, fieldop | quadratic_value, quadratic_operation, quadratic_inverse, extension_minimal_polynomial, extension_power, extension_operation, extension_value | Exact embedded quadratic fields and certified abstract field presentations; no arbitrary algebraic-number construction or mixed embeddings. Python also exposes direct field-element construction. |
+| matdet, matinv, matrref, matmul, matsolve | matrix_determinant, matrix_inverse, matrix_rref, matrix_multiply, matrix_solve | Bounded exact rational matrices and affine solution families. |
+| diffexpr, diffreal | differentiate_expression, differentiate_expression_real | Checked symbolic derivatives with explicitly retained real-domain prerequisites; no complex logarithm branch assumptions. |
+| rsimplify, rdiff, reval, rsolve, rat, rateval, ratdiff, ratsolveq, ratop | rational_simplify, rational_derivative, rational_value, rational_solve, rational_function, rational_evaluate, rational_differentiate, rational_solve_quadratic, rational_operation | Bounded rational functions in one variable and selected low-degree equations; original zero exclusions are not filled. |
+| sturm, linsystem, mvdivide, rootbracket | sturm_root_count, solve_linear_system, divide_multivariate, refine_real_root_bracket | Matched checked mathematical scope. Sturm counts square-free nonzero Q[x] on open rational intervals with nonroot endpoints; the other domains are listed above. |
+| isolate | isolate_real_roots | Complete disjoint intervals for unrestricted nonzero square-free Q[x]; exact rational midpoint and error bound. |
+| Selected commands with --json | problem | One kernel-owned versioned dispatcher and encoder. Unsupported shapes are refused; not every legacy operation has a schema representation. |
+
+Kernel-only arithmetic building blocks, finite-field factorization and Hensel
+reconstruction, proof graphs, derivation rendering, and individual certificate
+verification routines are not independent user commands. This audit describes the bounded supported operations rather than full mathematical coverage.
+
+## Shared results and complete real-root isolation
+
+```python
+from fractions import Fraction
+import mathematishia as m
+
+result = m.solveauto("x^2-2=0")
+assert result.status == "complete"
+assert result.result_domain == "C"
+print(result.to_json())
+assert m.evalexact("sin(0)+cos(0)").status == "complete"
+
+roots = m.isolate_real_roots("x^2-2", "x", "1/32")
+assert len(roots) == 2
+assert roots[0].error_bound <= Fraction(1, 64)
+```
+
+`problem(*args)` uses the same request grammar and versioned JSON as the CLI
+`--json` flag, including roots, expansion, indefinite integration, finite rational
+limits, inequalities, symbolic differentiation and exact evaluation. The frozen
+wrapper exposes `status`, `result_domain`, `to_json()` and `as_dict()`. JSON
+contains exact integer strings and structural algebraic roots, not floats or
+trusted deserialized certificates. The legacy typed APIs remain unchanged.
+
+`isolate_real_roots` returns a tuple of frozen brackets with exact Fraction
+endpoints, midpoints and half-widths. It certifies complete coverage for nonzero
+square-free unrestricted Q[x]. It refuses repeated roots, source restrictions,
+and resource exhaustion rather than reporting an incomplete list as complete.

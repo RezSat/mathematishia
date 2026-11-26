@@ -3,6 +3,8 @@
 //! Python performs representation and presentation only. All algebraic work
 //! is delegated to the checked core, never reimplemented using Python floats.
 
+mod checked_results;
+mod legacy_parity;
 mod real_analysis;
 
 use mathema::{
@@ -100,6 +102,30 @@ fn selected_variable(name: &str) -> PyResult<Symbol> {
         Ok(symbol.clone())
     } else {
         Err(MathSyntaxError::new_err("variable must be one identifier"))
+    }
+}
+
+fn explicit_variable(name: &str) -> PyResult<Symbol> {
+    let symbol = selected_variable(name)?;
+    if symbol.name() != name.trim() {
+        return Err(MathSyntaxError::new_err("variable must be one identifier"));
+    }
+    Ok(symbol)
+}
+
+fn unrestricted_scalar(source: &str) -> PyResult<Rational> {
+    let value = checked_domain(source)?;
+    if !value.conditions().is_empty() {
+        return Err(UnsupportedMathematicsError::new_err(
+            "rational endpoints cannot discard source-domain restrictions",
+        ));
+    }
+    match value.expression().view() {
+        ExprView::Integer(value) => Ok(Rational::from(value.clone())),
+        ExprView::Rational(value) => Ok(value.clone()),
+        _ => Err(UnsupportedMathematicsError::new_err(
+            "expected an exact rational constant",
+        )),
     }
 }
 
@@ -1556,10 +1582,10 @@ fn py_sturm_root_count(
     lower: &str,
     upper: &str,
 ) -> PyResult<PySturmCount> {
-    let symbol = selected_variable(variable)?;
+    let symbol = explicit_variable(variable)?;
     let poly = selected_unrestricted_polynomial(source, &symbol)?;
-    let a = selected_scalar(lower)?;
-    let b = selected_scalar(upper)?;
+    let a = unrestricted_scalar(lower)?;
+    let b = unrestricted_scalar(upper)?;
     let ctx = EvaluationContext::default();
     let certificate = ctx
         .count_real_roots_sturm(&poly, &a, &b)
@@ -2052,6 +2078,8 @@ fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(py_integrate_elementary, m)?)?;
     m.add_function(wrap_pyfunction!(py_expand_polynomial, m)?)?;
     m.add_function(wrap_pyfunction!(py_integrate_expression_dispatch, m)?)?;
+    checked_results::register(m)?;
+    legacy_parity::register(m)?;
     real_analysis::register(m)?;
     m.add("MathSyntaxError", m.py().get_type::<MathSyntaxError>())?;
     m.add(

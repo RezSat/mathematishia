@@ -129,7 +129,7 @@ id	category	question	outcome	exit	error_kind	arguments	semantic_lines	conditions
 125	unsupported	Reject direct general integration product	unsupported	2	Unsupported	integrate¦sin(x)*exp(x)	error:*	-	none	product_integral_unavailable	cycle4
 126	inequalities	Reject exponential inequality syntax	unsupported	2	Unsupported	solveauto¦exp(x)>2	error:*	-	none	analytic_inequality_unavailable	cycle4
 127	unsupported	Enforce degree budget in root construction	resource	2	Resource	roots¦x^33	error:*	-	none	polynomial_degree_budget	cycle4
-128	unsupported	Reject CLI JSON before wire integration	unsupported	2	Unsupported	solveauto¦x=1¦--json	error: JSON output awaits the verified typed result contract	-	none	json_format_unavailable	cycle4
+128	algebra	Solve a linear equation with a versioned JSON result	solved	0	-	solveauto¦x=1¦--json	{"schema_version":1,"request":{"operation":"equation.auto","statement":{"kind":"source_equation","left":{"expression":{"kind":"symbol","name":"x"},"conditions":[]},"right":{"expression":{"kind":"integer","value":"1"},"conditions":[]}},"variables":["x"],"domain":"C"},"result_domain":"C","outcome":{"status":"complete","answer":{"kind":"complex_roots","roots":[{"root":{"kind":"rational","value":{"numerator":"1","denominator":"1"}},"multiplicity":1}]}},"restrictions":[],"evidence":{"checked_by":"partial_complex_factorization","steps":[]}}	-	none	exact	checked-results
 129	unsupported	Reject expression instead of an equation	invalid	2	InvalidInput	solve¦x^2-1¦x	error: expected an equation containing '='	-	none	missing_equals	cycle4
 130	unsupported	Reject a non-symbol solving variable	invalid	2	InvalidInput	solveauto¦x=2¦2	error: expected a single variable name	-	none	invalid_variable	cycle4
 131	unsupported	Reject a composite root variable	invalid	2	InvalidInput	roots¦x^2¦x+y	error: expected a single variable name	-	none	invalid_variable	cycle4
@@ -154,3 +154,10 @@ id	category	question	outcome	exit	error_kind	arguments	semantic_lines	conditions
 150	inequalities	Refuse higher-degree inequality	unsupported	2	Unsupported	inequality¦x^3>0	error:*	-	none	quadratic_degree_limit	wave2-parity
 151	inequalities	Reject a chained comparison	invalid	2	InvalidInput	inequality¦0<x<1	error:*	-	none	comparison_chain_unavailable	wave2-parity
 152	limits	Reject an invalid limit direction	invalid	2	InvalidInput	limit¦x^2¦x¦2¦above	error: direction must be left, right or two-sided	-	none	invalid_direction	wave2-parity
+153	algebra	Count distinct real roots of a cubic	solved	0	-	sturm¦x^3-x¦x¦-2¦2	root_count: 3¦verified: true	conditions: none	none	exact	checked-operations
+154	equations	Solve an explicitly ordered affine system	solved	0	-	linsystem¦y,x¦x+y=3¦x-y=1	variables: y, x¦solution: unique¦values: 1,2¦verified: true	conditions: none	none	exact	checked-operations
+155	equations	Describe all solutions of an underdetermined affine system	solved	0	-	linsystem¦x,y¦x+y=1/2	solution: affine¦particular: 1/2,0¦basis: -1,1¦verified: true	conditions: none	none	exact	checked-operations
+156	algebra	Divide multivariate polynomials in specified order	solved	0	-	mvdivide¦y,x¦x*y+1¦x¦y	variables: x, y¦quotient 1: y¦quotient 2: 0¦remainder: 1¦verified: true	conditions: none	none	exact	checked-operations
+157	algebra	Refine a sign-change root bracket	partial	0	-	rootbracket¦x^2-2¦x¦1¦2¦1/16¦8	status: partial¦claim: at least one root; uniqueness not established¦precision_met: true¦verified: true	conditions: none	none	existence_not_uniqueness	checked-operations
+158	algebra	Isolate all real roots of a square-free quadratic	solved	0	-	isolate¦x^2-2¦x¦1/32	status: exact¦roots: 2¦target_width: 1/32¦complete: true¦verified: true	conditions: none	none	exact	checked-operations
+159	algebra	Certify a polynomial has no real roots	solved	0	-	isolate¦x^2+1¦x¦1/32	status: exact¦roots: 0¦complete: true¦verified: true	conditions: none	none	exact	checked-operations

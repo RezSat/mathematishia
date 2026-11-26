@@ -9,6 +9,7 @@ use mathema::{Expr, ExprView, Symbol};
 mod algebraic;
 mod algebraic_extension;
 mod analytic_constants;
+mod analytic_semantics;
 mod assumptions;
 mod budget;
 mod conditional_rewrite;
@@ -51,11 +52,18 @@ mod rational_expression;
 mod rational_factorization;
 mod rational_function;
 mod rational_quadratic;
+mod real_root_isolation;
 mod root_isolation;
+mod solution_certificates;
 mod solve_linear;
 mod square_free;
 mod sturm_count;
 mod verification;
+
+pub use solution_certificates::{
+    CertifiedSolutionSet, SolutionCertificateError, SolutionSetCertificate, certify_solution_set,
+    verify_solution_set,
+};
 
 pub use algebraic::{
     AlgebraicRootEvidence, AlgebraicRootResult, AlgebraicRootRule, AlgebraicRootSet,
@@ -69,6 +77,10 @@ pub use analytic_constants::{
     AnalyticConstantError, AnalyticConstantLimit, AnalyticConstantLimits, AnalyticConstantOutcome,
     AnalyticConstantRewrite, AnalyticConstantRule, AnalyticConstantUnsupported,
     rewrite_analytic_constant_once, verify_analytic_constant_rewrite,
+};
+pub use analytic_semantics::{
+    DomainPreconditionError, DomainPreconditionReport, DomainPreconditionStatus,
+    check_domain_preconditions,
 };
 pub use assumptions::{AssumptionError, Assumptions, ConditionStatus};
 pub use conditional_rewrite::{
@@ -160,8 +172,8 @@ pub use polynomial_solution_set::{
 };
 pub use problem_result::{
     CheckedBy, ExactAnswer, ProblemError, ProblemEvidence, ProblemOperation, ProblemOutcome,
-    ProblemRequest, ProblemRestriction, ProblemResult, ProblemStatement, StepReference,
-    UndefinedReason, UnsupportedReason, adapt_verified_problem, dispatch_problem,
+    ProblemRequest, ProblemRestriction, ProblemResult, ProblemStatement, ProblemWireError,
+    StepReference, UndefinedReason, UnsupportedReason, adapt_verified_problem, dispatch_problem,
 };
 pub use proof_graph::{
     ProofGraph, ProofGraphBuildError, ProofGraphVerificationError, ProofNode, ProofNodeId,
@@ -186,6 +198,9 @@ pub use rational_factorization::{
 pub use rational_function::{RationalFunction, RationalFunctionError};
 pub use rational_quadratic::{
     RationalQuadraticResult, RationalQuadraticRoots, verify_rational_quadratic_equation,
+};
+pub use real_root_isolation::{
+    IsolatedRealRoot, RealRootIsolation, RealRootIsolationError, verify_real_root_isolation,
 };
 pub use root_isolation::{
     RootIntervalOutcome, RootRefinement, RootRefinementError, RootRefinementVerificationError,

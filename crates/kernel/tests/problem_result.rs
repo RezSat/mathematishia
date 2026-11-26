@@ -352,7 +352,7 @@ fn invalid_requests_unsupported_operations_and_degree_limits_are_typed() {
         dispatch_problem(&context, &many).unwrap().outcome(),
         &ProblemOutcome::Unsupported(UnsupportedReason::SeveralVariables)
     );
-    let unsupported = request(
+    let integral = request(
         ProblemOperation::Integrate,
         ProblemStatement::Expression(
             DomainExpression::from_expr(Expr::from(variable("x")), 32).unwrap(),
@@ -360,8 +360,11 @@ fn invalid_requests_unsupported_operations_and_degree_limits_are_typed() {
         ScalarDomain::Real,
     );
     assert_eq!(
-        dispatch_problem(&context, &unsupported).unwrap().outcome(),
-        &ProblemOutcome::Unsupported(UnsupportedReason::AlgorithmNotAvailable)
+        dispatch_problem(&context, &integral).unwrap().outcome(),
+        &ProblemOutcome::SolvedExact(ExactAnswer::Expression(Expr::mul([
+            Expr::from(Rational::new(Integer::from(1), Integer::from(2)).unwrap()),
+            Expr::pow(Expr::from(variable("x")), Expr::from(2))
+        ])))
     );
     let high = request(
         ProblemOperation::RationalRoots,
@@ -402,4 +405,351 @@ fn resource_exhaustion_is_not_misreported_as_unsolved() {
     );
     assert_eq!(result.checked_by(), None);
     assert!(result.steps().is_empty());
+}
+
+fn source(expression: Expr) -> DomainExpression {
+    DomainExpression::from_expr_in_domain(expression, ScalarDomain::Real, 2048, 32).unwrap()
+}
+
+fn q(n: i64) -> Rational {
+    Rational::from(Integer::from(n))
+}
+
+#[test]
+fn shared_integration_binds_certificate_to_original_source() {
+    let context = EvaluationContext::default();
+    let x = Expr::from(variable("x"));
+    let input = source(Expr::add([x.clone(), Expr::sin(x)]));
+    let proof = context
+        .integrate_expression_dispatch(&input, &variable("x"), ScalarDomain::Real)
+        .unwrap();
+    let req = request(
+        ProblemOperation::Integrate,
+        ProblemStatement::Expression(input),
+        ScalarDomain::Real,
+    );
+    let result = dispatch_problem(&context, &req).unwrap();
+    assert_eq!(result.request(), &req);
+    assert_eq!(result.checked_by(), Some(CheckedBy::IntegrationTerms));
+    assert_eq!(
+        result.outcome(),
+        &ProblemOutcome::SolvedExact(ExactAnswer::Expression(
+            proof.primitive().expression().clone()
+        ))
+    );
+    let wrong = request(
+        ProblemOperation::Integrate,
+        ProblemStatement::Expression(source(Expr::from(2))),
+        ScalarDomain::Real,
+    );
+    assert!(
+        adapt_verified_problem(&context, &wrong, ProblemEvidence::Integration(&proof)).is_err()
+    );
+}
+
+#[test]
+fn shared_expansion_keeps_conditions_and_explicit_ring() {
+    let context = EvaluationContext::default();
+    let x = Expr::from(variable("x"));
+    let y = Expr::from(variable("y"));
+    let condition = Condition::NonZero(x.clone());
+    let input = DomainExpression::with_conditions(
+        Expr::pow(Expr::add([x, y]), Expr::from(2)),
+        [condition.clone()],
+        128,
+        8,
+    )
+    .unwrap();
+    let variables = vec![variable("x"), variable("y")];
+    let req = ProblemRequest {
+        operation: ProblemOperation::Expand,
+        statement: ProblemStatement::Expression(input.clone()),
+        variables: variables.clone(),
+        domain: ScalarDomain::Real,
+    };
+    let PolynomialExpansionOutcome::Exact(proof) =
+        expand_polynomial(&input, &variables, MultivariateLimits::default())
+    else {
+        panic!("expected expansion")
+    };
+    let result = dispatch_problem(&context, &req).unwrap();
+    assert_eq!(
+        result.outcome(),
+        &ProblemOutcome::SolvedConditional(ExactAnswer::Expression(
+            proof.expanded().expression().clone()
+        ))
+    );
+    assert!(
+        result
+            .restrictions()
+            .contains(&ProblemRestriction::Condition(condition))
+    );
+    assert_eq!(result.checked_by(), Some(CheckedBy::PolynomialIdentity));
+    let wrong = ProblemRequest {
+        variables: vec![variable("y"), variable("x")],
+        ..req
+    };
+    assert!(adapt_verified_problem(&context, &wrong, ProblemEvidence::Expansion(&proof)).is_err());
+}
+
+#[test]
+fn shared_limit_preserves_hole_and_rejects_wrong_point_or_direction() {
+    let context = EvaluationContext::default();
+    let condition = Condition::NonZero(Expr::add([Expr::from(variable("x")), Expr::from(-1)]));
+    let input =
+        DomainExpression::with_conditions(Expr::from(1), [condition.clone()], 128, 8).unwrap();
+    let proof = context
+        .rational_expression_limit(&input, &variable("x"), &q(1), LimitDirection::TwoSided)
+        .unwrap();
+    let req = request(
+        ProblemOperation::Limit,
+        ProblemStatement::Limit {
+            source: input.clone(),
+            at: q(1),
+            direction: LimitDirection::TwoSided,
+        },
+        ScalarDomain::Real,
+    );
+    let result = dispatch_problem(&context, &req).unwrap();
+    assert_eq!(
+        result.outcome(),
+        &ProblemOutcome::SolvedExact(ExactAnswer::Limit(LimitValue::Finite(q(1))))
+    );
+    assert!(
+        result
+            .restrictions()
+            .contains(&ProblemRestriction::Condition(condition))
+    );
+    assert!(
+        result
+            .restrictions()
+            .contains(&ProblemRestriction::PolynomialNonZero(polynomial(&[-1, 1])))
+    );
+    for (at, direction) in [
+        (q(2), LimitDirection::TwoSided),
+        (q(1), LimitDirection::Left),
+    ] {
+        let wrong = ProblemRequest {
+            statement: ProblemStatement::Limit {
+                source: input.clone(),
+                at,
+                direction,
+            },
+            ..req.clone()
+        };
+        assert!(adapt_verified_problem(&context, &wrong, ProblemEvidence::Limit(&proof)).is_err());
+    }
+    let pole = source(Expr::pow(Expr::from(variable("x")), Expr::from(-1)));
+    for (direction, value) in [
+        (LimitDirection::Left, LimitValue::NegativeInfinity),
+        (LimitDirection::TwoSided, LimitValue::DoesNotExist),
+    ] {
+        let req = request(
+            ProblemOperation::Limit,
+            ProblemStatement::Limit {
+                source: pole.clone(),
+                at: q(0),
+                direction,
+            },
+            ScalarDomain::Real,
+        );
+        assert_eq!(
+            dispatch_problem(&context, &req).unwrap().outcome(),
+            &ProblemOutcome::SolvedExact(ExactAnswer::Limit(value))
+        );
+    }
+}
+
+#[test]
+fn shared_inequality_preserves_algebraic_bounds_and_empty_set() {
+    let context = EvaluationContext::default();
+    let left = source(Expr::pow(Expr::from(variable("x")), Expr::from(2)));
+    let right = source(Expr::from(2));
+    let proof = context
+        .solve_expression_inequality(&left, &right, &variable("x"), ComparisonOperator::Less)
+        .unwrap();
+    let req = request(
+        ProblemOperation::Inequality,
+        ProblemStatement::Comparison {
+            left: left.clone(),
+            right: right.clone(),
+            operator: ComparisonOperator::Less,
+        },
+        ScalarDomain::Real,
+    );
+    let result = dispatch_problem(&context, &req).unwrap();
+    assert_eq!(
+        result.outcome(),
+        &ProblemOutcome::SolvedExact(ExactAnswer::Intervals(proof.intervals().to_vec()))
+    );
+    assert_eq!(proof.intervals().len(), 1);
+    let json = result.to_json().unwrap();
+    assert!(json.contains("algebraic"));
+    assert!(json.contains("minimal_polynomial"));
+    let wrong = ProblemRequest {
+        statement: ProblemStatement::Comparison {
+            left: left.clone(),
+            right,
+            operator: ComparisonOperator::Greater,
+        },
+        ..req.clone()
+    };
+    assert!(adapt_verified_problem(&context, &wrong, ProblemEvidence::Inequality(&proof)).is_err());
+    let impossible = ProblemRequest {
+        statement: ProblemStatement::Comparison {
+            left,
+            right: source(Expr::from(0)),
+            operator: ComparisonOperator::Less,
+        },
+        ..req
+    };
+    let empty = dispatch_problem(&context, &impossible).unwrap();
+    assert_eq!(empty.outcome(), &ProblemOutcome::NoSolutions);
+    assert_eq!(empty.checked_by(), Some(CheckedBy::RationalInequalitySigns));
+}
+
+#[test]
+fn automatic_equation_dispatch_never_promotes_rational_completeness_to_complex() {
+    let context = EvaluationContext::default();
+    let x = Expr::from(variable("x"));
+    let condition = Condition::NonZero(Expr::add([x.clone(), Expr::from(-1)]));
+    let left = DomainExpression::with_conditions(x.clone(), [condition.clone()], 128, 8).unwrap();
+    let statement = ProblemStatement::SourceEquation {
+        left,
+        right: source(Expr::from(1)),
+    };
+    let req = request(
+        ProblemOperation::SolveAuto,
+        statement,
+        ScalarDomain::Rational,
+    );
+    let result = dispatch_problem(&context, &req).unwrap();
+    assert_eq!(result.outcome(), &ProblemOutcome::NoSolutions);
+    assert_eq!(result.request(), &req);
+    let complex = ProblemRequest {
+        domain: ScalarDomain::Complex,
+        ..req
+    };
+    let result = dispatch_problem(&context, &complex).unwrap();
+    assert_eq!(result.request(), &complex);
+    assert_eq!(result.result_domain(), ScalarDomain::Rational);
+    assert_eq!(
+        result.outcome(),
+        &ProblemOutcome::PartialScope {
+            known: ExactAnswer::RationalRoots(vec![]),
+            reason: UnsupportedReason::Domain
+        }
+    );
+    assert!(
+        result
+            .restrictions()
+            .contains(&ProblemRestriction::Condition(condition))
+    );
+    let unrestricted = ProblemRequest {
+        statement: ProblemStatement::SourceEquation {
+            left: source(Expr::add([Expr::pow(x, Expr::from(2)), Expr::from(1)])),
+            right: source(Expr::from(0)),
+        },
+        ..complex
+    };
+    let result = dispatch_problem(&context, &unrestricted).unwrap();
+    assert_eq!(result.request(), &unrestricted);
+    assert_eq!(result.result_domain(), ScalarDomain::Complex);
+    assert!(
+        matches!(result.outcome(), ProblemOutcome::SolvedExact(ExactAnswer::ComplexRoots(roots)) if roots.len() == 2)
+    );
+}
+
+fn exact_request(expression: Expr) -> ProblemRequest {
+    ProblemRequest {
+        operation: ProblemOperation::EvaluateExact,
+        statement: ProblemStatement::Expression(source(expression)),
+        variables: vec![],
+        domain: ScalarDomain::Real,
+    }
+}
+
+#[test]
+fn exact_constant_dispatch_distinguishes_rewrite_partial_and_refusal() {
+    let context = EvaluationContext::default();
+    let result = dispatch_problem(
+        &context,
+        &exact_request(Expr::add([
+            Expr::sin(Expr::from(0)),
+            Expr::cos(Expr::from(0)),
+            Expr::exp(Expr::from(0)),
+        ])),
+    )
+    .unwrap();
+    assert_eq!(
+        result.outcome(),
+        &ProblemOutcome::SolvedExact(ExactAnswer::Rational(q(2)))
+    );
+    assert_eq!(result.checked_by(), Some(CheckedBy::AnalyticConstantRules));
+    assert_eq!(result.steps().len(), 3);
+    let partial = dispatch_problem(
+        &context,
+        &exact_request(Expr::add([
+            Expr::cos(Expr::from(0)),
+            Expr::sin(Expr::from(1)),
+        ])),
+    )
+    .unwrap();
+    assert!(matches!(
+        partial.outcome(),
+        ProblemOutcome::PartialScope { .. }
+    ));
+    assert_eq!(partial.steps().len(), 1);
+    let unsupported = dispatch_problem(&context, &exact_request(Expr::sin(Expr::from(1)))).unwrap();
+    assert!(matches!(
+        unsupported.outcome(),
+        ProblemOutcome::Unsupported(_)
+    ));
+    assert_eq!(unsupported.checked_by(), None);
+    let limited = EvaluationContext::new(ResourceLimits {
+        max_work_units: 0,
+        ..ResourceLimits::default()
+    });
+    let refusal = dispatch_problem(&limited, &exact_request(Expr::sin(Expr::from(0)))).unwrap();
+    assert!(matches!(
+        refusal.outcome(),
+        ProblemOutcome::ResourceRefusal(_)
+    ));
+    assert_eq!(refusal.checked_by(), None);
+}
+
+#[test]
+fn canonical_json_is_exact_deterministic_and_bounded() {
+    let context = EvaluationContext::default();
+    let half = Rational::new(Integer::from(1), Integer::from(2)).unwrap();
+    let req = exact_request(Expr::from(half));
+    let result = dispatch_problem(&context, &req).unwrap();
+    let json = result.to_json().unwrap();
+    assert_eq!(
+        json,
+        dispatch_problem(&context, &req).unwrap().to_json().unwrap()
+    );
+    assert!(json.contains(r#""schema_version":1"#));
+    assert!(json.contains(r#""numerator":"1","denominator":"2""#));
+    assert!(json.contains(r#""status":"complete""#));
+    let request_json = req.to_json().unwrap();
+    assert!(json.starts_with(request_json.strip_suffix('}').unwrap()));
+    let unusual = request(
+        ProblemOperation::SolveLinear,
+        ProblemStatement::Equation(Equation::new(
+            Expr::from(variable("a\"\\\n\u{0001}")),
+            Expr::from(0),
+        )),
+        ScalarDomain::Rational,
+    );
+    assert!(unusual.to_json().unwrap().contains(r#"a\"\\\n\u0001"#));
+    let large = request(
+        ProblemOperation::SolveLinear,
+        ProblemStatement::Equation(Equation::new(
+            Expr::from(variable(&"x".repeat(2 * 1024 * 1024))),
+            Expr::from(0),
+        )),
+        ScalarDomain::Rational,
+    );
+    assert_eq!(large.to_json(), Err(ProblemWireError::OutputLimit));
 }

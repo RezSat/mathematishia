@@ -124,7 +124,6 @@ fn negative_inputs_and_unsupported_domains_are_refused() {
         &["integrate", "x^-1", "x", "0", "1"][..],
         &["evalexact", "log(-1)"][..],
         &["evalexact", "0^0"][..],
-        &["solveauto", "x=1", "--json"][..],
         &["solveauto", "x=2", "2"][..],
         &["roots", "x^2", "x+y"][..],
     ] {
@@ -134,9 +133,10 @@ fn negative_inputs_and_unsupported_domains_are_refused() {
         run(&["roots", "x^33"]).unwrap_err().kind(),
         CliErrorKind::Resource
     );
-    assert_eq!(
-        run(&["solveauto", "x=1", "--json"]).unwrap_err().kind(),
-        CliErrorKind::Unsupported
+    assert!(
+        run(&["solveauto", "x=1", "--json"])
+            .unwrap()
+            .contains(r#""status":"complete""#)
     );
     assert_eq!(
         run(&["roots", "x^-1"]).unwrap_err().kind(),

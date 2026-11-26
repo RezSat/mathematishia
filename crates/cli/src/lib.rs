@@ -3,6 +3,8 @@
 //! The CLI owns input/output formatting only; mathematical behavior lives in
 //! mathema-frontend and mathematishia-kernel.
 
+mod checked_results;
+mod legacy_operations;
 mod real_analysis;
 mod user_solve;
 
@@ -32,9 +34,14 @@ Usage:
   mathematishia rewrite <EXPRESSION> [NONZERO_PREMISE ...]
   mathematishia expand <EXPRESSION> [MAX_STEPS]  (distributive rules only)
   mathematishia expandall <EXPRESSION> [VARIABLE ...]  (infer variables if omitted)
+  mathematishia isolate <POLYNOMIAL> <VARIABLE> <WIDTH>
   mathematishia solve <EQUATION> <VARIABLE>
   mathematishia solveauto <EQUATION> [VARIABLE]  (defaults to x)
   mathematishia roots <POLYNOMIAL> [VARIABLE]
+  mathematishia sturm <POLYNOMIAL> <VARIABLE> <LOWER> <UPPER>
+  mathematishia rootbracket <POLYNOMIAL> <VARIABLE> <LOWER> <UPPER> <WIDTH> <MAX_BISECTIONS>
+  mathematishia linsystem <VARIABLES_CSV> <EQUATION> ...
+  mathematishia mvdivide <VARIABLES_CSV> <DIVIDEND> <DIVISOR> ...
   mathematishia limit <EXPRESSION> <VARIABLE> <POINT> [left|right|two-sided]
   mathematishia inequality <COMPARISON> [VARIABLE]
   mathematishia integrate <EXPRESSION> [VARIABLE]
@@ -91,6 +98,10 @@ Examples:
   mathematishia solveauto 'x^2-2=0'
   mathematishia solveauto '(x^2-1)/(x-1)=3'
   mathematishia roots 'x^3-2'
+  mathematishia sturm 'x^2-2' x -2 2
+  mathematishia rootbracket 'x^2-2' x 1 2 '1/16' 8
+  mathematishia linsystem x,y 'x+y=3' 'x-y=1'
+  mathematishia mvdivide x,y 'x*y+1' x y
   mathematishia integrate 'x^2' x 0 2
   mathematishia integrate 'x^2+sin(2*x)' x
   mathematishia evalexact 'sin(0)'
@@ -131,7 +142,8 @@ Canceled denominator zeros remain excluded. New operations display partial and u
 status explicitly; polynomial roots are complex, rational-function roots Q-only.
 Expansion uses Q[variables] and preserves inherited domain conditions.
 Integration sums use independently checked term certificates and a zero constant.
-JSON requires a separately agreed deterministic result schema.";
+Append --json to solveauto, roots, expandall, integrate (indefinite), limit, inequality,
+evalexact, diffreal or diffexpr for the shared versioned result.";
 
 const MAX_DISTRIBUTION_STEPS: usize = 12;
 
@@ -393,14 +405,9 @@ fn show_equation(equation: &Equation) -> String {
 pub fn run(args: &[&str]) -> Result<String, CliError> {
     match args {
         [] | ["--help" | "-h" | "help"] => Ok(HELP.to_owned()),
-        [
-            "expandall" | "solveauto" | "roots" | "integrate" | "evalexact" | "limit"
-            | "inequality",
-            ..,
-        ] if args.contains(&"--json") => Err(problem_error(
-            CliErrorKind::Unsupported,
-            "JSON output awaits the verified typed result contract",
-        )),
+        [commands @ .., "--json"] => checked_results::json(commands),
+        [..] if args.contains(&"--json") => Err(invalid("--json must be the final argument")),
+        ["isolate", input, name, width] => checked_results::isolate(input, name, width),
         ["expr", input] => Ok(format!("expression: {}", expression(input)?)),
         ["expandall", input, variables @ ..] => user_solve::expand_all(input, variables),
         ["solveauto" | "inequality", input] if real_analysis::is_comparison(input) => {
@@ -413,6 +420,15 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
         }
         ["inequality", input] => real_analysis::inequality(input, "x"),
         ["inequality", input, name] => real_analysis::inequality(input, name),
+        ["sturm", input, name, lower, upper] => real_analysis::sturm(input, name, lower, upper),
+        ["rootbracket", input, name, lower, upper, width, max] => {
+            legacy_operations::root_bracket(input, name, lower, upper, width, max)
+        }
+        ["linsystem", names, equations @ ..] => legacy_operations::linear_system(names, equations),
+        ["mvdivide", names, dividend, divisors @ ..] => {
+            legacy_operations::multivariate_division(names, dividend, divisors)
+        }
+
         ["limit", input, name, at] => real_analysis::limit(input, name, at, "two-sided"),
         ["limit", input, name, at, direction] => real_analysis::limit(input, name, at, direction),
         ["solveauto", input] => user_solve::solve_auto(input, "x"),

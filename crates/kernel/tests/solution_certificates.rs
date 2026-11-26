@@ -1,0 +1,391 @@
+use mathema::{Condition, DomainExpression, Expr, Integer, Rational, ScalarDomain, Symbol};
+use mathematishia_kernel::{
+    CertifiedSolutionSet, EvaluationContext, EvaluationError, ExactQuadraticRoot,
+    PolynomialRootMultiplicity, RationalExpressionError, RationalFunction, RationalPolynomial,
+    ResourceLimitKind, ResourceLimits, SolutionCertificateError, certify_solution_set,
+    verify_solution_set,
+};
+
+fn x() -> Symbol {
+    Symbol::new("x").unwrap()
+}
+
+fn poly(values: &[i64]) -> RationalPolynomial {
+    RationalPolynomial::new(
+        values
+            .iter()
+            .map(|&v| Rational::from(Integer::from(v)))
+            .collect(),
+    )
+}
+
+fn domain(expr: Expr) -> DomainExpression {
+    DomainExpression::from_expr(expr, 128).unwrap()
+}
+
+fn polynomial(values: &[i64]) -> DomainExpression {
+    domain(poly(values).to_expr(&x()))
+}
+
+fn root(value: i64, multiplicity: usize) -> PolynomialRootMultiplicity {
+    PolynomialRootMultiplicity::new(
+        ExactQuadraticRoot::Rational(Rational::from(Integer::from(value))),
+        multiplicity,
+    )
+}
+
+#[test]
+fn completeness_distinguishes_rational_real_and_complex_domains() {
+    let ctx = EvaluationContext::default();
+    let zero = polynomial(&[]);
+    for (source, domain, count) in [
+        (polynomial(&[-2, 0, 1]), ScalarDomain::Rational, 0),
+        (polynomial(&[-2, 0, 1]), ScalarDomain::Real, 2),
+        (polynomial(&[1, 0, 1]), ScalarDomain::Real, 0),
+        (polynomial(&[1, 0, 1]), ScalarDomain::Complex, 2),
+    ] {
+        let result = certify_solution_set(&ctx, &source, &zero, &x(), domain, &[]).unwrap();
+        match result.solutions {
+            CertifiedSolutionSet::None => assert_eq!(count, 0),
+            CertifiedSolutionSet::Finite(ref roots) => {
+                assert_eq!(roots.len(), count);
+                assert!(roots.iter().all(|r| r.multiplicity() == 1));
+            }
+            _ => panic!("expected complete set"),
+        }
+        assert!(verify_solution_set(&ctx, &source, &zero, &x(), domain, &result).unwrap());
+    }
+}
+
+#[test]
+fn original_operands_are_equal_at_exact_algebraic_roots() {
+    let ctx = EvaluationContext::default();
+    let symbol = Expr::from(x());
+    let left = domain(Expr::pow(symbol.clone(), (-1).into()));
+    let right = domain(Expr::mul([symbol, Expr::pow(2.into(), (-1).into())]));
+    let result = certify_solution_set(&ctx, &left, &right, &x(), ScalarDomain::Real, &[]).unwrap();
+    let CertifiedSolutionSet::Finite(ref roots) = result.solutions else {
+        panic!("expected finite set")
+    };
+    assert_eq!(roots.len(), 2);
+    assert_eq!(result.residual.excluded_zero_sets(), &[poly(&[0, 1])]);
+    assert!(verify_solution_set(&ctx, &left, &right, &x(), ScalarDomain::Real, &result).unwrap());
+}
+
+#[test]
+fn removed_rational_and_algebraic_poles_are_never_solutions() {
+    let ctx = EvaluationContext::default();
+    let symbol = Expr::from(x());
+    let left = domain(Expr::mul([
+        Expr::add([Expr::pow(symbol.clone(), 2.into()), (-1).into()]),
+        Expr::pow(Expr::add([symbol, (-1).into()]), (-1).into()),
+    ]));
+    let right = polynomial(&[2]);
+    let result =
+        certify_solution_set(&ctx, &left, &right, &x(), ScalarDomain::Rational, &[]).unwrap();
+    assert_eq!(result.solutions, CertifiedSolutionSet::None);
+    assert_eq!(result.residual.excluded_zero_sets(), &[poly(&[-1, 1])]);
+
+    let quadratic = poly(&[-2, 0, 1]).to_expr(&x());
+    let restricted = DomainExpression::with_conditions(
+        quadratic.clone(),
+        [Condition::NonZero(quadratic)],
+        128,
+        8,
+    )
+    .unwrap();
+    let zero = polynomial(&[]);
+    let result =
+        certify_solution_set(&ctx, &restricted, &zero, &x(), ScalarDomain::Complex, &[]).unwrap();
+    assert_eq!(result.solutions, CertifiedSolutionSet::None);
+    assert_eq!(result.residual.excluded_zero_sets(), &[poly(&[-2, 0, 1])]);
+}
+
+#[test]
+fn identity_preserves_conditions_and_nonzero_constant_is_empty() {
+    let ctx = EvaluationContext::default();
+    let zero = polynomial(&[]);
+    let restricted =
+        DomainExpression::with_conditions(0.into(), [Condition::NonZero(Expr::from(x()))], 128, 8)
+            .unwrap();
+    let identity =
+        certify_solution_set(&ctx, &restricted, &zero, &x(), ScalarDomain::Complex, &[]).unwrap();
+    assert_eq!(identity.solutions, CertifiedSolutionSet::AllAdmissible);
+    assert_eq!(identity.residual.excluded_zero_sets(), &[poly(&[0, 1])]);
+    assert!(
+        verify_solution_set(
+            &ctx,
+            &restricted,
+            &zero,
+            &x(),
+            ScalarDomain::Complex,
+            &identity
+        )
+        .unwrap()
+    );
+    let constant = certify_solution_set(
+        &ctx,
+        &polynomial(&[1]),
+        &zero,
+        &x(),
+        ScalarDomain::Complex,
+        &[],
+    )
+    .unwrap();
+    assert_eq!(constant.solutions, CertifiedSolutionSet::None);
+}
+
+#[test]
+fn repeated_roots_and_supported_factor_products_have_exact_multiplicity() {
+    let ctx = EvaluationContext::default();
+    let zero = polynomial(&[]);
+    let repeated = polynomial(&[1, -2, 1]);
+    let result =
+        certify_solution_set(&ctx, &repeated, &zero, &x(), ScalarDomain::Real, &[]).unwrap();
+    assert_eq!(
+        result.solutions,
+        CertifiedSolutionSet::Finite(vec![root(1, 2)])
+    );
+
+    // (x-1)^4(x+2) = x^5-2x^4-2x^3+8x^2-7x+2
+    let source = polynomial(&[2, -7, 8, -2, -2, 1]);
+    let result = certify_solution_set(
+        &ctx,
+        &source,
+        &zero,
+        &x(),
+        ScalarDomain::Real,
+        &[poly(&[-1, 1])],
+    )
+    .unwrap();
+    assert_eq!(
+        result.solutions,
+        CertifiedSolutionSet::Finite(vec![root(-2, 1), root(1, 4)])
+    );
+    assert!(verify_solution_set(&ctx, &source, &zero, &x(), ScalarDomain::Real, &result).unwrap());
+}
+
+#[test]
+fn higher_degree_cofactor_remains_partial_even_without_known_roots() {
+    let ctx = EvaluationContext::default();
+    let zero = polynomial(&[]);
+    let cubic = polynomial(&[-2, 0, 0, 1]);
+    let unresolved =
+        certify_solution_set(&ctx, &cubic, &zero, &x(), ScalarDomain::Rational, &[]).unwrap();
+    assert_eq!(
+        unresolved.solutions,
+        CertifiedSolutionSet::Partial {
+            roots: vec![],
+            unresolved_cofactor: poly(&[-2, 0, 0, 1])
+        }
+    );
+    let product = polynomial(&[2, -2, 0, -1, 1]);
+    let result = certify_solution_set(
+        &ctx,
+        &product,
+        &zero,
+        &x(),
+        ScalarDomain::Real,
+        &[poly(&[-1, 1])],
+    )
+    .unwrap();
+    assert_eq!(
+        result.solutions,
+        CertifiedSolutionSet::Partial {
+            roots: vec![root(1, 1)],
+            unresolved_cofactor: poly(&[-2, 0, 0, 1])
+        }
+    );
+    assert!(verify_solution_set(&ctx, &product, &zero, &x(), ScalarDomain::Real, &result).unwrap());
+}
+
+#[test]
+fn verification_rejects_altered_source_domain_roots_multiplicity_and_links() {
+    let ctx = EvaluationContext::default();
+    let left = DomainExpression::with_conditions(
+        poly(&[2, -3, 1]).to_expr(&x()),
+        [Condition::NonZero(poly(&[-1, 1]).to_expr(&x()))],
+        128,
+        8,
+    )
+    .unwrap();
+    let right = polynomial(&[]);
+    let domain = ScalarDomain::Real;
+    let result = certify_solution_set(&ctx, &left, &right, &x(), domain, &[]).unwrap();
+    assert_eq!(
+        result.solutions,
+        CertifiedSolutionSet::Finite(vec![root(2, 1)])
+    );
+    assert!(
+        !verify_solution_set(
+            &ctx,
+            &polynomial(&[2, -3, 1]),
+            &right,
+            &x(),
+            domain,
+            &result
+        )
+        .unwrap()
+    );
+    assert!(
+        !verify_solution_set(&ctx, &left, &right, &x(), ScalarDomain::Complex, &result).unwrap()
+    );
+
+    for roots in [
+        vec![root(1, 1), root(2, 1)],
+        vec![root(2, 2)],
+        vec![root(3, 1)],
+        vec![],
+    ] {
+        let mut forged = result.clone();
+        forged.solutions = CertifiedSolutionSet::Finite(roots);
+        assert!(!verify_solution_set(&ctx, &left, &right, &x(), domain, &forged).unwrap());
+    }
+    let mut forged = result.clone();
+    forged.residual = RationalFunction::from_polynomial(poly(&[2, -3, 1]));
+    assert!(!verify_solution_set(&ctx, &left, &right, &x(), domain, &forged).unwrap());
+    let mut forged = result.clone();
+    forged.factors[0] = ctx.algebraic_roots(&poly(&[-3, 1])).unwrap();
+    assert!(!verify_solution_set(&ctx, &left, &right, &x(), domain, &forged).unwrap());
+    let mut forged = result;
+    forged.factors.clear();
+    forged.solutions = CertifiedSolutionSet::None;
+    assert!(!verify_solution_set(&ctx, &left, &right, &x(), domain, &forged).unwrap());
+}
+
+#[test]
+fn incomplete_proof_cannot_claim_completeness() {
+    let ctx = EvaluationContext::default();
+    let left = polynomial(&[2, -2, 0, -1, 1]);
+    let right = polynomial(&[]);
+    let mut result = certify_solution_set(
+        &ctx,
+        &left,
+        &right,
+        &x(),
+        ScalarDomain::Complex,
+        &[poly(&[-1, 1])],
+    )
+    .unwrap();
+    result.solutions = CertifiedSolutionSet::Finite(vec![root(1, 1)]);
+    assert!(
+        !verify_solution_set(&ctx, &left, &right, &x(), ScalarDomain::Complex, &result).unwrap()
+    );
+    result.solutions = CertifiedSolutionSet::Partial {
+        roots: vec![root(1, 1)],
+        unresolved_cofactor: poly(&[1, 0, 0, 1]),
+    };
+    assert!(
+        !verify_solution_set(&ctx, &left, &right, &x(), ScalarDomain::Complex, &result).unwrap()
+    );
+}
+
+#[test]
+fn refuses_unsupported_conditions_invalid_factors_and_exhausted_budgets() {
+    let ctx = EvaluationContext::default();
+    let left = polynomial(&[-2, 0, 1]);
+    let zero = polynomial(&[]);
+    let restricted =
+        DomainExpression::with_conditions(0.into(), [Condition::Positive(Expr::from(x()))], 128, 8)
+            .unwrap();
+    assert_eq!(
+        certify_solution_set(&ctx, &restricted, &zero, &x(), ScalarDomain::Real, &[]),
+        Err(SolutionCertificateError::Expression(
+            RationalExpressionError::UnsupportedCondition
+        ))
+    );
+    assert_eq!(
+        certify_solution_set(&ctx, &left, &zero, &x(), ScalarDomain::Integer, &[]),
+        Err(SolutionCertificateError::UnsupportedDomain)
+    );
+    assert_eq!(
+        certify_solution_set(
+            &ctx,
+            &left,
+            &zero,
+            &x(),
+            ScalarDomain::Real,
+            &[poly(&[-3, 1])]
+        ),
+        Err(SolutionCertificateError::IncorrectCertificate)
+    );
+    for (limits, kind) in [
+        (
+            ResourceLimits {
+                max_polynomial_degree: 1,
+                ..ResourceLimits::default()
+            },
+            ResourceLimitKind::PolynomialDegree,
+        ),
+        (
+            ResourceLimits {
+                max_work_units: 0,
+                ..ResourceLimits::default()
+            },
+            ResourceLimitKind::WorkUnits,
+        ),
+    ] {
+        let limited = EvaluationContext::new(limits);
+        let result = certify_solution_set(&limited, &left, &zero, &x(), ScalarDomain::Real, &[]);
+        // The shared converter reports its own exponent ceiling before polynomial admission.
+        assert!(
+            result
+                == Err(SolutionCertificateError::Evaluation(
+                    EvaluationError::Limit(kind)
+                ))
+                || (kind == ResourceLimitKind::PolynomialDegree
+                    && result
+                        == Err(SolutionCertificateError::Expression(
+                            RationalExpressionError::ExponentLimitExceeded
+                        )))
+        );
+    }
+}
+
+#[test]
+fn rejects_unnecessary_partial_claim_for_supported_quadratic() {
+    let ctx = EvaluationContext::default();
+    let left = polynomial(&[-2, 0, 1]);
+    let right = polynomial(&[]);
+    let mut result =
+        certify_solution_set(&ctx, &left, &right, &x(), ScalarDomain::Real, &[]).unwrap();
+    result.factors.clear();
+    result.solutions = CertifiedSolutionSet::Partial {
+        roots: vec![],
+        unresolved_cofactor: poly(&[-2, 0, 1]),
+    };
+    assert!(!verify_solution_set(&ctx, &left, &right, &x(), ScalarDomain::Real, &result).unwrap());
+}
+
+#[test]
+fn complex_conjugate_multiplicity_and_original_nonzero_conditions() {
+    let ctx = EvaluationContext::default();
+    let left = polynomial(&[1, 0, 2, 0, 1]);
+    let zero = polynomial(&[]);
+    let result = certify_solution_set(
+        &ctx,
+        &left,
+        &zero,
+        &x(),
+        ScalarDomain::Complex,
+        &[poly(&[1, 0, 1])],
+    )
+    .unwrap();
+    let CertifiedSolutionSet::Finite(ref roots) = result.solutions else {
+        panic!("expected complete complex pair")
+    };
+    assert_eq!(roots.len(), 2);
+    assert!(roots.iter().all(|r| r.multiplicity() == 2));
+    assert!(verify_solution_set(&ctx, &left, &zero, &x(), ScalarDomain::Complex, &result).unwrap());
+
+    let limited = EvaluationContext::new(ResourceLimits {
+        max_work_units: 1,
+        ..ResourceLimits::default()
+    });
+    assert_eq!(
+        verify_solution_set(&limited, &left, &zero, &x(), ScalarDomain::Complex, &result),
+        Err(SolutionCertificateError::Evaluation(
+            EvaluationError::Limit(ResourceLimitKind::WorkUnits)
+        ))
+    );
+}

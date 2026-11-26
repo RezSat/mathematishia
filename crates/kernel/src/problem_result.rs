@@ -4,19 +4,33 @@
 //! Inputs are already-normalized mathematical statements; conditions inherited
 //! from construction must be carried by `DomainExpression` or `RationalFunction`.
 
+mod wire;
+pub use wire::ProblemWireError;
+
 use std::error::Error;
 use std::fmt;
 
-use mathema::{Condition, DomainExpression, Equation, Expr, Rational, ScalarDomain, Symbol};
+use mathema::{
+    Condition, DefinednessError, DomainExpression, Equation, Expr, ExprView, Rational,
+    ScalarDomain, Symbol,
+};
 
 use crate::{
-    Assumptions, ConditionStatus, EvaluationContext, EvaluationError, LinearSolution,
-    LinearSolveResult, PartialPolynomialRootError, PartialPolynomialRootResult,
-    PolynomialRootMultiplicity, PolynomialZeroSet, QuadraticResult, QuadraticRoots,
-    RationalEquationResult, RationalEquationSolution, RationalFunction, RationalFunctionError,
-    RationalPolynomial, ResourceLimitKind, SymbolicDerivative, SymbolicDifferentiationError,
-    verify_linear_solution, verify_partial_polynomial_roots, verify_quadratic_roots,
-    verify_rational_equation, verify_symbolic_derivative,
+    AnalyticConstantError, AnalyticConstantLimit, AnalyticConstantLimits, AnalyticConstantOutcome,
+    Assumptions, ComparisonOperator, ConditionStatus, DispatchedAntiderivative,
+    ElementaryIntegrationError, EvaluationContext, EvaluationError, InequalityError,
+    InequalityResult, IntegrationDispatchError, IntegrationError, LimitDirection, LimitError,
+    LimitValue, LimitVerificationError, LinearSolution, LinearSolveResult, MultivariateError,
+    MultivariateExprError, MultivariateLimits, PartialPolynomialRootError,
+    PartialPolynomialRootResult, PolynomialExpansion, PolynomialExpansionError,
+    PolynomialExpansionOutcome, PolynomialRootMultiplicity, PolynomialZeroSet, QuadraticResult,
+    QuadraticRoots, RationalEquationResult, RationalEquationSolution, RationalExpressionError,
+    RationalFunction, RationalFunctionError, RationalLimit, RationalPolynomial,
+    RationalQuadraticRoots, RealInterval, ResourceLimitKind, SymbolicDerivative,
+    SymbolicDifferentiationError, expand_polynomial, rewrite_analytic_constant_once,
+    verify_analytic_constant_rewrite, verify_linear_solution, verify_partial_polynomial_roots,
+    verify_polynomial_expansion, verify_quadratic_roots, verify_rational_equation,
+    verify_rational_limit, verify_rational_quadratic_equation, verify_symbolic_derivative,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -28,6 +42,11 @@ pub enum ProblemOperation {
     Differentiate,
     EvaluateRational,
     Integrate,
+    Expand,
+    Limit,
+    Inequality,
+    SolveAuto,
+    EvaluateExact,
 }
 
 impl ProblemOperation {
@@ -40,6 +59,11 @@ impl ProblemOperation {
             Self::Differentiate => "calculus.differentiate",
             Self::EvaluateRational => "rational.evaluate",
             Self::Integrate => "calculus.integrate",
+            Self::Expand => "polynomial.expand",
+            Self::Limit => "calculus.rational_limit",
+            Self::Inequality => "inequality.rational",
+            Self::SolveAuto => "equation.auto",
+            Self::EvaluateExact => "analytic.evaluate_exact",
         }
     }
 }
@@ -57,6 +81,20 @@ pub enum ProblemStatement {
         at: Rational,
     },
     Expression(DomainExpression),
+    Limit {
+        source: DomainExpression,
+        at: Rational,
+        direction: LimitDirection,
+    },
+    SourceEquation {
+        left: DomainExpression,
+        right: DomainExpression,
+    },
+    Comparison {
+        left: DomainExpression,
+        right: DomainExpression,
+        operator: ComparisonOperator,
+    },
 }
 
 /// The selected variable and ambient domain are explicit. Polynomial
@@ -81,6 +119,9 @@ pub enum ExactAnswer {
     ComplexRoots(Vec<PolynomialRootMultiplicity>),
     Expression(Expr),
     Rational(Rational),
+    Limit(LimitValue),
+    Intervals(Vec<RealInterval>),
+    AllAdmissibleValues,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -90,6 +131,7 @@ pub enum UnsupportedReason {
     AlgorithmNotAvailable,
     ExpressionOutsideAlgorithm,
     DegreeOutsideAlgorithm,
+    RewriteStepLimit,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -108,6 +150,10 @@ pub enum ProblemOutcome {
         known: ExactAnswer,
         unresolved: RationalPolynomial,
     },
+    PartialScope {
+        known: ExactAnswer,
+        reason: UnsupportedReason,
+    },
     Unsupported(UnsupportedReason),
     NoSolutions,
     AllAdmissibleValues,
@@ -123,6 +169,13 @@ pub enum CheckedBy {
     PartialComplexFactorization,
     SymbolicDerivativeRules,
     RationalEvaluation,
+    IntegrationTerms,
+    PolynomialIdentity,
+    RationalLimitFactorization,
+    RationalInequalitySigns,
+    RationalQuadraticEquation,
+    AnalyticConstantRules,
+    RationalLiteral,
 }
 
 /// An index into a verified source proof, not a reconstructed prose step.
@@ -205,11 +258,15 @@ pub enum ProblemEvidence<'a> {
     ComplexRoots(&'a PartialPolynomialRootResult),
     Derivative(&'a SymbolicDerivative),
     RationalEvaluation(&'a Rational),
+    Integration(&'a DispatchedAntiderivative),
+    Expansion(&'a PolynomialExpansion),
+    Limit(&'a RationalLimit),
+    Inequality(&'a InequalityResult),
 }
 
 fn restrictions(statement: &ProblemStatement) -> Vec<ProblemRestriction> {
     match statement {
-        ProblemStatement::Expression(source) => source
+        ProblemStatement::Expression(source) | ProblemStatement::Limit { source, .. } => source
             .conditions()
             .iter()
             .cloned()
@@ -235,6 +292,17 @@ fn restrictions(statement: &ProblemStatement) -> Vec<ProblemRestriction> {
             .cloned()
             .map(ProblemRestriction::PolynomialNonZero)
             .collect(),
+        ProblemStatement::Comparison { left, right, .. }
+        | ProblemStatement::SourceEquation { left, right } => {
+            let mut conditions = Vec::new();
+            for condition in left.conditions().iter().chain(right.conditions()) {
+                let restriction = ProblemRestriction::Condition(condition.clone());
+                if !conditions.contains(&restriction) {
+                    conditions.push(restriction);
+                }
+            }
+            conditions
+        }
         ProblemStatement::Equation(_) | ProblemStatement::PolynomialZero(_) => Vec::new(),
     }
 }
@@ -265,6 +333,9 @@ fn handle_evaluation_error(
         | EvaluationError::RationalEquation(crate::RationalEquationError::NonlinearNumerator) => {
             ProblemOutcome::Unsupported(UnsupportedReason::DegreeOutsideAlgorithm)
         }
+        EvaluationError::Polynomial(crate::PolynomialConversionError::DegreeLimitExceeded) => {
+            ProblemOutcome::ResourceRefusal(ResourceLimitKind::PolynomialDegree)
+        }
         EvaluationError::Polynomial(_)
         | EvaluationError::Linear(crate::LinearSolveError::UnsupportedExpression(_))
         | EvaluationError::SymbolicDifferentiation(
@@ -277,9 +348,225 @@ fn handle_evaluation_error(
         EvaluationError::RationalFunction(RationalFunctionError::UndefinedAtPoint) => {
             ProblemOutcome::Undefined(UndefinedReason::ExcludedPoint)
         }
+        EvaluationError::RationalFunction(
+            RationalFunctionError::ZeroDenominator
+            | RationalFunctionError::ZeroDivisor
+            | RationalFunctionError::EmptyDomain,
+        ) => ProblemOutcome::Undefined(UndefinedReason::ContradictedDomainCondition),
         other => return Err(ProblemError::Evaluation(other)),
     };
     Ok(result(request, outcome))
+}
+
+fn source_is_refuted(source: &DomainExpression) -> bool {
+    let assumptions = Assumptions::new();
+    source
+        .conditions()
+        .iter()
+        .any(|condition| assumptions.assess(condition) == ConditionStatus::Refuted)
+}
+
+fn conditional_answer(answer: ExactAnswer, conditions: &[Condition]) -> ProblemOutcome {
+    let assumptions = Assumptions::new();
+    if conditions
+        .iter()
+        .all(|condition| assumptions.assess(condition) == ConditionStatus::Proven)
+    {
+        ProblemOutcome::SolvedExact(answer)
+    } else {
+        ProblemOutcome::SolvedConditional(answer)
+    }
+}
+
+fn with_conditions(mut published: ProblemResult, conditions: &[Condition]) -> ProblemResult {
+    for condition in conditions {
+        let restriction = ProblemRestriction::Condition(condition.clone());
+        if !published.restrictions.contains(&restriction) {
+            published.restrictions.push(restriction);
+        }
+    }
+    published
+}
+
+fn with_exclusions(
+    mut published: ProblemResult,
+    exclusions: &[RationalPolynomial],
+) -> ProblemResult {
+    for polynomial in exclusions {
+        let restriction = ProblemRestriction::PolynomialNonZero(polynomial.clone());
+        if !published.restrictions.contains(&restriction) {
+            published.restrictions.push(restriction);
+        }
+    }
+    published
+}
+
+fn refusal(
+    request: &ProblemRequest,
+    kind: ResourceLimitKind,
+) -> Result<ProblemResult, ProblemError> {
+    Ok(result(request, ProblemOutcome::ResourceRefusal(kind)))
+}
+
+fn definedness_failure(
+    request: &ProblemRequest,
+    error: DefinednessError,
+) -> Result<ProblemResult, ProblemError> {
+    match error {
+        DefinednessError::NodeLimitExceeded => refusal(request, ResourceLimitKind::ExpressionNodes),
+        DefinednessError::ConditionLimitExceeded => {
+            refusal(request, ResourceLimitKind::RationalConditions)
+        }
+        DefinednessError::ZeroDenominator => Ok(result(
+            request,
+            ProblemOutcome::Undefined(UndefinedReason::ContradictedDomainCondition),
+        )),
+        _ => Ok(unsupported(
+            request,
+            UnsupportedReason::ExpressionOutsideAlgorithm,
+        )),
+    }
+}
+
+fn integration_failure(
+    request: &ProblemRequest,
+    error: IntegrationDispatchError,
+) -> Result<ProblemResult, ProblemError> {
+    use ElementaryIntegrationError as E;
+    use IntegrationDispatchError as I;
+    match error {
+        I::Evaluation(error)
+        | I::Polynomial(IntegrationError::Evaluation(error))
+        | I::Elementary(E::Evaluation(error)) => handle_evaluation_error(request, error),
+        I::Definedness(error) | I::Elementary(E::Definedness(error)) => {
+            definedness_failure(request, error)
+        }
+        I::TooManyTerms => refusal(request, ResourceLimitKind::ExpressionNodes),
+        I::MissingDomainCondition | I::Elementary(E::MissingDomainCondition) => {
+            Err(ProblemError::MissingDomainRestrictions)
+        }
+        I::UnsupportedScalarDomain | I::Elementary(E::UnsupportedScalarDomain) => {
+            Ok(unsupported(request, UnsupportedReason::Domain))
+        }
+        I::Polynomial(IntegrationError::UnsupportedIntegrand(error))
+        | I::Elementary(E::UnsupportedArgument(error)) => {
+            handle_evaluation_error(request, EvaluationError::Polynomial(error))
+        }
+        I::Polynomial(IntegrationError::RestrictedDomain)
+        | I::RestrictedDefiniteDomain
+        | I::UnsupportedAnalyticDefiniteIntegral
+        | I::Elementary(
+            E::UnsupportedForm
+            | E::UnsupportedFunction
+            | E::NonAffineArgument
+            | E::ZeroSlope
+            | E::UnsupportedNormalization,
+        ) => Ok(unsupported(
+            request,
+            UnsupportedReason::ExpressionOutsideAlgorithm,
+        )),
+        _ => Err(ProblemError::InvalidEvidence),
+    }
+}
+
+fn conversion_failure(
+    request: &ProblemRequest,
+    error: RationalExpressionError,
+) -> Result<ProblemResult, ProblemError> {
+    match error {
+        RationalExpressionError::Evaluation(error) => handle_evaluation_error(request, error),
+        RationalExpressionError::ExponentLimitExceeded => {
+            refusal(request, ResourceLimitKind::PolynomialDegree)
+        }
+        RationalExpressionError::RationalFunction(
+            RationalFunctionError::ZeroDenominator
+            | RationalFunctionError::ZeroDivisor
+            | RationalFunctionError::EmptyDomain,
+        ) => Ok(result(
+            request,
+            ProblemOutcome::Undefined(UndefinedReason::ContradictedDomainCondition),
+        )),
+        RationalExpressionError::RationalFunction(_) => Err(ProblemError::InvalidEvidence),
+        _ => Ok(unsupported(
+            request,
+            UnsupportedReason::ExpressionOutsideAlgorithm,
+        )),
+    }
+}
+
+fn inequality_failure(
+    request: &ProblemRequest,
+    error: InequalityError,
+) -> Result<ProblemResult, ProblemError> {
+    match error {
+        InequalityError::Evaluation(error) => handle_evaluation_error(request, error),
+        InequalityError::Conversion(error) => conversion_failure(request, error),
+        InequalityError::UnsupportedDegree => Ok(unsupported(
+            request,
+            UnsupportedReason::DegreeOutsideAlgorithm,
+        )),
+        InequalityError::IncorrectCertificate => Err(ProblemError::InvalidEvidence),
+    }
+}
+
+fn expansion_limits(context: &EvaluationContext) -> MultivariateLimits {
+    let configured = context.limits();
+    let limits = MultivariateLimits::default();
+    MultivariateLimits {
+        max_variables: limits.max_variables.min(configured.max_expression_nodes),
+        max_terms: limits.max_terms.min(configured.max_expression_nodes),
+        max_input_terms: limits.max_input_terms.min(configured.max_expression_nodes),
+        max_total_degree: limits
+            .max_total_degree
+            .min(u32::try_from(configured.max_polynomial_degree).unwrap_or(u32::MAX)),
+        max_scalar_bits: limits
+            .max_scalar_bits
+            .min(configured.max_scalar_bits)
+            .min(configured.max_intermediate_scalar_bits),
+        max_work_units: limits.max_work_units.min(configured.max_work_units),
+    }
+}
+
+fn expansion_failure(
+    request: &ProblemRequest,
+    error: MultivariateExprError,
+) -> Result<ProblemResult, ProblemError> {
+    use MultivariateError as M;
+    use MultivariateExprError as E;
+    match error {
+        E::ExponentLimit | E::Polynomial(M::TotalDegreeLimit) => {
+            refusal(request, ResourceLimitKind::PolynomialDegree)
+        }
+        E::ExpressionDepthLimit => refusal(request, ResourceLimitKind::ExpressionDepth),
+        E::ExpressionNodeLimit
+        | E::Polynomial(M::VariableLimit | M::TermLimit | M::InputTermLimit) => {
+            refusal(request, ResourceLimitKind::ExpressionNodes)
+        }
+        E::ConditionLimit => refusal(request, ResourceLimitKind::RationalConditions),
+        E::Polynomial(M::ScalarBitLimit) => refusal(request, ResourceLimitKind::ScalarBits),
+        E::Polynomial(M::WorkLimit) => refusal(request, ResourceLimitKind::WorkUnits),
+        E::Domain(error) => definedness_failure(request, error),
+        _ => Ok(unsupported(
+            request,
+            UnsupportedReason::ExpressionOutsideAlgorithm,
+        )),
+    }
+}
+
+fn admit_source(
+    context: &EvaluationContext,
+    source: &DomainExpression,
+) -> Result<(), EvaluationError> {
+    context.check_expression(source.expression())?;
+    if source.conditions().len() > context.limits().max_rational_conditions {
+        return Err(EvaluationError::Limit(
+            ResourceLimitKind::RationalConditions,
+        ));
+    }
+    for condition in source.conditions() {
+        context.check_expression(condition.expression())?;
+    }
+    Ok(())
 }
 
 fn admit_request(
@@ -301,26 +588,33 @@ fn admit_request(
             context.check_rational_function(function)?;
             context.check_rational(at)
         }
-        ProblemStatement::Expression(source) => {
-            context.check_expression(source.expression())?;
-            if source.conditions().len() > limits.max_rational_conditions {
-                return Err(EvaluationError::Limit(
-                    ResourceLimitKind::RationalConditions,
-                ));
-            }
-            for condition in source.conditions() {
-                context.check_expression(condition.expression())?;
-            }
-            Ok(())
+        ProblemStatement::Expression(source) => admit_source(context, source),
+        ProblemStatement::Limit { source, at, .. } => {
+            admit_source(context, source)?;
+            context.check_rational(at)
+        }
+        ProblemStatement::Comparison { left, right, .. }
+        | ProblemStatement::SourceEquation { left, right } => {
+            admit_source(context, left)?;
+            admit_source(context, right)
         }
     }
 }
 
 fn validate_request(request: &ProblemRequest) -> Result<Option<ProblemResult>, ProblemError> {
-    if request.variables.is_empty() {
+    if request.variables.is_empty()
+        && !matches!(
+            request.operation,
+            ProblemOperation::Expand | ProblemOperation::EvaluateExact
+        )
+    {
         return Err(ProblemError::MissingVariable);
     }
-    if request.variables.len() != 1 {
+    if match request.operation {
+        ProblemOperation::Expand => false,
+        ProblemOperation::EvaluateExact => !request.variables.is_empty(),
+        _ => request.variables.len() != 1,
+    } {
         return Ok(Some(unsupported(
             request,
             UnsupportedReason::SeveralVariables,
@@ -349,7 +643,21 @@ fn validate_request(request: &ProblemRequest) -> Result<Option<ProblemResult>, P
                 ProblemOperation::EvaluateRational,
                 ProblemStatement::RationalEvaluation { .. }
             )
-            | (ProblemOperation::Integrate, ProblemStatement::Expression(_))
+            | (
+                ProblemOperation::Integrate
+                    | ProblemOperation::Expand
+                    | ProblemOperation::EvaluateExact,
+                ProblemStatement::Expression(_)
+            )
+            | (ProblemOperation::Limit, ProblemStatement::Limit { .. })
+            | (
+                ProblemOperation::Inequality,
+                ProblemStatement::Comparison { .. }
+            )
+            | (
+                ProblemOperation::SolveAuto,
+                ProblemStatement::SourceEquation { .. }
+            )
     );
     if !matched {
         return Err(ProblemError::StatementMismatch);
@@ -363,7 +671,22 @@ fn validate_request(request: &ProblemRequest) -> Result<Option<ProblemResult>, P
         ProblemOperation::Differentiate => {
             matches!(request.domain, ScalarDomain::Real | ScalarDomain::Complex)
         }
-        ProblemOperation::Integrate => true,
+        ProblemOperation::Integrate => matches!(
+            request.domain,
+            ScalarDomain::Rational | ScalarDomain::Real | ScalarDomain::Complex
+        ),
+        ProblemOperation::Expand => matches!(
+            request.domain,
+            ScalarDomain::Rational | ScalarDomain::Real | ScalarDomain::Complex
+        ),
+        ProblemOperation::Limit | ProblemOperation::Inequality => {
+            request.domain == ScalarDomain::Real
+        }
+        ProblemOperation::SolveAuto => matches!(
+            request.domain,
+            ScalarDomain::Rational | ScalarDomain::Complex
+        ),
+        ProblemOperation::EvaluateExact => request.domain == ScalarDomain::Real,
     };
     if !domain_supported {
         return Ok(Some(unsupported(request, UnsupportedReason::Domain)));
@@ -397,7 +720,7 @@ pub fn adapt_verified_problem(
     if let Some(rejection) = validate_request(request)? {
         return Ok(rejection);
     }
-    let variable = &request.variables[0];
+    let variable = request.variables.first();
     let limits = context.limits();
     let (outcome, proof, steps) = match (&request.operation, &request.statement, evidence) {
         (
@@ -416,8 +739,6 @@ pub fn adapt_verified_problem(
             context
                 .check_polynomial(candidate.residual())
                 .map_err(ProblemError::Evaluation)?;
-            verify_linear_solution(candidate, variable)
-                .map_err(|_| ProblemError::InvalidEvidence)?;
             for step in candidate.steps() {
                 context
                     .check_equation(step.before())
@@ -426,6 +747,8 @@ pub fn adapt_verified_problem(
                     .check_equation(step.after())
                     .map_err(ProblemError::Evaluation)?;
             }
+            verify_linear_solution(candidate, variable.expect("validated variable"))
+                .map_err(|_| ProblemError::InvalidEvidence)?;
             let outcome = match candidate.solution() {
                 LinearSolution::Unique(value) => {
                     context
@@ -562,7 +885,7 @@ pub fn adapt_verified_problem(
                 )));
             }
             if candidate.original() != source.expression()
-                || candidate.variable() != variable
+                || Some(candidate.variable()) != variable
                 || candidate.domain() != Some(request.domain)
                 || candidate.conditions() != source.conditions()
                 || candidate.steps().len() > limits.max_expression_nodes
@@ -619,6 +942,139 @@ pub fn adapt_verified_problem(
                 Vec::new(),
             )
         }
+        (
+            ProblemOperation::Integrate,
+            ProblemStatement::Expression(source),
+            ProblemEvidence::Integration(candidate),
+        ) => {
+            if source_is_refuted(source) {
+                return Err(ProblemError::InvalidEvidence);
+            }
+            if let Err(error) = context.verify_dispatched_antiderivative(
+                source,
+                variable.expect("validated variable"),
+                request.domain,
+                candidate,
+            ) {
+                return integration_failure(request, error);
+            }
+            let answer = ExactAnswer::Expression(candidate.primitive().expression().clone());
+            return Ok(with_conditions(
+                checked_result(
+                    request,
+                    conditional_answer(answer, candidate.conditions()),
+                    CheckedBy::IntegrationTerms,
+                    Vec::new(),
+                ),
+                candidate.conditions(),
+            ));
+        }
+        (
+            ProblemOperation::Expand,
+            ProblemStatement::Expression(source),
+            ProblemEvidence::Expansion(candidate),
+        ) => {
+            if source_is_refuted(source) {
+                return Err(ProblemError::InvalidEvidence);
+            }
+            if candidate.variables() != request.variables.as_slice() || candidate.source() != source
+            {
+                return Err(ProblemError::InvalidEvidence);
+            }
+            match verify_polynomial_expansion(
+                source,
+                candidate,
+                &request.variables,
+                expansion_limits(context),
+            ) {
+                Ok(true) => {}
+                Ok(false) => return Err(ProblemError::InvalidEvidence),
+                Err(PolynomialExpansionError::Conversion(error)) => {
+                    return expansion_failure(request, error);
+                }
+            }
+            if let Err(error) = admit_source(context, candidate.expanded()) {
+                return handle_evaluation_error(request, error);
+            }
+            let answer = ExactAnswer::Expression(candidate.expanded().expression().clone());
+            (
+                conditional_answer(answer, source.conditions()),
+                CheckedBy::PolynomialIdentity,
+                Vec::new(),
+            )
+        }
+        (
+            ProblemOperation::Limit,
+            ProblemStatement::Limit {
+                source,
+                at,
+                direction,
+            },
+            ProblemEvidence::Limit(candidate),
+        ) => {
+            if source_is_refuted(source) {
+                return Err(ProblemError::InvalidEvidence);
+            }
+            let function =
+                match context.rational_expression(source, variable.expect("validated variable")) {
+                    Ok(value) => value,
+                    Err(error) => return conversion_failure(request, error),
+                };
+            match verify_rational_limit(context, &function, at, *direction, candidate) {
+                Ok(()) => {}
+                Err(LimitVerificationError::Evaluation(error)) => {
+                    return handle_evaluation_error(request, error);
+                }
+                Err(_) => return Err(ProblemError::InvalidEvidence),
+            }
+            return Ok(with_exclusions(
+                checked_result(
+                    request,
+                    ProblemOutcome::SolvedExact(ExactAnswer::Limit(candidate.value().clone())),
+                    CheckedBy::RationalLimitFactorization,
+                    Vec::new(),
+                ),
+                function.excluded_zero_sets(),
+            ));
+        }
+        (
+            ProblemOperation::Inequality,
+            ProblemStatement::Comparison {
+                left,
+                right,
+                operator,
+            },
+            ProblemEvidence::Inequality(candidate),
+        ) => {
+            if source_is_refuted(left) || source_is_refuted(right) {
+                return Err(ProblemError::InvalidEvidence);
+            }
+            match context.verify_expression_inequality(
+                left,
+                right,
+                variable.expect("validated variable"),
+                *operator,
+                candidate,
+            ) {
+                Ok(true) => {}
+                Ok(false) => return Err(ProblemError::InvalidEvidence),
+                Err(error) => return inequality_failure(request, error),
+            }
+            let outcome = if candidate.intervals().is_empty() {
+                ProblemOutcome::NoSolutions
+            } else {
+                ProblemOutcome::SolvedExact(ExactAnswer::Intervals(candidate.intervals().to_vec()))
+            };
+            return Ok(with_exclusions(
+                checked_result(
+                    request,
+                    outcome,
+                    CheckedBy::RationalInequalitySigns,
+                    Vec::new(),
+                ),
+                candidate.excluded_zero_sets(),
+            ));
+        }
         _ => return Err(ProblemError::StatementMismatch),
     };
     Ok(checked_result(request, outcome, proof, steps))
@@ -636,10 +1092,10 @@ pub fn dispatch_problem(
     if let Some(rejection) = validate_request(request)? {
         return Ok(rejection);
     }
-    let variable = &request.variables[0];
+    let variable = request.variables.first();
     match (&request.operation, &request.statement) {
         (ProblemOperation::SolveLinear, ProblemStatement::Equation(equation)) => {
-            match context.solve_linear(equation, variable) {
+            match context.solve_linear(equation, variable.expect("validated variable")) {
                 Ok(proof) => {
                     adapt_verified_problem(context, request, ProblemEvidence::Linear(&proof))
                 }
@@ -688,7 +1144,11 @@ pub fn dispatch_problem(
                     ProblemOutcome::Undefined(UndefinedReason::ContradictedDomainCondition),
                 ));
             }
-            match context.differentiate_domain_expression(source, variable, request.domain) {
+            match context.differentiate_domain_expression(
+                source,
+                variable.expect("validated variable"),
+                request.domain,
+            ) {
                 Ok(proof) => {
                     adapt_verified_problem(context, request, ProblemEvidence::Derivative(&proof))
                 }
@@ -707,14 +1167,397 @@ pub fn dispatch_problem(
             Err(error) => handle_evaluation_error(request, error),
         },
         (ProblemOperation::Integrate, ProblemStatement::Expression(source)) => {
-            match context.check_expression(source.expression()) {
-                Ok(()) => Ok(unsupported(
+            if source_is_refuted(source) {
+                return Ok(result(
                     request,
-                    UnsupportedReason::AlgorithmNotAvailable,
-                )),
-                Err(error) => handle_evaluation_error(request, error),
+                    ProblemOutcome::Undefined(UndefinedReason::ContradictedDomainCondition),
+                ));
             }
+            match context.integrate_expression_dispatch(
+                source,
+                variable.expect("validated variable"),
+                request.domain,
+            ) {
+                Ok(proof) => {
+                    adapt_verified_problem(context, request, ProblemEvidence::Integration(&proof))
+                }
+                Err(error) => integration_failure(request, error),
+            }
+        }
+        (ProblemOperation::Expand, ProblemStatement::Expression(source)) => {
+            if source_is_refuted(source) {
+                return Ok(result(
+                    request,
+                    ProblemOutcome::Undefined(UndefinedReason::ContradictedDomainCondition),
+                ));
+            }
+            match expand_polynomial(source, &request.variables, expansion_limits(context)) {
+                PolynomialExpansionOutcome::Exact(proof) => {
+                    adapt_verified_problem(context, request, ProblemEvidence::Expansion(&proof))
+                }
+                PolynomialExpansionOutcome::Unsupported(error)
+                | PolynomialExpansionOutcome::ResourceLimited(error) => {
+                    expansion_failure(request, error)
+                }
+            }
+        }
+        (
+            ProblemOperation::Limit,
+            ProblemStatement::Limit {
+                source,
+                at,
+                direction,
+            },
+        ) => {
+            if source_is_refuted(source) {
+                return Ok(result(
+                    request,
+                    ProblemOutcome::Undefined(UndefinedReason::ContradictedDomainCondition),
+                ));
+            }
+            match context.rational_expression_limit(
+                source,
+                variable.expect("validated variable"),
+                at,
+                *direction,
+            ) {
+                Ok(proof) => {
+                    adapt_verified_problem(context, request, ProblemEvidence::Limit(&proof))
+                }
+                Err(LimitError::Evaluation(error)) => handle_evaluation_error(request, error),
+                Err(LimitError::Conversion(error)) => conversion_failure(request, error),
+                Err(LimitError::Verification(LimitVerificationError::Evaluation(error))) => {
+                    handle_evaluation_error(request, error)
+                }
+                Err(_) => Err(ProblemError::InvalidEvidence),
+            }
+        }
+        (
+            ProblemOperation::Inequality,
+            ProblemStatement::Comparison {
+                left,
+                right,
+                operator,
+            },
+        ) => {
+            if source_is_refuted(left) || source_is_refuted(right) {
+                return Ok(result(
+                    request,
+                    ProblemOutcome::Undefined(UndefinedReason::ContradictedDomainCondition),
+                ));
+            }
+            match context.solve_expression_inequality(
+                left,
+                right,
+                variable.expect("validated variable"),
+                *operator,
+            ) {
+                Ok(proof) => {
+                    adapt_verified_problem(context, request, ProblemEvidence::Inequality(&proof))
+                }
+                Err(error) => inequality_failure(request, error),
+            }
+        }
+        (ProblemOperation::SolveAuto, ProblemStatement::SourceEquation { left, right }) => {
+            solve_auto(
+                context,
+                request,
+                left,
+                right,
+                variable.expect("validated variable"),
+            )
+        }
+        (ProblemOperation::EvaluateExact, ProblemStatement::Expression(source)) => {
+            evaluate_exact(context, request, source)
         }
         _ => Err(ProblemError::StatementMismatch),
     }
+}
+
+fn solve_auto(
+    context: &EvaluationContext,
+    request: &ProblemRequest,
+    left: &DomainExpression,
+    right: &DomainExpression,
+    variable: &Symbol,
+) -> Result<ProblemResult, ProblemError> {
+    if source_is_refuted(left) || source_is_refuted(right) {
+        return Ok(result(
+            request,
+            ProblemOutcome::Undefined(UndefinedReason::ContradictedDomainCondition),
+        ));
+    }
+    let (original_left, original_right) = (left, right);
+    let left = match context.rational_expression(left, variable) {
+        Ok(value) => value,
+        Err(error) => return conversion_failure(request, error),
+    };
+    let right = match context.rational_expression(right, variable) {
+        Ok(value) => value,
+        Err(error) => return conversion_failure(request, error),
+    };
+    if request.domain == ScalarDomain::Complex
+        && left.excluded_zero_sets().is_empty()
+        && right.excluded_zero_sets().is_empty()
+    {
+        let residual = match context.subtract_rational_functions(&left, &right) {
+            Ok(value) => value,
+            Err(error) => return handle_evaluation_error(request, error),
+        };
+        if residual.excluded_zero_sets().is_empty() && residual.denominator().degree() == Some(0) {
+            if left.denominator().degree() != Some(0)
+                || right.denominator().degree() != Some(0)
+                || left.numerator().subtract(right.numerator()) != *residual.numerator()
+            {
+                return Err(ProblemError::InvalidEvidence);
+            }
+            let polynomial = ProblemRequest {
+                operation: ProblemOperation::ComplexPolynomialRoots,
+                statement: ProblemStatement::PolynomialZero(residual.numerator().clone()),
+                variables: request.variables.clone(),
+                domain: request.domain,
+            };
+            let mut checked = dispatch_problem(context, &polynomial)?;
+            checked.request = request.clone();
+            checked.restrictions = restrictions(&request.statement);
+            return Ok(checked);
+        }
+    }
+    let checked = match context.solve_rational_quadratic_equation(&left, &right) {
+        Ok(value) => value,
+        Err(error) => return handle_evaluation_error(request, error),
+    };
+    if checked.left() != &left
+        || checked.right() != &right
+        || verify_rational_quadratic_equation(&checked).is_err()
+    {
+        return Err(ProblemError::InvalidEvidence);
+    }
+    // Check the rational solution set against both original operands, not only
+    // the reduced numerator. A complex request still has only rational scope
+    // on this fallback path.
+    use crate::{
+        CertifiedSolutionSet, SolutionCertificateError, certify_solution_set, verify_solution_set,
+    };
+    let certificate = match certify_solution_set(
+        context,
+        original_left,
+        original_right,
+        variable,
+        ScalarDomain::Rational,
+        &[],
+    ) {
+        Ok(value) => value,
+        Err(SolutionCertificateError::Evaluation(error)) => {
+            return handle_evaluation_error(request, error);
+        }
+        Err(SolutionCertificateError::Expression(error)) => {
+            return conversion_failure(request, error);
+        }
+        Err(_) => return Err(ProblemError::InvalidEvidence),
+    };
+    match verify_solution_set(
+        context,
+        original_left,
+        original_right,
+        variable,
+        ScalarDomain::Rational,
+        &certificate,
+    ) {
+        Ok(true) => {}
+        Ok(false) => return Err(ProblemError::InvalidEvidence),
+        Err(SolutionCertificateError::Evaluation(error)) => {
+            return handle_evaluation_error(request, error);
+        }
+        Err(SolutionCertificateError::Expression(error)) => {
+            return conversion_failure(request, error);
+        }
+        Err(_) => return Err(ProblemError::InvalidEvidence),
+    }
+    let agrees = match (&certificate.solutions, checked.roots()) {
+        (CertifiedSolutionSet::None, RationalQuadraticRoots::Finite(values)) => values.is_empty(),
+        (CertifiedSolutionSet::Finite(roots), RationalQuadraticRoots::Finite(values)) => {
+            roots.len() == values.len()
+                && roots.iter().all(|root| match root.root() {
+                    crate::ExactQuadraticRoot::Rational(value) => values.contains(value),
+                    _ => false,
+                })
+        }
+        (CertifiedSolutionSet::AllAdmissible, RationalQuadraticRoots::AllAdmissibleRationals) => {
+            true
+        }
+        _ => false,
+    };
+    if !agrees {
+        return Err(ProblemError::InvalidEvidence);
+    }
+    let outcome = match checked.roots() {
+        RationalQuadraticRoots::Finite(values) if request.domain == ScalarDomain::Complex => {
+            ProblemOutcome::PartialScope {
+                known: ExactAnswer::RationalRoots(values.clone()),
+                reason: UnsupportedReason::Domain,
+            }
+        }
+        RationalQuadraticRoots::AllAdmissibleRationals
+            if request.domain == ScalarDomain::Complex =>
+        {
+            ProblemOutcome::PartialScope {
+                known: ExactAnswer::AllAdmissibleValues,
+                reason: UnsupportedReason::Domain,
+            }
+        }
+        RationalQuadraticRoots::Finite(values) if values.is_empty() => ProblemOutcome::NoSolutions,
+        RationalQuadraticRoots::Finite(values) => {
+            ProblemOutcome::SolvedExact(ExactAnswer::RationalRoots(values.clone()))
+        }
+        RationalQuadraticRoots::AllAdmissibleRationals => ProblemOutcome::AllAdmissibleValues,
+    };
+    let mut published = with_exclusions(
+        checked_result(
+            request,
+            outcome,
+            CheckedBy::RationalQuadraticEquation,
+            Vec::new(),
+        ),
+        checked.domain_conditions(),
+    );
+    published.result_domain = ScalarDomain::Rational;
+    Ok(published)
+}
+
+fn analytic_failure(
+    request: &ProblemRequest,
+    error: AnalyticConstantError,
+) -> Result<ProblemResult, ProblemError> {
+    match error {
+        AnalyticConstantError::Limit(kind) => refusal(
+            request,
+            match kind {
+                AnalyticConstantLimit::Nodes | AnalyticConstantLimit::NameBytes => {
+                    ResourceLimitKind::ExpressionNodes
+                }
+                AnalyticConstantLimit::Depth => ResourceLimitKind::ExpressionDepth,
+                AnalyticConstantLimit::Conditions => ResourceLimitKind::RationalConditions,
+                AnalyticConstantLimit::ScalarBits => ResourceLimitKind::ScalarBits,
+                AnalyticConstantLimit::Work | AnalyticConstantLimit::Configuration => {
+                    ResourceLimitKind::WorkUnits
+                }
+            },
+        ),
+        AnalyticConstantError::Unsupported(_) => Ok(unsupported(
+            request,
+            UnsupportedReason::ExpressionOutsideAlgorithm,
+        )),
+        AnalyticConstantError::Definedness(error) => definedness_failure(request, error),
+        AnalyticConstantError::ContradictedCondition(condition) => {
+            let mut published = result(
+                request,
+                ProblemOutcome::Undefined(UndefinedReason::ContradictedDomainCondition),
+            );
+            let restriction = ProblemRestriction::Condition(condition);
+            if !published.restrictions.contains(&restriction) {
+                published.restrictions.push(restriction);
+            }
+            Ok(published)
+        }
+        AnalyticConstantError::InvalidRulePath => Err(ProblemError::InvalidEvidence),
+    }
+}
+
+fn evaluate_exact(
+    context: &EvaluationContext,
+    request: &ProblemRequest,
+    source: &DomainExpression,
+) -> Result<ProblemResult, ProblemError> {
+    const MAX_REWRITES: usize = 16;
+    let configured = context.limits();
+    let defaults = AnalyticConstantLimits::default();
+    let limits = AnalyticConstantLimits {
+        max_nodes: defaults.max_nodes.min(configured.max_expression_nodes),
+        max_depth: defaults.max_depth.min(configured.max_expression_depth),
+        max_conditions: defaults
+            .max_conditions
+            .min(configured.max_rational_conditions),
+        max_scalar_bits: defaults
+            .max_scalar_bits
+            .min(configured.max_scalar_bits)
+            .min(configured.max_intermediate_scalar_bits),
+        max_work: defaults.max_work.min(
+            usize::try_from(configured.max_work_units / (2 * MAX_REWRITES as u64 + 1))
+                .unwrap_or(usize::MAX),
+        ),
+    };
+    let mut current = source.clone();
+    let mut steps = Vec::new();
+    let mut retained = source.conditions().to_vec();
+    let mut exhausted = true;
+    for index in 0..MAX_REWRITES {
+        match rewrite_analytic_constant_once(&current, request.domain, limits) {
+            Ok(AnalyticConstantOutcome::Exact(proof)) => {
+                match verify_analytic_constant_rewrite(&current, request.domain, &proof, limits) {
+                    Ok(true) => {}
+                    Ok(false) => return Err(ProblemError::InvalidEvidence),
+                    Err(error) => return analytic_failure(request, error),
+                }
+                if let Err(error) = admit_source(context, &proof.result) {
+                    return handle_evaluation_error(request, error);
+                }
+                steps.push(StepReference {
+                    index,
+                    rule_id: proof.rule.stable_id(),
+                });
+                current = proof.result;
+                retained = current.conditions().to_vec();
+            }
+            Ok(AnalyticConstantOutcome::NoRule {
+                retained_conditions,
+            }) => {
+                retained = retained_conditions;
+                exhausted = false;
+                break;
+            }
+            Ok(AnalyticConstantOutcome::Unsupported(_)) => {
+                return Ok(unsupported(
+                    request,
+                    UnsupportedReason::ExpressionOutsideAlgorithm,
+                ));
+            }
+            Err(error) => return analytic_failure(request, error),
+        }
+    }
+    let value = match current.expression().view() {
+        ExprView::Integer(value) => Some(Rational::from(value.clone())),
+        ExprView::Rational(value) => Some(value.clone()),
+        _ => None,
+    };
+    let outcome = if let Some(value) = value {
+        conditional_answer(ExactAnswer::Rational(value), &retained)
+    } else if steps.is_empty() {
+        return Ok(unsupported(
+            request,
+            UnsupportedReason::ExpressionOutsideAlgorithm,
+        ));
+    } else {
+        ProblemOutcome::PartialScope {
+            known: ExactAnswer::Expression(current.expression().clone()),
+            reason: if exhausted {
+                UnsupportedReason::RewriteStepLimit
+            } else {
+                UnsupportedReason::ExpressionOutsideAlgorithm
+            },
+        }
+    };
+    let proof = if steps.is_empty() {
+        CheckedBy::RationalLiteral
+    } else {
+        CheckedBy::AnalyticConstantRules
+    };
+    let mut published = checked_result(request, outcome, proof, steps);
+    for condition in retained {
+        let restriction = ProblemRestriction::Condition(condition);
+        if !published.restrictions.contains(&restriction) {
+            published.restrictions.push(restriction);
+        }
+    }
+    Ok(published)
 }

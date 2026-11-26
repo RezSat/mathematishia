@@ -1059,7 +1059,134 @@ def solve_inequality(source: str, variable: str = "x") -> InequalityResult:
     )
 
 
+@dataclass(frozen=True)
+class AffineSystemResult:
+    variables: tuple[str, ...]
+    solution: MatrixSolution
+
+
+def solve_linear_system(
+    equations: tuple[str, ...], variables: tuple[str, ...],
+) -> AffineSystemResult:
+    """Solve rational affine equalities in the explicitly ordered variables."""
+    variables = tuple(variables)
+    kind, particular, basis = _native.solve_linear_system(list(equations), list(variables))
+    return AffineSystemResult(
+        tuple(variables),
+        MatrixSolution(kind, tuple(map(Fraction, particular)),
+                       tuple(tuple(map(Fraction, row)) for row in basis)),
+    )
+
+
+@dataclass(frozen=True)
+class MultivariateDivisionResult:
+    variables: tuple[str, ...]
+    quotients: tuple[tuple[MultivariateTerm, ...], ...]
+    remainder: tuple[MultivariateTerm, ...]
+    steps: int
+
+
+def divide_multivariate(
+    dividend: str, divisors: tuple[str, ...], variables: tuple[str, ...],
+) -> MultivariateDivisionResult:
+    """Exact ordered lexicographic division, not a Groebner normal form."""
+    variables = tuple(variables)
+    canonical_variables, quotients, remainder, steps = _native.divide_multivariate(
+        dividend, list(divisors), list(variables),
+    )
+
+    def terms(data):
+        return tuple(MultivariateTerm(tuple(powers), Fraction(value))
+                     for powers, value in data)
+
+    return MultivariateDivisionResult(
+        tuple(canonical_variables), tuple(terms(q) for q in quotients), terms(remainder), steps,
+    )
+
+
+@dataclass(frozen=True)
+class RootBracketResult:
+    kind: Literal["exact", "sign_change", "unresolved"]
+    root: Fraction | None
+    interval: tuple[Fraction, Fraction] | None
+    bisections: int
+    precision_met: bool
+
+
+def refine_real_root_bracket(
+    source: str, variable: str, lower: str, upper: str, target_width: str,
+    max_bisections: int,
+) -> RootBracketResult:
+    """Certify a rational root or existence in a sign-change interval.
+
+    An unresolved same-sign interval proves neither existence nor absence.
+    A sign change does not certify uniqueness or isolation of every root.
+    """
+    kind, root, interval, count, precision = _native.refine_real_root_bracket(
+        source, variable, lower, upper, target_width, max_bisections,
+    )
+    return RootBracketResult(
+        kind, Fraction(root) if root is not None else None,
+        (Fraction(interval[0]), Fraction(interval[1])) if interval is not None else None,
+        count, precision,
+    )
+
+
+@dataclass(frozen=True)
+class ProblemResult:
+    """Versioned checked result. The JSON is data, not a reusable certificate."""
+    json: str
+
+    def to_json(self) -> str:
+        return self.json
+
+    def as_dict(self) -> dict:
+        import json
+        return json.loads(self.json)
+
+    @property
+    def status(self) -> str:
+        return self.as_dict()["outcome"]["status"]
+
+    @property
+    def result_domain(self) -> str:
+        return self.as_dict()["result_domain"]
+
+
+def problem(*args: str) -> ProblemResult:
+    """Use the same checked request and versioned result as CLI --json."""
+    return ProblemResult(_native.problem_json(list(args)))
+
+
+def solveauto(source: str, variable: str = "x") -> ProblemResult:
+    """Automatic checked equation dispatch (complex request, explicit result domain)."""
+    return problem("solveauto", source, variable)
+
+
+def evalexact(source: str) -> ProblemResult:
+    """Evaluate the supported exact analytic constants."""
+    return problem("evalexact", source)
+
+
+@dataclass(frozen=True)
+class IsolatedRealRoot:
+    lower: Fraction
+    upper: Fraction
+    midpoint: Fraction
+    error_bound: Fraction
+
+
+def isolate_real_roots(source: str, variable: str, target_width: str) -> tuple[IsolatedRealRoot, ...]:
+    """Complete disjoint root brackets for nonzero square-free unrestricted Q[x]."""
+    return tuple(IsolatedRealRoot(*map(Fraction, row)) for row in
+                 _native.isolate_real_roots(source, variable, target_width))
+
+
 __all__ = [
+    "ProblemResult", "problem", "solveauto", "evalexact",
+    "IsolatedRealRoot", "isolate_real_roots",
+    "AffineSystemResult", "solve_linear_system", "MultivariateDivisionResult",
+    "divide_multivariate", "RootBracketResult", "refine_real_root_bracket",
     "LimitFactor", "LimitResult", "limit", "RealBound", "RealInterval",
     "InequalityCriticalPoint", "InequalityResult", "solve_inequality",
     "MultivariateTerm", "PolynomialExpansion", "expand_polynomial", "expandall",

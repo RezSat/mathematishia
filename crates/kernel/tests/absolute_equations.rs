@@ -48,16 +48,28 @@ fn assert_solutions(equation: &AbsoluteEquation, expected: Vec<AbsoluteInterval>
     assert_eq!(equation.domain, ScalarDomain::Real);
     let result = solve_absolute_equation(&context, equation).unwrap();
     assert_eq!(result.solutions, expected);
-    assert_eq!(verify_absolute_equation(&context, equation, &result), Ok(true));
+    assert_eq!(
+        verify_absolute_equation(&context, equation, &result),
+        Ok(true)
+    );
     assert_eq!(solve_absolute_equation(&context, equation), Ok(result));
 }
 
 #[test]
 fn common_absolute_value_questions() {
     let abs = [(1, 0)];
-    assert_solutions(&equation(expr(1, 0, &abs), expr(0, 3, &[])), points(&[-3, 3]));
-    assert_solutions(&equation(expr(2, -5, &abs), expr(0, 7, &[])), points(&[-1, 6]));
-    assert_solutions(&equation(expr(1, -1, &abs), expr(1, 3, &abs)), points(&[-1]));
+    assert_solutions(
+        &equation(expr(1, 0, &abs), expr(0, 3, &[])),
+        points(&[-3, 3]),
+    );
+    assert_solutions(
+        &equation(expr(2, -5, &abs), expr(0, 7, &[])),
+        points(&[-1, 6]),
+    );
+    assert_solutions(
+        &equation(expr(1, -1, &abs), expr(1, 3, &abs)),
+        points(&[-1]),
+    );
     assert_solutions(
         &equation(expr(1, 0, &[(1, -2), (1, 0)]), expr(0, 1, &[])),
         points(&[-3, -1, 1, 3]),
@@ -132,20 +144,14 @@ fn identities_and_closed_rays() {
 #[test]
 fn bounded_interval_and_disjoint_rays() {
     assert_solutions(
-        &equation(
-            expr(1, 0, &[(1, -1), (1, 0)]),
-            expr(1, 0, &[(-1, 1)]),
-        ),
+        &equation(expr(1, 0, &[(1, -1), (1, 0)]), expr(1, 0, &[(-1, 1)])),
         vec![AbsoluteInterval {
             lower: Some(q(-1, 1)),
             upper: Some(q(1, 1)),
         }],
     );
     assert_solutions(
-        &equation(
-            expr(1, 0, &[(1, -1), (1, 0)]),
-            expr(1, 0, &[(1, -1)]),
-        ),
+        &equation(expr(1, 0, &[(1, -1), (1, 0)]), expr(1, 0, &[(1, -1)])),
         vec![
             AbsoluteInterval {
                 lower: None,
@@ -204,29 +210,47 @@ fn forged_certificates_fail_against_original_equation() {
     let result = solve_absolute_equation(&context, &source).unwrap();
     let mut forged = result.clone();
     forged.cases.pop();
-    assert_eq!(verify_absolute_equation(&context, &source, &forged), Ok(false));
+    assert_eq!(
+        verify_absolute_equation(&context, &source, &forged),
+        Ok(false)
+    );
 
     let mut forged = result.clone();
     forged.cases[0].interval.upper = Some(q(-1, 1));
-    assert_eq!(verify_absolute_equation(&context, &source, &forged), Ok(false));
+    assert_eq!(
+        verify_absolute_equation(&context, &source, &forged),
+        Ok(false)
+    );
 
     let mut forged = result.clone();
     forged.cases[0].signs[0] = AbsoluteSign::Nonnegative;
-    assert_eq!(verify_absolute_equation(&context, &source, &forged), Ok(false));
+    assert_eq!(
+        verify_absolute_equation(&context, &source, &forged),
+        Ok(false)
+    );
 
     let mut forged = result.clone();
     forged.cases[0].solution = None;
     forged.solutions.remove(0);
-    assert_eq!(verify_absolute_equation(&context, &source, &forged), Ok(false));
+    assert_eq!(
+        verify_absolute_equation(&context, &source, &forged),
+        Ok(false)
+    );
 
     let mut forged = result.clone();
     forged.cases[0].solution = Some(point(q(-2, 1)));
     forged.solutions[0] = point(q(-2, 1));
-    assert_eq!(verify_absolute_equation(&context, &source, &forged), Ok(false));
+    assert_eq!(
+        verify_absolute_equation(&context, &source, &forged),
+        Ok(false)
+    );
 
     let mut forged = result.clone();
     forged.solutions.reverse();
-    assert_eq!(verify_absolute_equation(&context, &source, &forged), Ok(false));
+    assert_eq!(
+        verify_absolute_equation(&context, &source, &forged),
+        Ok(false)
+    );
 
     let negative_target = equation(expr(1, 0, &[(1, 0)]), expr(0, -3, &[]));
     assert_eq!(
@@ -243,11 +267,17 @@ fn forged_identity_and_overlapping_partition_fail() {
     let mut forged = result.clone();
     forged.cases[1].solution = Some(point(q(0, 1)));
     forged.solutions = points(&[0]);
-    assert_eq!(verify_absolute_equation(&context, &source, &forged), Ok(false));
+    assert_eq!(
+        verify_absolute_equation(&context, &source, &forged),
+        Ok(false)
+    );
 
     let mut forged = result;
     forged.cases[0].interval.upper = Some(q(1, 1));
-    assert_eq!(verify_absolute_equation(&context, &source, &forged), Ok(false));
+    assert_eq!(
+        verify_absolute_equation(&context, &source, &forged),
+        Ok(false)
+    );
 }
 
 #[test]
@@ -323,7 +353,10 @@ fn resource_limits_apply_to_generation_and_untrusted_evidence() {
         let context = EvaluationContext::new(limits);
         let error = AbsoluteEquationError::Evaluation(EvaluationError::Limit(kind));
         assert_eq!(solve_absolute_equation(&context, &source), Err(error));
-        assert_eq!(verify_absolute_equation(&context, &source, &result), Err(error));
+        assert_eq!(
+            verify_absolute_equation(&context, &source, &result),
+            Err(error)
+        );
     }
     let over_limit = equation(expr(1, 0, &[(1, 0); 9]), expr(0, 1, &[]));
     assert_eq!(
@@ -332,5 +365,8 @@ fn resource_limits_apply_to_generation_and_untrusted_evidence() {
     );
     let mut forged = result;
     forged.cases.push(forged.cases[0].clone());
-    assert_eq!(verify_absolute_equation(&context, &source, &forged), Ok(false));
+    assert_eq!(
+        verify_absolute_equation(&context, &source, &forged),
+        Ok(false)
+    );
 }

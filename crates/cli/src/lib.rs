@@ -3,6 +3,7 @@
 //! The CLI owns input/output formatting only; mathematical behavior lives in
 //! mathema-frontend and mathematishia-kernel.
 
+mod legacy_operations;
 mod real_analysis;
 mod user_solve;
 
@@ -35,6 +36,10 @@ Usage:
   mathematishia solve <EQUATION> <VARIABLE>
   mathematishia solveauto <EQUATION> [VARIABLE]  (defaults to x)
   mathematishia roots <POLYNOMIAL> [VARIABLE]
+  mathematishia sturm <POLYNOMIAL> <VARIABLE> <LOWER> <UPPER>
+  mathematishia rootbracket <POLYNOMIAL> <VARIABLE> <LOWER> <UPPER> <WIDTH> <MAX_BISECTIONS>
+  mathematishia linsystem <VARIABLES_CSV> <EQUATION> ...
+  mathematishia mvdivide <VARIABLES_CSV> <DIVIDEND> <DIVISOR> ...
   mathematishia limit <EXPRESSION> <VARIABLE> <POINT> [left|right|two-sided]
   mathematishia inequality <COMPARISON> [VARIABLE]
   mathematishia integrate <EXPRESSION> [VARIABLE]
@@ -91,6 +96,10 @@ Examples:
   mathematishia solveauto 'x^2-2=0'
   mathematishia solveauto '(x^2-1)/(x-1)=3'
   mathematishia roots 'x^3-2'
+  mathematishia sturm 'x^2-2' x -2 2
+  mathematishia rootbracket 'x^2-2' x 1 2 '1/16' 8
+  mathematishia linsystem x,y 'x+y=3' 'x-y=1'
+  mathematishia mvdivide x,y 'x*y+1' x y
   mathematishia integrate 'x^2' x 0 2
   mathematishia integrate 'x^2+sin(2*x)' x
   mathematishia evalexact 'sin(0)'
@@ -395,7 +404,7 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
         [] | ["--help" | "-h" | "help"] => Ok(HELP.to_owned()),
         [
             "expandall" | "solveauto" | "roots" | "integrate" | "evalexact" | "limit"
-            | "inequality",
+            | "inequality" | "sturm" | "rootbracket" | "linsystem" | "mvdivide",
             ..,
         ] if args.contains(&"--json") => Err(problem_error(
             CliErrorKind::Unsupported,
@@ -413,6 +422,15 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
         }
         ["inequality", input] => real_analysis::inequality(input, "x"),
         ["inequality", input, name] => real_analysis::inequality(input, name),
+        ["sturm", input, name, lower, upper] => real_analysis::sturm(input, name, lower, upper),
+        ["rootbracket", input, name, lower, upper, width, max] => {
+            legacy_operations::root_bracket(input, name, lower, upper, width, max)
+        }
+        ["linsystem", names, equations @ ..] => legacy_operations::linear_system(names, equations),
+        ["mvdivide", names, dividend, divisors @ ..] => {
+            legacy_operations::multivariate_division(names, dividend, divisors)
+        }
+
         ["limit", input, name, at] => real_analysis::limit(input, name, at, "two-sided"),
         ["limit", input, name, at, direction] => real_analysis::limit(input, name, at, direction),
         ["solveauto", input] => user_solve::solve_auto(input, "x"),

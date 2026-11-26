@@ -120,12 +120,7 @@ pub fn rewrite_domain_once(
             let end = graph.add_composite_cancellation(root, parents, step)?;
             graph.select_conclusion(end);
             verify_proof_graph(source.expression(), assumptions, &graph)?;
-            let result = DomainExpression::with_conditions(
-                after,
-                source.conditions().iter().cloned(),
-                MAX_NODES,
-                MAX_CONDITIONS,
-            )?;
+            let result = source.rebuild_with_expression(after, MAX_NODES, MAX_CONDITIONS)?;
             return Ok(DomainRewriteOutcome::Applied(DomainRewrite {
                 result,
                 proof: graph,
@@ -148,12 +143,7 @@ pub fn rewrite_domain_once(
             let end = graph.add_guarded_cancellation(root, parent, step)?;
             graph.select_conclusion(end);
             verify_proof_graph(source.expression(), assumptions, &graph)?;
-            let result = DomainExpression::with_conditions(
-                after,
-                source.conditions().iter().cloned(),
-                MAX_NODES,
-                MAX_CONDITIONS,
-            )?;
+            let result = source.rebuild_with_expression(after, MAX_NODES, MAX_CONDITIONS)?;
             Ok(DomainRewriteOutcome::Applied(DomainRewrite {
                 result,
                 proof: graph,

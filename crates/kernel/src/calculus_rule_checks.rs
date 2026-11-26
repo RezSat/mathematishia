@@ -28,6 +28,7 @@ pub enum RationalCalculusError {
     UnsupportedExponent,
     UnsupportedFunction,
     UnsupportedCondition,
+    DomainMismatch,
     NameLimit,
     NewExclusion,
     IncorrectIdentity,
@@ -44,6 +45,7 @@ impl fmt::Display for RationalCalculusError {
             Self::UnsupportedCondition => {
                 f.write_str("only rational nonzero conditions are supported")
             }
+            Self::DomainMismatch => f.write_str("calculus source was constructed in a different scalar domain"),
             Self::NameLimit => f.write_str("symbol name exceeds the admission limit"),
             Self::NewExclusion => {
                 f.write_str("candidate domain is not established on the source domain")
@@ -146,6 +148,7 @@ impl<'a> Checker<'a> {
     }
 
     fn admit(&mut self, input: &DomainExpression) -> Result<(), RationalCalculusError> {
+        input.check_construction_domain(mathema::ScalarDomain::Real).map_err(|_| RationalCalculusError::DomainMismatch)?;
         if input.conditions().len() > self.context.limits().max_rational_conditions {
             return Err(EvaluationError::Limit(ResourceLimitKind::RationalConditions).into());
         }

@@ -57,6 +57,7 @@ mod root_isolation;
 mod solution_certificates;
 mod solve_linear;
 mod square_free;
+pub mod step_records;
 mod sturm_count;
 mod verification;
 

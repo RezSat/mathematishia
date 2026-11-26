@@ -71,9 +71,10 @@ fn absolute_failure(
         AbsoluteEquationError::MultipleVariables => {
             Ok(unsupported(request, UnsupportedReason::SeveralVariables))
         }
-        AbsoluteEquationError::MissingAbsoluteValue => {
-            Ok(unsupported(request, UnsupportedReason::ExpressionOutsideAlgorithm))
-        }
+        AbsoluteEquationError::MissingAbsoluteValue => Ok(unsupported(
+            request,
+            UnsupportedReason::ExpressionOutsideAlgorithm,
+        )),
         AbsoluteEquationError::VerificationFailed => Err(ProblemError::InvalidEvidence),
     }
 }
@@ -83,22 +84,25 @@ fn trig_limits(context: &EvaluationContext) -> TrigLimits {
         max_input_bits: TrigLimits::default()
             .max_input_bits
             .min(context.limits().max_scalar_bits)
-            .min(context.limits().max_intermediate_scalar_bits.saturating_sub(5)),
+            .min(
+                context
+                    .limits()
+                    .max_intermediate_scalar_bits
+                    .saturating_sub(5),
+            ),
     }
 }
 
-fn trig_failure(
-    request: &ProblemRequest,
-    error: TrigError,
-) -> Result<ProblemResult, ProblemError> {
+fn trig_failure(request: &ProblemRequest, error: TrigError) -> Result<ProblemResult, ProblemError> {
     match error {
         TrigError::ScalarLimit | TrigError::InvalidLimits => {
             refusal(request, ResourceLimitKind::ScalarBits)
         }
         TrigError::UnsupportedDomain(_) => Ok(unsupported(request, UnsupportedReason::Domain)),
-        TrigError::UnsupportedAngle | TrigError::UnsupportedEquation => {
-            Ok(unsupported(request, UnsupportedReason::ExpressionOutsideAlgorithm))
-        }
+        TrigError::UnsupportedAngle | TrigError::UnsupportedEquation => Ok(unsupported(
+            request,
+            UnsupportedReason::ExpressionOutsideAlgorithm,
+        )),
         TrigError::InvalidEvidence => Err(ProblemError::InvalidEvidence),
     }
 }
@@ -111,9 +115,10 @@ fn groebner_failure(
         GroebnerError::GeneratorLimit
         | GroebnerError::BasisLimit
         | GroebnerError::VariableNameLimit => refusal(request, ResourceLimitKind::ExpressionNodes),
-        GroebnerError::RestrictedDomain { .. } => {
-            Ok(unsupported(request, UnsupportedReason::ExpressionOutsideAlgorithm))
-        }
+        GroebnerError::RestrictedDomain { .. } => Ok(unsupported(
+            request,
+            UnsupportedReason::ExpressionOutsideAlgorithm,
+        )),
         GroebnerError::Polynomial(error) => {
             expansion_failure(request, MultivariateExprError::Polynomial(error))
         }
@@ -181,9 +186,8 @@ pub(super) fn dispatch(
 }
 
 fn zero_angles(function: TrigFunction) -> Option<[Rational; 2]> {
-    let ratio = |n, d| {
-        Rational::new(Integer::from(n), Integer::from(d)).expect("nonzero denominator")
-    };
+    let ratio =
+        |n, d| Rational::new(Integer::from(n), Integer::from(d)).expect("nonzero denominator");
     match function {
         TrigFunction::Sin => Some([ratio(0_i64, 1_i64), ratio(1, 1)]),
         TrigFunction::Cos => Some([ratio(1, 2), ratio(3, 2)]),
@@ -205,9 +209,17 @@ pub(super) fn adapt(
             }
             let answer = ExactAnswer::Absolute(candidate.clone());
             if candidate.solutions.is_empty() {
-                (ProblemOutcome::NoSolutions, CheckedBy::AbsoluteSignCases, Some(answer))
+                (
+                    ProblemOutcome::NoSolutions,
+                    CheckedBy::AbsoluteSignCases,
+                    Some(answer),
+                )
             } else {
-                (ProblemOutcome::SolvedExact(answer), CheckedBy::AbsoluteSignCases, None)
+                (
+                    ProblemOutcome::SolvedExact(answer),
+                    CheckedBy::AbsoluteSignCases,
+                    None,
+                )
             }
         }
         (
@@ -230,7 +242,8 @@ pub(super) fn adapt(
                     context.check_rational(value)
                 }
                 SpecialAngleOutcome::Exact(ExactQuadraticRoot::Algebraic {
-                    minimal_polynomial, ..
+                    minimal_polynomial,
+                    ..
                 }) => context.check_polynomial(minimal_polynomial),
                 SpecialAngleOutcome::UndefinedTangentPole => Ok(()),
             };
@@ -245,12 +258,19 @@ pub(super) fn adapt(
                     Some(answer),
                 )
             } else {
-                (ProblemOutcome::SolvedExact(answer), CheckedBy::SpecialAngleIdentity, None)
+                (
+                    ProblemOutcome::SolvedExact(answer),
+                    CheckedBy::SpecialAngleIdentity,
+                    None,
+                )
             }
         }
         (ProblemStatement::TrigZeros(function), ProblemEvidence::TrigZeros(candidates)) => {
             let Some(angles) = zero_angles(*function) else {
-                return Ok(unsupported(request, UnsupportedReason::ExpressionOutsideAlgorithm));
+                return Ok(unsupported(
+                    request,
+                    UnsupportedReason::ExpressionOutsideAlgorithm,
+                ));
             };
             if candidates.len() != angles.len() {
                 return Err(ProblemError::InvalidEvidence);
@@ -284,7 +304,10 @@ pub(super) fn adapt(
             )
         }
         (
-            ProblemStatement::Ideal { generators, target: None },
+            ProblemStatement::Ideal {
+                generators,
+                target: None,
+            },
             ProblemEvidence::Groebner(candidate),
         ) => {
             match verify_groebner_basis_from_domain_expressions(
@@ -304,7 +327,10 @@ pub(super) fn adapt(
             )
         }
         (
-            ProblemStatement::Ideal { generators, target: Some(target) },
+            ProblemStatement::Ideal {
+                generators,
+                target: Some(target),
+            },
             ProblemEvidence::Membership(basis, candidate),
         ) => {
             match verify_ideal_membership_from_domain_expressions(

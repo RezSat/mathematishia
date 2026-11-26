@@ -86,7 +86,10 @@ fn stable(request: &ProblemRequest) -> ProblemResult {
     let json = checked.to_json().unwrap();
     assert_eq!(
         json,
-        dispatch_problem(&context, request).unwrap().to_json().unwrap()
+        dispatch_problem(&context, request)
+            .unwrap()
+            .to_json()
+            .unwrap()
     );
     assert!(json.starts_with(request.to_json().unwrap().strip_suffix('}').unwrap()));
     checked
@@ -144,7 +147,12 @@ fn special_angle_retains_exact_algebraic_branch() {
             ..
         })
     ));
-    assert!(checked.to_json().unwrap().contains("\"minimal_polynomial\""));
+    assert!(
+        checked
+            .to_json()
+            .unwrap()
+            .contains("\"minimal_polynomial\"")
+    );
 }
 
 #[test]
@@ -154,7 +162,12 @@ fn tangent_pole_is_checked_undefined_not_a_numeric_answer() {
         checked.outcome(),
         &ProblemOutcome::Undefined(UndefinedReason::TangentPole)
     );
-    assert!(checked.to_json().unwrap().contains("\"undefined_tangent_pole\""));
+    assert!(
+        checked
+            .to_json()
+            .unwrap()
+            .contains("\"undefined_tangent_pole\"")
+    );
     assert!(checked.evidence_detail().is_some());
 }
 
@@ -170,13 +183,21 @@ fn special_angle_wrong_source_and_forged_tick_are_rejected() {
     )
     .unwrap();
     assert_eq!(
-        adapt_verified_problem(&context, &request, ProblemEvidence::SpecialAngle(&candidate)),
+        adapt_verified_problem(
+            &context,
+            &request,
+            ProblemEvidence::SpecialAngle(&candidate)
+        ),
         Err(ProblemError::InvalidEvidence)
     );
     candidate.angle = PiMultiple::new(q(1, 6));
     candidate.tick = 0;
     assert_eq!(
-        adapt_verified_problem(&context, &request, ProblemEvidence::SpecialAngle(&candidate)),
+        adapt_verified_problem(
+            &context,
+            &request,
+            ProblemEvidence::SpecialAngle(&candidate)
+        ),
         Err(ProblemError::InvalidEvidence)
     );
 }
@@ -191,17 +212,26 @@ fn trig_zeros_are_partial_and_exact() {
             reason: UnsupportedReason::PeriodicCompletenessUnavailable,
         } if certificates.len() == 2
     ));
-    assert!(checked.to_json().unwrap().contains("\"status\":\"partial\""));
+    assert!(
+        checked
+            .to_json()
+            .unwrap()
+            .contains("\"status\":\"partial\"")
+    );
 }
 
 #[test]
 fn incomplete_trig_evidence_and_unsupported_angles_are_not_complete() {
     let context = EvaluationContext::default();
     let request = zeros(TrigFunction::Sin);
-    let proof = partial_trig_zeros(TrigFunction::Sin, ScalarDomain::Real, TrigLimits::default())
-        .unwrap();
+    let proof =
+        partial_trig_zeros(TrigFunction::Sin, ScalarDomain::Real, TrigLimits::default()).unwrap();
     assert_eq!(
-        adapt_verified_problem(&context, &request, ProblemEvidence::TrigZeros(&proof.known_zeros()[..1])),
+        adapt_verified_problem(
+            &context,
+            &request,
+            ProblemEvidence::TrigZeros(&proof.known_zeros()[..1])
+        ),
         Err(ProblemError::InvalidEvidence)
     );
     assert!(matches!(
@@ -239,7 +269,11 @@ fn forged_ideal_membership_status_cannot_be_published() {
     };
     let forged = IdealMembership::Member(reduction.clone());
     assert_eq!(
-        adapt_verified_problem(&context, &request, ProblemEvidence::Membership(basis, &forged)),
+        adapt_verified_problem(
+            &context,
+            &request,
+            ProblemEvidence::Membership(basis, &forged)
+        ),
         Err(ProblemError::InvalidEvidence)
     );
 }

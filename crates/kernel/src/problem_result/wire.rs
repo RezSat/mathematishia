@@ -3,14 +3,14 @@
 //! Wire values are data, never an authority to construct a checked result.
 
 use super::*;
+use crate::step_records::{
+    StepClaim, StepConclusion, StepCondition, StepEvidence, StepEvidenceSource, StepLimits,
+    StepRecord, StepRecordError, StepRecords, verify_step_records,
+};
 use crate::{
     AbsoluteAffine, AbsoluteCase, AbsoluteExpression, AbsoluteInterval, AbsoluteSign,
     ExactQuadraticRoot, GroebnerPair, GroebnerReduction, MultivariatePolynomial, RealBound,
     SpecialAngleOutcome, VerifiedCondition,
-};
-use crate::step_records::{
-    StepClaim, StepConclusion, StepCondition, StepEvidence, StepEvidenceSource, StepLimits,
-    StepRecord, StepRecordError, StepRecords, verify_step_records,
 };
 use mathema::{ExprView, Integer};
 use std::fmt;
@@ -749,26 +749,44 @@ impl Encoder {
                 "before" => |w| w.expression(before, 0),
                 "after" => |w| w.expression(after, 0),
             ),
-            StepClaim::Equivalent { before, after, variable } => object!(self,
+            StepClaim::Equivalent {
+                before,
+                after,
+                variable,
+            } => object!(self,
                 "kind" => |w| w.string("equivalent"),
                 "before" => |w| w.equation(before),
                 "after" => |w| w.equation(after),
                 "variable" => |w| w.string(variable.name()),
             ),
-            StepClaim::DerivativeOf { before, after, variable } => object!(self,
+            StepClaim::DerivativeOf {
+                before,
+                after,
+                variable,
+            } => object!(self,
                 "kind" => |w| w.string("derivative_of"),
                 "before" => |w| w.expression(before, 0),
                 "after" => |w| w.expression(after, 0),
                 "variable" => |w| w.string(variable.name()),
             ),
-            StepClaim::PolynomialDivision { dividend, divisor, quotient, remainder } => object!(self,
+            StepClaim::PolynomialDivision {
+                dividend,
+                divisor,
+                quotient,
+                remainder,
+            } => object!(self,
                 "kind" => |w| w.string("polynomial_division"),
                 "dividend" => |w| w.polynomial(dividend),
                 "divisor" => |w| w.polynomial(divisor),
                 "quotient" => |w| w.polynomial(quotient),
                 "remainder" => |w| w.polynomial(remainder),
             ),
-            StepClaim::MultivariateDivision { dividend, ordered_divisors, quotients, remainder } => object!(self,
+            StepClaim::MultivariateDivision {
+                dividend,
+                ordered_divisors,
+                quotients,
+                remainder,
+            } => object!(self,
                 "kind" => |w| w.string("multivariate_division"),
                 "dividend" => |w| w.multivariate(dividend),
                 "ordered_divisors" => |w| w.array(ordered_divisors, Self::multivariate),
@@ -821,13 +839,21 @@ impl Encoder {
 
     fn step_conclusion(&mut self, value: &StepConclusion) -> WireResult {
         match value {
-            StepConclusion::Distribution { original, result, complete } => object!(self,
+            StepConclusion::Distribution {
+                original,
+                result,
+                complete,
+            } => object!(self,
                 "kind" => |w| w.string("distribution"),
                 "original" => |w| w.expression(original, 0),
                 "result" => |w| w.expression(result, 0),
                 "complete" => |w| w.boolean(*complete),
             ),
-            StepConclusion::Linear { original, variable, solution } => object!(self,
+            StepConclusion::Linear {
+                original,
+                variable,
+                solution,
+            } => object!(self,
                 "kind" => |w| w.string("linear"),
                 "original" => |w| w.equation(original),
                 "variable" => |w| w.string(variable.name()),
@@ -840,13 +866,19 @@ impl Encoder {
                     LinearSolution::AllRationals => object!(w, "kind" => |w| w.string("all_rationals")),
                 },
             ),
-            StepConclusion::Derivative { original, variable, result } => object!(self,
+            StepConclusion::Derivative {
+                original,
+                variable,
+                result,
+            } => object!(self,
                 "kind" => |w| w.string("derivative"),
                 "original" => |w| w.expression(original, 0),
                 "variable" => |w| w.string(variable.name()),
                 "result" => |w| w.expression(result, 0),
             ),
-            StepConclusion::FinalDivision => object!(self, "kind" => |w| w.string("final_division")),
+            StepConclusion::FinalDivision => {
+                object!(self, "kind" => |w| w.string("final_division"))
+            }
         }
     }
 }

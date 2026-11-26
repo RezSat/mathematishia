@@ -724,11 +724,24 @@ fn validate_request(request: &ProblemRequest) -> Result<Option<ProblemResult>, P
     }
     let matched = matches!(
         (&request.operation, &request.statement),
-        (ProblemOperation::SolveAbsolute, ProblemStatement::Absolute(_))
-            | (ProblemOperation::EvaluateSpecialAngle, ProblemStatement::SpecialAngle { .. })
-            | (ProblemOperation::TrigZeros, ProblemStatement::TrigZeros(_))
-            | (ProblemOperation::GroebnerBasis, ProblemStatement::Ideal { target: None, .. })
-            | (ProblemOperation::IdealMembership, ProblemStatement::Ideal { target: Some(_), .. })
+        (
+            ProblemOperation::SolveAbsolute,
+            ProblemStatement::Absolute(_)
+        ) | (
+            ProblemOperation::EvaluateSpecialAngle,
+            ProblemStatement::SpecialAngle { .. }
+        ) | (ProblemOperation::TrigZeros, ProblemStatement::TrigZeros(_))
+            | (
+                ProblemOperation::GroebnerBasis,
+                ProblemStatement::Ideal { target: None, .. }
+            )
+            | (
+                ProblemOperation::IdealMembership,
+                ProblemStatement::Ideal {
+                    target: Some(_),
+                    ..
+                }
+            )
             | (ProblemOperation::SolveLinear, ProblemStatement::Equation(_))
             | (
                 ProblemOperation::SolveRational,

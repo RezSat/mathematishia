@@ -38,6 +38,31 @@ class CheckedResultTests(unittest.TestCase):
         with self.assertRaises(m.UnsupportedMathematicsError):
             m.problem("limit", "x^2", "x", "1+0/x")
 
+    def test_checked_school_math_requests(self):
+        cases = (
+            ("natural", "sin(pi/6)"),
+            ("natural", "|2x-5|=7"),
+            ("abssolve", "abs(x)=3"),
+            ("solvefield", "(x^2-1)/(x-1)=3", "x", "R"),
+            ("solvefield", "x^2=2", "x", "R"),
+            ("integrate", "x*exp(x)"),
+            ("groebner", "x,y", "x^2-y", "y^2-1"),
+            ("idealmember", "x", "x^2", "x"),
+        )
+        for case in cases:
+            result = m.problem(*case)
+            self.assertEqual(result.status, "complete", case)
+            self.assertEqual(result, m.problem(*case))
+        excluded = m.problem("solvefield", "(x^2-1)/(x-1)=2", "x", "R")
+        self.assertEqual(excluded.status, "no_solutions")
+        self.assertTrue(excluded.as_dict()["restrictions"])
+        self.assertEqual(m.problem("natural", "tan(pi/2)").status, "undefined")
+        self.assertEqual(m.problem("trigzeros", "sin").status, "partial")
+        with self.assertRaises(m.UnsupportedMathematicsError):
+            m.problem("natural", "sqrt(16)")
+        with self.assertRaises(m.UndefinedAtPointError):
+            m.problem("natural", "sqrt(-1)")
+
     def test_root_isolation(self):
         roots = m.isolate_real_roots("x^2-2", "x", "1/32")
         self.assertEqual(len(roots), 2)

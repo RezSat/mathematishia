@@ -119,6 +119,7 @@ pub use domain_operations::{
 };
 pub use elementary_integration::{
     ElementaryAntiderivative, ElementaryIntegrationError, ElementaryPrimitiveRule,
+    PolynomialExponentialPrimitive,
 };
 pub use exact_matrix::{
     ExactMatrix, LinearSystemSolution, MatrixError, ReducedMatrix, verify_linear_system_vector,

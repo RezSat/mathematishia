@@ -171,3 +171,4 @@ id	category	question	outcome	exit	error_kind	arguments	semantic_lines	conditions
 167	algebra	Check nonmembership in a rational polynomial ideal	solved	0	-	idealmember¦x,y¦x*y¦x^2¦y^2	status: exact¦member: false¦verified: true	-	none	exact	checked-algebra
 168	derivatives	Verify a rational derivative	solved	0	-	checkcalculus¦derivative¦x^2¦2*x¦x	status: exact¦relation: derivative¦verified: true	-	none	exact	checked-algebra
 169	rational_domains	Refuse an absolute value with a hidden excluded point	domain	2	Domain	abssolve¦abs(x+0/x)=3	error:*	-	none	retained_restriction	checked-algebra
+170	integrals	Integrate x exp(x)	solved	0	-	integrate¦x*exp(x)	status: exact¦term 1: calculus.integrate_polynomial_exponential¦verified: true	conditions: none	terms=1	polynomial_exponential	cycle5

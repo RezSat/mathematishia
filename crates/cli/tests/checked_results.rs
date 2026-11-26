@@ -46,3 +46,39 @@ fn isolate_all_roots_or_refuse_without_a_false_certificate() {
         CliErrorKind::InvalidInput
     );
 }
+
+#[test]
+fn checked_school_math_operations_are_available_through_shared_requests() {
+    for args in [
+        &["natural", "sin(pi/6)", "--json"][..],
+        &["natural", "|2x-5|=7", "--json"],
+        &["abssolve", "abs(x)=3", "--json"],
+        &["trig", "sin", "1/6", "--json"],
+        &["solvefield", "(x^2-1)/(x-1)=3", "x", "R", "--json"],
+        &["solvefield", "x^2=2", "x", "R", "--json"],
+        &["integrate", "x*exp(x)", "--json"],
+        &["groebner", "x,y", "x^2-y", "y^2-1", "--json"],
+        &["idealmember", "x", "x^2", "x", "--json"],
+    ] {
+        let output = run(args).unwrap();
+        assert!(output.contains(r#""status":"complete""#), "{args:?}: {output}");
+        assert_eq!(output, run(args).unwrap());
+    }
+    let excluded = run(&["solvefield", "(x^2-1)/(x-1)=2", "x", "R", "--json"]).unwrap();
+    assert!(excluded.contains(r#""status":"no_solutions""#));
+    assert!(excluded.contains(r#""kind":"polynomial_nonzero""#));
+    let identity = run(&["solvefield", "0/x=0", "x", "R", "--json"]).unwrap();
+    assert!(identity.contains(r#""status":"all_admissible""#));
+    let pole = run(&["natural", "tan(pi/2)", "--json"]).unwrap();
+    assert!(pole.contains(r#""status":"undefined""#));
+    let zeros = run(&["trigzeros", "sin", "--json"]).unwrap();
+    assert!(zeros.contains(r#""status":"partial""#));
+    assert_eq!(
+        run(&["natural", "sqrt(16)", "--json"]).unwrap_err().kind(),
+        CliErrorKind::Unsupported
+    );
+    assert_eq!(
+        run(&["natural", "sqrt(-1)", "--json"]).unwrap_err().kind(),
+        CliErrorKind::Domain
+    );
+}

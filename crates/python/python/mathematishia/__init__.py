@@ -899,14 +899,23 @@ class AffineIntegrationEvidence:
 
 
 @dataclass(frozen=True)
+class PolynomialExponentialEvidence:
+    input_polynomial: Polynomial
+    primitive_polynomial: Polynomial
+    slope: Fraction
+    intercept: Fraction
+
+
+@dataclass(frozen=True)
 class IntegrationTerm:
-    kind: Literal["polynomial", "elementary"]
+    kind: Literal["polynomial", "elementary", "polynomial_exponential"]
     source: str
     primitive: str
     rule: str | None
     polynomial: PolynomialIntegral | None
     affine: AffineIntegrationEvidence | None
     derivative_rules: tuple[str, ...]
+    polynomial_exponential: PolynomialExponentialEvidence | None = None
 
 
 @dataclass(frozen=True)
@@ -927,14 +936,14 @@ def integrate_expression_dispatch(
     """Integrate supported bounded polynomial and affine analytic sums exactly.
 
     Returns the zero-additive-constant primitive with all source conditions.
-    Each term has independently checked polynomial or elementary evidence.
-    Generic analytic products, log, tan and nonlinear arguments are unsupported.
+    Each term has independently checked polynomial, elementary or polynomial-exponential evidence.
+    Other generic analytic products, log, tan and nonlinear arguments are unsupported.
     """
     status, original, primitive, selected_domain, source_conditions, result_conditions, terms = (
         _native.integrate_expression_dispatch(source, variable, domain)
     )
     parsed_terms = []
-    for kind, term, term_primitive, rule, polynomial, affine, derivative_rules in terms:
+    for kind, term, term_primitive, rule, polynomial, affine, derivative_rules, exponential in terms:
         polynomial_proof = (
             PolynomialIntegral(_poly(polynomial[0]), _poly(polynomial[1]))
             if polynomial is not None else None
@@ -943,9 +952,14 @@ def integrate_expression_dispatch(
             AffineIntegrationEvidence(*(Fraction(value) for value in affine))
             if affine is not None else None
         )
+        exponential_proof = (
+            PolynomialExponentialEvidence(_poly(exponential[0]), _poly(exponential[1]),
+                                          Fraction(exponential[2]), Fraction(exponential[3]))
+            if exponential is not None else None
+        )
         parsed_terms.append(
             IntegrationTerm(kind, term, term_primitive, rule, polynomial_proof,
-                            affine_proof, tuple(derivative_rules))
+                            affine_proof, tuple(derivative_rules), exponential_proof)
         )
     return DispatchedIntegral(
         status,
@@ -1281,7 +1295,7 @@ __all__ = [
     "GroebnerBasis", "groebner_basis", "IdealMembership", "ideal_membership",
     "special_angle", "AbsoluteInterval", "solve_absolute", "solve_polynomial_in_domain",
     "check_calculus", "DerivationRecord", "DerivationRecords", "derivation_records",
-    "ProblemResult", "problem", "solveauto", "evalexact",
+    "ProblemResult", "problem", "solveauto", "evalexact", "PolynomialExponentialEvidence",
     "IsolatedRealRoot", "isolate_real_roots",
     "AffineSystemResult", "solve_linear_system", "MultivariateDivisionResult",
     "divide_multivariate", "RootBracketResult", "refine_real_root_bracket",

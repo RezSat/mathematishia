@@ -103,7 +103,7 @@ fn absolute_partitions_reject_missing_cells_and_false_signs() {
     let mut wrong_sign = result.clone();
     wrong_sign.cases[0].signs[0] = AbsoluteSign::Nonnegative;
     assert_eq!(verify(&wrong_sign), Ok(false));
-    let mut incomplete = result;
+    let mut incomplete = result.clone();
     incomplete.solutions.pop();
     assert_eq!(verify(&incomplete), Ok(false));
 }
@@ -134,7 +134,7 @@ fn periodic_value_evidence_is_bound_to_angle_and_signed_branch() {
         let mut tick = cert.clone();
         tick.tick = (tick.tick + 12) % 24;
         assert_eq!(verify(&tick), Ok(false));
-        let mut period = cert;
+        let mut period = cert.clone();
         period.angle = PiMultiple::new(q(8 * k + 7, 4));
         assert_eq!(verify(&period), Ok(false));
     }

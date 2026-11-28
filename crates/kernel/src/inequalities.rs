@@ -342,7 +342,9 @@ fn factorization_error(error: RationalFactorizationError) -> InequalityError {
         }
         RationalFactorizationError::Reconstruction(_) => InequalityError::UnsupportedDegree,
         RationalFactorizationError::ZeroPolynomial
-        | RationalFactorizationError::InvalidCertificate(_) => InequalityError::IncorrectCertificate,
+        | RationalFactorizationError::InvalidCertificate(_) => {
+            InequalityError::IncorrectCertificate
+        }
     }
 }
 
@@ -938,7 +940,11 @@ mod certificate_tests {
             );
             assert_eq!(
                 result.segment_signs(),
-                if numerator.is_zero() { &[0; 4] } else { &[1; 4] }
+                if numerator.is_zero() {
+                    &[0; 4]
+                } else {
+                    &[1; 4]
+                }
             );
         }
         let f = ctx

@@ -89,9 +89,9 @@ class SchoolStrategiesTests(unittest.TestCase):
         chart = self.check_school("inequality.factored_sign_chart", ("inequality", "(x-1)*(x+2)*(x-3)>=0", "x"))
         intervals = chart["answer"]
         self.assertEqual(len(intervals), 2)
-        self.assertEqual(rational(intervals[0]["lower"]["root"]["value"]), -2)
-        self.assertEqual(rational(intervals[0]["upper"]["root"]["value"]), 1)
-        self.assertEqual(rational(intervals[1]["lower"]["root"]["value"]), 3)
+        self.assertEqual(rational(intervals[0]["lower"]["value"]["value"]), -2)
+        self.assertEqual(rational(intervals[0]["upper"]["value"]["value"]), 1)
+        self.assertEqual(rational(intervals[1]["lower"]["value"]["value"]), 3)
         self.assertEqual(intervals[1]["upper"]["kind"], "positive_infinity")
         self.assertTrue(intervals[0]["lower_closed"])
         self.assertTrue(intervals[0]["upper_closed"])

@@ -6,6 +6,7 @@
 pub mod advanced;
 pub mod natural;
 pub mod problem;
+pub mod school;
 
 use std::error::Error;
 use std::fmt;
@@ -552,7 +553,11 @@ fn parse_syntax(input: &str) -> Result<SyntaxStatement<'_>, ParseError> {
 
 fn parse_syntax_mode(input: &str, allow_real_abs: bool) -> Result<SyntaxStatement<'_>, ParseError> {
     let tokens = tokenize(input)?;
-    let mut parser = Parser { tokens, cursor: 0, allow_real_abs };
+    let mut parser = Parser {
+        tokens,
+        cursor: 0,
+        allow_real_abs,
+    };
     if parser.current() == TokenKind::End {
         return Err(ParseError::at(0, ParseErrorKind::EmptyInput));
     }
@@ -594,13 +599,21 @@ fn lower_domain_mode(
         )?),
         leaf @ (Syntax::Integer(..) | Syntax::Decimal(..) | Syntax::Name(..)) => {
             if bound {
-                Ok(DomainExpression::from_expr_in_domain(lower(leaf)?, domain, MAX_TOKENS, MAX_CONDITIONS)?)
+                Ok(DomainExpression::from_expr_in_domain(
+                    lower(leaf)?,
+                    domain,
+                    MAX_TOKENS,
+                    MAX_CONDITIONS,
+                )?)
             } else {
                 Ok(DomainExpression::from_expr(lower(leaf)?, MAX_TOKENS)?)
             }
         }
         Syntax::Sum(left, right) => Ok(DomainExpression::add(
-            [lower_domain_mode(*left, domain, bound)?, lower_domain_mode(*right, domain, bound)?],
+            [
+                lower_domain_mode(*left, domain, bound)?,
+                lower_domain_mode(*right, domain, bound)?,
+            ],
             MAX_CONDITIONS,
         )?),
         Syntax::Difference(left, right) => {
@@ -617,16 +630,16 @@ fn lower_domain_mode(
             )?)
         }
         Syntax::Product(left, right) => Ok(DomainExpression::multiply(
-            [lower_domain_mode(*left, domain, bound)?, lower_domain_mode(*right, domain, bound)?],
+            [
+                lower_domain_mode(*left, domain, bound)?,
+                lower_domain_mode(*right, domain, bound)?,
+            ],
             MAX_CONDITIONS,
         )?),
-        Syntax::Quotient(left, right, _) => {
-            Ok(lower_domain_mode(*left, domain, bound)?
-                .divide(lower_domain_mode(*right, domain, bound)?, MAX_CONDITIONS)?)
-        }
-        Syntax::Power(left, right) => {
-            Ok(lower_domain_mode(*left, domain, bound)?.pow(lower_domain_mode(*right, domain, bound)?, MAX_CONDITIONS)?)
-        }
+        Syntax::Quotient(left, right, _) => Ok(lower_domain_mode(*left, domain, bound)?
+            .divide(lower_domain_mode(*right, domain, bound)?, MAX_CONDITIONS)?),
+        Syntax::Power(left, right) => Ok(lower_domain_mode(*left, domain, bound)?
+            .pow(lower_domain_mode(*right, domain, bound)?, MAX_CONDITIONS)?),
         Syntax::Negate(node) => Ok(DomainExpression::multiply(
             [
                 DomainExpression::from_expr(Expr::from(-1), MAX_TOKENS)?,
@@ -663,9 +676,16 @@ pub fn parse_bound_real_comparison(input: &str) -> Result<RealComparison, Domain
     parse_real_comparison_mode(input, true)
 }
 
-fn parse_real_comparison_mode(input: &str, bound: bool) -> Result<RealComparison, DomainParseError> {
+fn parse_real_comparison_mode(
+    input: &str,
+    bound: bool,
+) -> Result<RealComparison, DomainParseError> {
     let tokens = tokenize_with_comparisons(input, true)?;
-    let mut parser = Parser { tokens, cursor: 0, allow_real_abs: false };
+    let mut parser = Parser {
+        tokens,
+        cursor: 0,
+        allow_real_abs: false,
+    };
     let left = parser.sum(0)?;
     let operator = match parser.current() {
         TokenKind::Less => RealComparisonOperator::Less,
@@ -715,9 +735,14 @@ pub fn parse_domain_statement_in_domain(
 }
 
 /// Parse source with the domain fixed at every leaf, before normalization.
-pub fn parse_bound_domain_statement(input: &str, domain: ScalarDomain) -> Result<DomainStatement, DomainParseError> {
+pub fn parse_bound_domain_statement(
+    input: &str,
+    domain: ScalarDomain,
+) -> Result<DomainStatement, DomainParseError> {
     match parse_syntax_mode(input, domain == ScalarDomain::Real)? {
-        SyntaxStatement::Expression(node) => Ok(DomainStatement::Expression(lower_domain_mode(node, domain, true)?)),
+        SyntaxStatement::Expression(node) => Ok(DomainStatement::Expression(lower_domain_mode(
+            node, domain, true,
+        )?)),
         SyntaxStatement::Equation(left, right) => Ok(DomainStatement::Equation {
             left: lower_domain_mode(left, domain, true)?,
             right: lower_domain_mode(right, domain, true)?,
@@ -725,10 +750,15 @@ pub fn parse_bound_domain_statement(input: &str, domain: ScalarDomain) -> Result
     }
 }
 
-pub fn parse_bound_domain_expression(input: &str, domain: ScalarDomain) -> Result<DomainExpression, DomainParseError> {
+pub fn parse_bound_domain_expression(
+    input: &str,
+    domain: ScalarDomain,
+) -> Result<DomainExpression, DomainParseError> {
     match parse_bound_domain_statement(input, domain)? {
         DomainStatement::Expression(value) => Ok(value),
-        DomainStatement::Equation { .. } => Err(ParseError::at(0, ParseErrorKind::ExpectedExpression).into()),
+        DomainStatement::Equation { .. } => {
+            Err(ParseError::at(0, ParseErrorKind::ExpectedExpression).into())
+        }
     }
 }
 

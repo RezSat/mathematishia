@@ -29,6 +29,12 @@ fn problem_json(args: Vec<String>) -> PyResult<String> {
     problem::evaluate_json(&EvaluationContext::default(), &args).map_err(request_error)
 }
 
+#[pyfunction]
+fn school_json(args: Vec<String>) -> PyResult<String> {
+    let args = args.iter().map(String::as_str).collect::<Vec<_>>();
+    mathema_frontend::school::evaluate_json(&EvaluationContext::default(), &args).map_err(request_error)
+}
+
 fn isolation_error(error: RealRootIsolationError) -> PyErr {
     match error {
         RealRootIsolationError::Evaluation(error) => map_evaluation_error(error),
@@ -69,6 +75,7 @@ fn isolate_real_roots(source: &str, variable: &str, target_width: &str) -> PyRes
 
 pub(super) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(problem_json, m)?)?;
+    m.add_function(wrap_pyfunction!(school_json, m)?)?;
     m.add_function(wrap_pyfunction!(isolate_real_roots, m)?)?;
     Ok(())
 }

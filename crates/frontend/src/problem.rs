@@ -310,6 +310,8 @@ fn absolute_request(
 /// interfaces remain available independently of this bounded schema.
 pub fn request(context: &EvaluationContext, args: &[&str]) -> Result<ProblemRequest, RequestError> {
     match args {
+        ["naturalv2", input] => crate::natural::parse_v2(context, input, "x").map_err(advanced_error),
+        ["naturalv2", input, name] => crate::natural::parse_v2(context, input, name).map_err(advanced_error),
         ["natural", input] => natural_request(context, input, "x"),
         ["natural", input, name] => natural_request(context, input, name),
         ["abssolve", input] => absolute_request(context, input, "x"),

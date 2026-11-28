@@ -569,11 +569,31 @@ mod verification_adversarial_tests {
 }
 
 // Public types for opt-in, independently checked school mathematics strategies.
-pub use absolute_equations::{GuardedAffine, PiecewiseAffine, PiecewiseBranch, PiecewiseCase, PiecewiseEquation, PiecewiseEquationError, PiecewiseEquationResult, PiecewiseInterval, PiecewiseSourceDomain, WeightedAbsoluteTerm};
+pub use absolute_equations::{
+    GuardedAffine, PiecewiseAffine, PiecewiseBranch, PiecewiseCase, PiecewiseEquation,
+    PiecewiseEquationError, PiecewiseEquationResult, PiecewiseInterval, PiecewiseSourceDomain,
+    WeightedAbsoluteTerm,
+};
 pub use analytic_semantics::{PrincipalSquareRootClaim, PrincipalSquareRootValue};
-pub use elementary_integration::polynomial_analytic::{PolynomialSubstitutionPrimitive, PolynomialTrigonometricPrimitive, TrigonometricPartsStep};
-pub use limits::{AnalyticLimitError, AnalyticZeroLimit, InfinityEnd, LimitLeadingTerm, RationalInfinityLimit, StandardLimitRule};
-pub use polynomial_equation_dispatch::{PatternExclusion, PolynomialLift, PolynomialLiftEvidence, PolynomialPatternResult, SchoolFactorResult, SchoolFactorRule, SchoolPolynomialResult};
-pub use problem_result::{SchoolError, checked_infinity_json, checked_periodic_json, checked_piecewise_json, checked_school_json, checked_sqrt_json, checked_trig_identity_json};
-pub use problem_result::methods::{AlternativeError, AlternativeStatus, MethodEnvelope, MethodId, VerifiedAlternative};
-pub use trigonometry::{PeriodicFamily, PeriodicParameter, PeriodicTrigCertificate, PeriodicTrigEquation, TrigIdentityCertificate};
+pub use elementary_integration::polynomial_analytic::{
+    PolynomialSubstitutionPrimitive, PolynomialTrigonometricPrimitive, TrigonometricPartsStep,
+};
+pub use limits::{
+    AnalyticLimitError, AnalyticZeroLimit, InfinityEnd, LimitLeadingTerm, RationalInfinityLimit,
+    StandardLimitRule,
+};
+pub use polynomial_equation_dispatch::{
+    PatternExclusion, PolynomialLift, PolynomialLiftEvidence, PolynomialPatternResult,
+    SchoolFactorResult, SchoolFactorRule, SchoolPolynomialResult,
+};
+pub use problem_result::methods::{
+    AlternativeError, AlternativeStatus, MethodEnvelope, MethodId, VerifiedAlternative,
+};
+pub use problem_result::{
+    SchoolError, checked_infinity_json, checked_periodic_json, checked_piecewise_json,
+    checked_school_json, checked_sqrt_json, checked_trig_identity_json,
+};
+pub use trigonometry::{
+    PeriodicFamily, PeriodicParameter, PeriodicTrigCertificate, PeriodicTrigEquation,
+    TrigIdentityCertificate,
+};

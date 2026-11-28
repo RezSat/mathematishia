@@ -468,9 +468,9 @@ Explicit construction-domain provenance is retained on bound values and
 checked in the shared dispatcher and selected calculus, substitution and
 rewrite paths. Legacy unbound expressions cannot attest a lost construction
 domain. The ordinary symbol pi is not silently reinterpreted. Opt-in natural input
-supports selected special angles and total affine absolute-value equations. General periodic solution families, arbitrary piecewise
+supports selected special angles and total affine absolute-value equations. Unrestricted periodic solution families, arbitrary piecewise
 or absolute-value expressions, general analytic calculus and universal result
-serialization remain unsupported.
+serialization remain unsupported; the bounded school routes below extend this scope.
 
 ```python
 import mathematishia as m
@@ -498,3 +498,19 @@ json.loads(m.division_trace_json('x^2+x*y+y^2+1', ('x+y', 'x'), ('x', 'y')))
 ```
 
 Polynomial-exponential primitives are checked using the exact polynomial identity Q' + aQ = P. This does not yet emit a complete integration-by-parts teaching trace.
+
+## Opt-in school strategies
+
+```python
+import mathematishia as m
+
+root = m.school("sqrt", "2")
+solutions = m.school("solve", "x^4-5*x^2+4=0", "x", "R")
+parts = m.school("integrate", "x*sin(x)", "x")
+periodic = m.school("periodic", "sin", "2", "0", "1/2", "x")
+methods = m.school("methods", "rootsfield", "(x-1)^2", "x", "C")
+raw = m.school_json("limit", "sin(3*x)/x", "x", "0")
+legacy = m.problem("naturalv2", "solve: 2x+3=7")
+```
+
+`school` decodes the verified JSON to ordinary Python data; `school_json` returns the native JSON string. The school envelope, legacy fallback envelope and optional methods envelope are distinct; see the [CLI guide](../cli/USER_GUIDE.md) for all signatures and supported domains. Existing typed functions and `problem` remain unchanged. Not every mathematical input or educational derivation is supported.

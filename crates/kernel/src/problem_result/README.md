@@ -175,3 +175,7 @@ re-export `MethodEnvelope`, `MethodId`, `AlternativeStatus`,
 `AlternativeError` and `VerifiedAlternative` from the kernel root as needed;
 the existing public `ProblemResult` associated entrypoints do not require
 changes to shared module registration.
+
+## Checked school result envelope (v1)
+
+The opt-in native school projection uses the same bounded canonical encoder and verifies native certificates before serialization. It has `schema_version: 1`, `kind: "checked_school_result"`, `status`, `method`, `request`, `answer`, and `evidence`. Exact rationals and algebraic roots use the existing wire shapes. Source-bound expressions retain conditions; infinity and periodic arguments are explicit typed inputs. Evidence is specific to the method and may be absent (for example an exact principal square root). A method name alone is not a proof or full teaching trace. Unsupported/refused operations may return typed errors; a fallback native operation uses the unchanged problem-result envelope. `school methods` uses the independent methods envelope above. This is an output-only projection, never an admission authority for untrusted JSON.

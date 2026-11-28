@@ -132,6 +132,27 @@ It does not claim a unique normal form for arbitrary divisors.
 Explicit construction-domain provenance is retained on bound values and
 checked in the shared dispatcher and selected calculus, substitution and
 rewrite paths. Strict source-bound provenance rejects external or unbound history; legacy unbound expressions cannot attest a lost construction domain. Cancellation requires checked source conditions. The ordinary symbol pi is not silently reinterpreted. Opt-in natural input
-supports selected special angles and total affine absolute-value equations. General periodic solution families, arbitrary piecewise
+supports selected special angles and total affine absolute-value equations. Unrestricted periodic solution families, arbitrary piecewise
 or absolute-value expressions, general analytic calculus and universal result
-serialization remain unsupported.
+serialization remain unsupported; the bounded school routes below extend this scope.
+
+## Wave 2: opt-in checked school strategies
+
+The `school` CLI and Python `school(*args)` / `school_json(*args)` expose the following bounded native algorithms. Existing command contracts and limits are unchanged. Source construction is explicitly bound before normalization; retained conditions are not discarded.
+
+| Operation | Checked scope | Evidence |
+| --- | --- | --- |
+| `school sqrt` | Real principal roots of rational constants, exact quadratic irrational roots, and syntactic squares | Exact branch / absolute-value result; not a general radical simplifier |
+| `school solve` | Selected repeated-power substitution and school polynomial factorizations over Q/R/C, with legacy dispatch otherwise | Factor or substitution certificate, root completeness or unresolved factor |
+| `school inequality` | Rational inequalities whose critical factors are certified linear/quadratic factors | Ordered critical points and exact sign chart |
+| `school differentiate` | Source-bound rational derivatives | Quotient-rule and simplification certificates |
+| `school integrate` | Polynomial times affine sine/cosine, and polynomial substitution into sine/cosine/exponential | Native parts reductions or substitution certificate |
+| `school limit` | Selected standard analytic zero limits and rational limits at signed infinity | Exact theorem/leading-term evidence |
+| `school periodic` | Real affine sine/cosine/tangent equations with exact supported special-angle targets | Periodic families with integer parameter and pole exclusions |
+| `school trig_identity` | Linear combinations of the supported squared-angle identities | Verified identity certificate |
+| `school abs_sum`, `school piecewise` | Total real weighted affine absolute sums and disjoint exhaustive rational affine guards | Partition and affine case checks |
+| `school methods` | Opt-in checked second method for repeated-root complex quadratics | Primary and distinct verified linear-factor alternative |
+
+`naturalv2` is additive, and `school natural` reuses its validated syntax with bound source admission. Explicit school routes support operations not admitted by natural input. See [CLI guide](crates/cli/USER_GUIDE.md) and [Python guide](crates/python/README.md). Results contain checked mathematical evidence; not every operation emits a full pedagogical trace. General radicals, variable powers, logarithmic primitives, unrestricted periodic and nonlinear piecewise equations, and broad applied-mathematics solving remain outside the delivered scope.
+
+The public W18 breadth corpus has 292 independently keyed valid cases plus four invalid-input checks. The W19 independent suite has 126 held-out cases and adversarial kernel tests. These are fixed regression suites, not representative statistical estimates of all school questions. Formula-only cases do not establish native mechanics, statistics or geometry solvers.

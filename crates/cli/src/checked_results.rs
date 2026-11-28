@@ -27,6 +27,9 @@ pub(super) fn request_error(error: RequestError) -> CliError {
 pub(super) fn json(args: &[&str]) -> Result<String, CliError> {
     let context = EvaluationContext::default();
     match args {
+        ["school", rest @ ..] => {
+            mathema_frontend::school::evaluate_json(&context, rest).map_err(request_error)
+        }
         ["steps", kind, source, name] => {
             mathema_frontend::advanced::derivation_json(&context, kind, source, name)
                 .map_err(super::advanced_operations::error)

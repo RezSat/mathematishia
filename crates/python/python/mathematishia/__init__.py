@@ -1172,6 +1172,17 @@ def problem(*args: str) -> ProblemResult:
     return ProblemResult(_native.problem_json(list(args)))
 
 
+def school_json(*args: str) -> str:
+    """Return the opt-in native school strategy evidence as versioned JSON."""
+    return _native.school_json(list(args))
+
+
+def school(*args: str) -> dict:
+    """Decode the same checked JSON as the CLI school command."""
+    import json
+    return json.loads(school_json(*args))
+
+
 def solveauto(source: str, variable: str = "x") -> ProblemResult:
     """Automatic checked equation dispatch (complex request, explicit result domain)."""
     return problem("solveauto", source, variable)
@@ -1306,7 +1317,7 @@ __all__ = [
     "special_angle", "AbsoluteInterval", "solve_absolute", "solve_polynomial_in_domain",
     "check_calculus", "DerivationRecord", "DerivationRecords", "derivation_records",
     "derivation_records_json", "division_trace_json",
-    "ProblemResult", "problem", "solveauto", "evalexact", "PolynomialExponentialEvidence",
+    "ProblemResult", "problem", "school", "school_json", "solveauto", "evalexact", "PolynomialExponentialEvidence",
     "IsolatedRealRoot", "isolate_real_roots",
     "AffineSystemResult", "solve_linear_system", "MultivariateDivisionResult",
     "divide_multivariate", "RootBracketResult", "refine_real_root_bracket",

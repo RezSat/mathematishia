@@ -336,3 +336,6 @@ fn compiled_cli_answers_or_honestly_refuses_student_questions() {
     }
     assert!(failures.is_empty(), "failed question ids: {failures:?}");
 }
+
+#[path = "../../../tests/problem_corpus/school_breadth.rs"]
+mod school_breadth;

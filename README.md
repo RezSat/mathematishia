@@ -132,3 +132,17 @@ The checked algebra commands `groebner`, `idealmember`, `abssolve`, `trig`, `tri
 
 
 Source-bound Q/R/C rational equations (`solvefield`), opt-in special-angle and absolute-value input (`natural`), polynomial-exponential integration, checked structural JSON (`steps --json`) and actual ordered division traces (`divisiontrace`) extend the native engine. Python exposes the same mathematics. See the [capability limits](CAPABILITIES.md).
+
+## Opt-in school mathematics
+
+The native Rust engine also provides bounded school strategies with checked JSON evidence:
+
+```sh
+cargo run -p mathematishia-cli -- school sqrt 2
+cargo run -p mathematishia-cli -- school solve 'x^4-5*x^2+4=0' x
+cargo run -p mathematishia-cli -- school integrate 'x*sin(x)' x
+cargo run -p mathematishia-cli -- school limit 'sin(3*x)/x' x 0
+cargo run -p mathematishia-cli -- school periodic sin 2 0 1/2 x
+````
+
+Python exposes the same operations with `mathematishia.school(*args)` (decoded JSON) and `school_json(*args)`. The `naturalv2` command and `school natural` admit bounded extended natural syntax. See the [CLI guide](crates/cli/USER_GUIDE.md) for signatures and limitations. The legacy interfaces remain intact. The new public 292-case breadth corpus and 126-case independent held-out suite supplement, not replace, the 170-case legacy corpus. Full school coverage and full teaching traces are not claimed.

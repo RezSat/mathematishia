@@ -82,6 +82,10 @@ Explicit construction-domain provenance is retained on bound values and
 checked in the shared dispatcher and selected calculus, substitution and
 rewrite paths. Legacy unbound expressions cannot attest a lost construction
 domain. The ordinary symbol pi is not silently reinterpreted. Opt-in natural input
-supports selected special angles and total affine absolute-value equations. General periodic solution families, arbitrary piecewise
+supports selected special angles and total affine absolute-value equations. Unrestricted periodic solution families, arbitrary piecewise
 or absolute-value expressions, general analytic calculus and universal result
-serialization remain unsupported.
+serialization remain unsupported; the bounded school routes below extend this scope.
+
+## Additive school interface
+
+All `school` operations in the [user guide](USER_GUIDE.md) share one frontend admission and native kernel verification path with Python `school(*args)` and `school_json(*args)`; pass the arguments after `school` verbatim. `naturalv2` uses the existing typed `problem` interface in both frontends. Old commands retain their previous contracts and limits. New checked-school evidence is not a promise of complete derivation steps for every result.

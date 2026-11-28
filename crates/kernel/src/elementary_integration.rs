@@ -4,6 +4,8 @@
 //! The fixed integration constant is zero. Domain conditions are retained
 //! prerequisites, never discharged or assumed true.
 
+pub mod polynomial_analytic;
+
 use std::error::Error;
 use std::fmt;
 

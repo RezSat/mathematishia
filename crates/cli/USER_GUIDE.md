@@ -179,9 +179,9 @@ Explicit construction-domain provenance is retained on bound values and
 checked in the shared dispatcher and selected calculus, substitution and
 rewrite paths. Legacy unbound expressions cannot attest a lost construction
 domain. The ordinary symbol pi is not silently reinterpreted. Opt-in natural input
-supports selected special angles and total affine absolute-value equations. General periodic solution families, arbitrary piecewise
+supports selected special angles and total affine absolute-value equations. Unrestricted periodic solution families, arbitrary piecewise
 or absolute-value expressions, general analytic calculus and universal result
-serialization remain unsupported.
+serialization remain unsupported; the bounded school routes below extend this scope.
 
 ```sh
 mathematishia rootsfield 'x^2-2' x R --json
@@ -204,3 +204,29 @@ mathematishia divisiontrace x,y 'x^2+x*y+y^2+1' 'x+y' x
 ```
 
 The polynomial-exponential integral is checked by the identity Q' + aQ = P for P(x) exp(ax+b). The result is a primitive, not yet a complete integration-by-parts teaching trace. General logarithmic primitives remain unsupported.
+
+## Opt-in checked school mathematics
+
+These commands return JSON even without `--json`. Existing commands are unchanged. The new paths construct source-bound expressions before simplification.
+
+```sh
+mathematishia naturalv2 'solve: 2x+3=7'
+mathematishia school natural 'solve: x^4−5x^2+4=0' x
+mathematishia school solve 'x^4-5*x^2+4=0' x R
+mathematishia school sqrt 2
+mathematishia school differentiate '(x^2-1)/(x-1)' x
+mathematishia school integrate 'x*sin(x)' x
+mathematishia school integrate '2*x*cos(x^2)' x
+mathematishia school inequality '(x-1)*(x+2)*(x-3)>=0' x
+mathematishia school limit 'sin(3*x)/x' x 0
+mathematishia school limit '(3*x^2+2)/(x^2-1)' x +infinity
+mathematishia school periodic sin 2 0 1/2 x
+mathematishia school trig_identity 1 1 0 -1
+mathematishia school abs_sum 'abs(x-1)+abs(x+1)=4' x
+mathematishia school piecewise x '-inf,0,0,0,-1,0;0,+inf,1,0,1,0' '-inf,+inf,0,0,0,2'
+mathematishia school methods rootsfield '(x-1)^2' x C
+```
+
+The solve domain defaults to R; Q and C are explicit choices. The periodic operation means f(a*x+b*pi)=target, with nonzero rational a, rational b and exact rational or supported special-angle target. The trig identity coefficients multiply sin²(t), cos²(t), cos(2t) and 1 respectively; the expression must equal zero. Piecewise rows specify lower, upper, lower-closed, upper-closed, slope and constant; closure is 0/1 and the guards must cover the real line without overlap. The natural grammar is deliberately bounded; use explicit routes for roots, periodic equations, and affine absolute sums. Integral and limit methods are restricted to the certified forms in the capability index.
+
+New strategies return a `checked_school_result` envelope with `status`, `method`, `request`, `answer`, and `evidence`. Fallback to a legacy native operation returns its normal problem-result JSON. `school methods` returns a separate `checked_method_results` envelope. Interpret partial, conditional, undefined, unsupported and resource failures as such; evidence is not necessarily a full teaching trace. Python accepts the same argument strings via `school(*args)`.

@@ -39,6 +39,8 @@ Usage:
   mathematishia rootsfield <POLYNOMIAL> <VARIABLE> <Q|R|C> [--json]
   mathematishia solvefield <EQUATION> <VARIABLE> <Q|R|C> [--json]
   mathematishia natural <EXPRESSION_OR_EQUATION> [VARIABLE] [--json]
+  mathematishia naturalv2 <EXPRESSION_OR_EQUATION> [VARIABLE] [--json]
+  mathematishia school <OPERATION> ... [--json]
   mathematishia groebner <VARIABLES_CSV> <GENERATOR> ...
   mathematishia idealmember <VARIABLES_CSV> <TARGET> <GENERATOR> ...
   mathematishia trig <sin|cos|tan> <PI_COEFFICIENT>
@@ -421,7 +423,10 @@ pub fn run(args: &[&str]) -> Result<String, CliError> {
         [..] if args.contains(&"--json") => Err(invalid("--json must be the final argument")),
         ["isolate", input, name, width] => checked_results::isolate(input, name, width),
         ["rootsfield" | "solvefield", _, _, _] => checked_results::json(args),
-        ["natural", _] | ["natural", _, _] => checked_results::json(args),
+        ["natural" | "naturalv2", _] | ["natural" | "naturalv2", _, _] => {
+            checked_results::json(args)
+        }
+        ["school", ..] => checked_results::json(args),
         ["divisiontrace", _, _, ..] => checked_results::json(args),
         ["groebner", names, generators @ ..] => advanced_operations::basis(names, generators),
         ["idealmember", names, target, generators @ ..] => {

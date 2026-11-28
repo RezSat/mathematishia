@@ -130,3 +130,52 @@ worker-specific record variants require explicit adapter agreement.
 `equation.source_bound` accepts original source equations over Q, R or C. It independently checks denominator exclusions, reduced residual identity and admitted root sets; higher-degree unresolved cofactors stay partial. The public `solvefield` command selects this operation, without changing the legacy `equation.auto` contract.
 
 `OrderedDivisionTrace::to_checked_json` rechecks actual ordered polynomial division transitions against the original dividend and ordered divisors. Its separate envelope has kind `checked_ordered_division`, domain Q, original operands, steps, quotients and remainder. Each step contains its index, previous premise (null at the first step), stable rule ID, optional divisor index, pending polynomials before and after, and exact monomial factor. A reduction means before = after + factor * divisor, whereas moving a term to the remainder means before = after + factor. These are not simple expression equalities. The trace cannot be inferred from a final-only certificate.
+
+### Optional verified methods
+
+The existing request and result JSON remain byte-for-byte unchanged. Use
+`ProblemResult::dispatch_with_methods(context, request, false)` for the normal
+fast path with method metadata, or pass `true` to attempt one alternative.
+The separate version-1 `checked_method_results` envelope contains a nullable
+`primary_method`, the unchanged primary result, and an alternative status
+(`not_requested`, `not_applicable`, `primary_not_complete`, `failed`, or
+`verified`). The original result remains authoritative if exploration fails.
+Native errors remain typed in Rust; a failed wire result reports the reason
+category and, when available, the resource kind. No failure establishes an
+empty solution set.
+
+The first verified pair is deliberately narrow: an unrestricted degree-two
+polynomial over C with a repeated rational root. The direct source-bound
+quadratic certificate is compared with native square-free decomposition and
+linear-factor root evidence. The latter obtains a multiplicity-two linear
+factor through the GCD-based square-free algorithm. Ordinary split quadratics
+are not advertised as distinct methods because the factorizer uses a
+discriminant internally for square-free quadratics. Exact root multiplicity,
+domain and restrictions must agree after independent native verification.
+The alternate retains its actual checked factorization (scalar unit, factor
+and multiplicity); no step trace is synthesized. Its nested result uses
+`polynomial.complex_roots_partial` with a complete outcome; the original
+request remains the primary `polynomial.equation` request.
+
+For example, coefficients [18, -12, 2] produce the exact repeated root 3,
+with factor x - 3, scalar unit 2 and multiplicity 2. Externally generated
+evidence can be supplied via `ProblemResult::adapt_with_alternative`; the
+direct certificate must contain a degree-two proof, and the second method
+must supply a separately verified native linear factorization certificate.
+Other methods, restricted sources, partial answers and repeated method
+claims are not promoted into alternatives. The normal context limits apply
+per native call; at most one extra search is attempted, not an unbounded
+planner. The aggregate JSON is subject to the existing 2 MiB output limit and
+each nested result keeps the scalar/depth limits. The envelope is output-only.
+
+Method names are additive; unknown or absent method IDs must not be interpreted
+as proof. The existing checked linear and symbolic derivative methods also
+have stable metadata in the optional envelope. Coordinator delivery can
+re-export `MethodEnvelope`, `MethodId`, `AlternativeStatus`,
+`AlternativeError` and `VerifiedAlternative` from the kernel root as needed;
+the existing public `ProblemResult` associated entrypoints do not require
+changes to shared module registration.
+
+## Checked school result envelope (v1)
+
+The opt-in native school projection uses the same bounded canonical encoder and verifies native certificates before serialization. It has `schema_version: 1`, `kind: "checked_school_result"`, `status`, `method`, `request`, `answer`, and `evidence`. Exact rationals and algebraic roots use the existing wire shapes. Source-bound expressions retain conditions; infinity and periodic arguments are explicit typed inputs. Evidence is specific to the method and may be absent (for example an exact principal square root). A method name alone is not a proof or full teaching trace. Unsupported/refused operations may return typed errors; a fallback native operation uses the unchanged problem-result envelope. `school methods` uses the independent methods envelope above. This is an output-only projection, never an admission authority for untrusted JSON.

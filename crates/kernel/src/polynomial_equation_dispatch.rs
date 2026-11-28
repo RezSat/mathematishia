@@ -461,9 +461,7 @@ fn checked_lifts(
         }
         match &lift.evidence {
             PolynomialLiftEvidence::Quadratic(proof) => {
-                if composed.degree() != Some(2)
-                    || proof.original() != &composed
-                {
+                if composed.degree() != Some(2) || proof.original() != &composed {
                     return Ok(None);
                 }
                 crate::algebraic::checked_algebraic_roots(&composed, &mut work)?;
@@ -676,7 +674,6 @@ impl EvaluationContext {
     }
 }
 
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SchoolFactorRule {
     CommonPower,
@@ -844,9 +841,12 @@ impl EvaluationContext {
         variable: &Symbol,
         domain: ScalarDomain,
     ) -> Result<Option<SchoolPolynomialResult>, PolynomialEquationError> {
-        if let Some(pattern) = self.solve_pattern_polynomial_equation(left, right, variable, domain)?
+        if let Some(pattern) =
+            self.solve_pattern_polynomial_equation(left, right, variable, domain)?
         {
-            return Ok(Some(SchoolPolynomialResult::Substitution(Box::new(pattern))));
+            return Ok(Some(SchoolPolynomialResult::Substitution(Box::new(
+                pattern,
+            ))));
         }
         let original = total_polynomial(self, left, right, variable, domain)?;
         let mut work = WorkBudget::new(self.limits());
@@ -879,9 +879,8 @@ impl EvaluationContext {
     ) -> Result<bool, PolynomialEquationError> {
         let SchoolPolynomialResult::Factored(result) = result else {
             if let SchoolPolynomialResult::Substitution(pattern) = result {
-                return self.verify_pattern_polynomial_equation(
-                    left, right, variable, domain, pattern,
-                );
+                return self
+                    .verify_pattern_polynomial_equation(left, right, variable, domain, pattern);
             }
             return Ok(false);
         };

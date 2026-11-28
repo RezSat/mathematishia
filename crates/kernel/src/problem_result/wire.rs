@@ -1044,3 +1044,6 @@ mod method_wire_tests {
         );
     }
 }
+
+mod school;
+pub use school::{SchoolError, checked_infinity_json, checked_periodic_json, checked_piecewise_json, checked_school_json, checked_sqrt_json, checked_trig_identity_json};

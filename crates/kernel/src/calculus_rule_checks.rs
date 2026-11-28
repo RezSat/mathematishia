@@ -767,7 +767,7 @@ mod derivative_trace_tests {
                 .is_err()
         );
         let mut forged = trace.clone();
-        forged[0].value = constant(99);
+        forged[0].value = constant(Integer::from(99));
         assert!(
             context
                 .verify_rational_domain_derivative(&input, &variable(), &forged)

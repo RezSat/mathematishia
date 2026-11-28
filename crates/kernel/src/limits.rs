@@ -535,8 +535,8 @@ fn infinity_value(
         Ordering::Greater => {
             let same_sign = (numerator.coefficient.numerator() > &Integer::zero())
                 == (denominator.coefficient.numerator() > &Integer::zero());
-            let flip = end == InfinityEnd::Negative
-                && (numerator.degree - denominator.degree) % 2 == 1;
+            let flip =
+                end == InfinityEnd::Negative && (numerator.degree - denominator.degree) % 2 == 1;
             Ok(if same_sign != flip {
                 LimitValue::PositiveInfinity
             } else {
@@ -563,8 +563,7 @@ impl EvaluationContext {
             .excluded_zero_sets()
             .iter()
             .map(|polynomial| {
-                leading_term(&mut work, polynomial)?
-                    .ok_or(LimitError::InconsistentFactorization)
+                leading_term(&mut work, polynomial)?.ok_or(LimitError::InconsistentFactorization)
             })
             .collect::<Result<Vec<_>, _>>()?;
         let value = infinity_value(&mut work, numerator.as_ref(), &denominator, end)?;
@@ -860,7 +859,11 @@ fn analytic_shape(
         return Err(AnalyticLimitError::Unsupported);
     }
     let argument = polynomial(work, argument, variable)?;
-    let constant = argument.coefficients().first().cloned().unwrap_or_else(zero);
+    let constant = argument
+        .coefficients()
+        .first()
+        .cloned()
+        .unwrap_or_else(zero);
     let required_constant = if rule == StandardLimitRule::NaturalLogarithm {
         one()
     } else {
@@ -981,15 +984,36 @@ mod extended_limit_tests {
     fn infinity_degree_sign_and_exact_ratio() {
         let ctx = EvaluationContext::default();
         let cases = [
-            (p(&[1, 0, 3]), p(&[-1, 0, 2]), LimitValue::Finite(
-                Rational::new(Integer::from(3), Integer::from(2)).unwrap(),
-            ), LimitValue::Finite(
-                Rational::new(Integer::from(3), Integer::from(2)).unwrap(),
-            )),
-            (p(&[0, 0, 0, 1]), p(&[1, 0, 1]), LimitValue::PositiveInfinity, LimitValue::NegativeInfinity),
-            (p(&[0, 0, -1]), p(&[1]), LimitValue::NegativeInfinity, LimitValue::NegativeInfinity),
-            (p(&[1]), p(&[1, 1]), LimitValue::Finite(r(0)), LimitValue::Finite(r(0))),
-            (p(&[]), p(&[0, 1]), LimitValue::Finite(r(0)), LimitValue::Finite(r(0))),
+            (
+                p(&[1, 0, 3]),
+                p(&[-1, 0, 2]),
+                LimitValue::Finite(Rational::new(Integer::from(3), Integer::from(2)).unwrap()),
+                LimitValue::Finite(Rational::new(Integer::from(3), Integer::from(2)).unwrap()),
+            ),
+            (
+                p(&[0, 0, 0, 1]),
+                p(&[1, 0, 1]),
+                LimitValue::PositiveInfinity,
+                LimitValue::NegativeInfinity,
+            ),
+            (
+                p(&[0, 0, -1]),
+                p(&[1]),
+                LimitValue::NegativeInfinity,
+                LimitValue::NegativeInfinity,
+            ),
+            (
+                p(&[1]),
+                p(&[1, 1]),
+                LimitValue::Finite(r(0)),
+                LimitValue::Finite(r(0)),
+            ),
+            (
+                p(&[]),
+                p(&[0, 1]),
+                LimitValue::Finite(r(0)),
+                LimitValue::Finite(r(0)),
+            ),
         ];
         for (n, d, positive, negative) in cases {
             let source = ctx.rational_function(&n, &d).unwrap();
@@ -1008,7 +1032,9 @@ mod extended_limit_tests {
     #[test]
     fn infinity_preserves_holes_and_rejects_mutations() {
         let ctx = EvaluationContext::default();
-        let source = ctx.rational_function(&p(&[-1, 0, 1]), &p(&[-1, 1])).unwrap();
+        let source = ctx
+            .rational_function(&p(&[-1, 0, 1]), &p(&[-1, 1]))
+            .unwrap();
         let end = InfinityEnd::Negative;
         let good = ctx.rational_infinity_limit(&source, end).unwrap();
         assert_eq!(good.value, LimitValue::NegativeInfinity);
@@ -1045,7 +1071,9 @@ mod extended_limit_tests {
         });
         assert!(matches!(
             good.verify(&restricted, &source, end),
-            Err(LimitVerificationError::Evaluation(EvaluationError::Limit(_)))
+            Err(LimitVerificationError::Evaluation(EvaluationError::Limit(
+                _
+            )))
         ));
     }
 
@@ -1057,24 +1085,49 @@ mod extended_limit_tests {
         let a = Expr::mul([Expr::from(3), x.clone()]);
         let cases = [
             (quotient(Expr::sin(a.clone()), x.clone()), r(3)),
-            (quotient(
-                Expr::add([Expr::from(1), Expr::mul([
-                    Expr::from(-1),
-                    Expr::cos(Expr::mul([Expr::from(2), x.clone()])),
-                ])]),
-                Expr::pow(x.clone(), Expr::from(2)),
-            ), r(2)),
-            (quotient(Expr::add([Expr::exp(a.clone()), Expr::from(-1)]), x.clone()), r(3)),
-            (quotient(Expr::log(Expr::add([Expr::from(1), x.clone()])), x.clone()), r(1)),
+            (
+                quotient(
+                    Expr::add([
+                        Expr::from(1),
+                        Expr::mul([
+                            Expr::from(-1),
+                            Expr::cos(Expr::mul([Expr::from(2), x.clone()])),
+                        ]),
+                    ]),
+                    Expr::pow(x.clone(), Expr::from(2)),
+                ),
+                r(2),
+            ),
+            (
+                quotient(Expr::add([Expr::exp(a.clone()), Expr::from(-1)]), x.clone()),
+                r(3),
+            ),
+            (
+                quotient(Expr::log(Expr::add([Expr::from(1), x.clone()])), x.clone()),
+                r(1),
+            ),
             (quotient(Expr::sin(Expr::from(0)), x.clone()), r(0)),
-            (quotient(Expr::sin(a), Expr::mul([Expr::from(-3), x.clone()])), r(-1)),
+            (
+                quotient(Expr::sin(a), Expr::mul([Expr::from(-3), x.clone()])),
+                r(-1),
+            ),
         ];
         for (source, expected) in cases {
-            for direction in [LimitDirection::Left, LimitDirection::Right, LimitDirection::TwoSided] {
-                let result = ctx.analytic_limit_at_zero(&source, &variable, direction).unwrap();
+            for direction in [
+                LimitDirection::Left,
+                LimitDirection::Right,
+                LimitDirection::TwoSided,
+            ] {
+                let result = ctx
+                    .analytic_limit_at_zero(&source, &variable, direction)
+                    .unwrap();
                 assert_eq!(result.value, LimitValue::Finite(expected.clone()));
                 assert_eq!(result.verify(&ctx, &source, &variable, direction), Ok(()));
-                assert_eq!(result, ctx.analytic_limit_at_zero(&source, &variable, direction).unwrap());
+                assert_eq!(
+                    result,
+                    ctx.analytic_limit_at_zero(&source, &variable, direction)
+                        .unwrap()
+                );
             }
         }
     }
@@ -1086,35 +1139,61 @@ mod extended_limit_tests {
         let x = Expr::from(variable.clone());
         let direction = LimitDirection::TwoSided;
         let source = quotient(Expr::sin(x.clone()), x.clone());
-        let good = ctx.analytic_limit_at_zero(&source, &variable, direction).unwrap();
+        let good = ctx
+            .analytic_limit_at_zero(&source, &variable, direction)
+            .unwrap();
         let mut bad = good.clone();
         bad.argument_scale = r(2);
-        assert_eq!(bad.verify(&ctx, &source, &variable, direction), Err(AnalyticLimitError::InvalidCertificate));
+        assert_eq!(
+            bad.verify(&ctx, &source, &variable, direction),
+            Err(AnalyticLimitError::InvalidCertificate)
+        );
         bad = good.clone();
         bad.rule = StandardLimitRule::NaturalLogarithm;
-        assert_eq!(bad.verify(&ctx, &source, &variable, direction), Err(AnalyticLimitError::InvalidCertificate));
+        assert_eq!(
+            bad.verify(&ctx, &source, &variable, direction),
+            Err(AnalyticLimitError::InvalidCertificate)
+        );
         bad = good.clone();
         bad.value = LimitValue::Finite(r(2));
-        assert_eq!(bad.verify(&ctx, &source, &variable, direction), Err(AnalyticLimitError::InvalidCertificate));
-        assert_eq!(good.verify(&ctx, &source, &variable, LimitDirection::Left), Err(AnalyticLimitError::InvalidCertificate));
+        assert_eq!(
+            bad.verify(&ctx, &source, &variable, direction),
+            Err(AnalyticLimitError::InvalidCertificate)
+        );
+        assert_eq!(
+            good.verify(&ctx, &source, &variable, LimitDirection::Left),
+            Err(AnalyticLimitError::InvalidCertificate)
+        );
 
         let wrong_power = quotient(Expr::sin(x.clone()), Expr::pow(x.clone(), Expr::from(2)));
         let nested = quotient(Expr::sin(Expr::sin(x.clone())), x.clone());
         let offset = quotient(Expr::sin(Expr::add([x.clone(), Expr::from(1)])), x.clone());
-        let false_cancel = source.rebuild_with_expression(source.expression().clone(), 128, 32).unwrap();
+        let false_cancel = source
+            .rebuild_with_expression(source.expression().clone(), 128, 32)
+            .unwrap();
         let zero_poly = Expr::add([x.clone(), Expr::mul([Expr::from(-1), x.clone()])]);
         let hidden = bound(Expr::from(0)).divide(bound(zero_poly), 32).unwrap();
         let restricted = DomainExpression::add([false_cancel, hidden], 32).unwrap();
         for unsupported in [wrong_power, nested, offset, restricted] {
-            assert!(ctx.analytic_limit_at_zero(&unsupported, &variable, direction).is_err());
+            assert!(
+                ctx.analytic_limit_at_zero(&unsupported, &variable, direction)
+                    .is_err()
+            );
         }
 
-        let hidden = bound(Expr::from(0)).divide(bound(Expr::add([x.clone(), Expr::from(-1)])), 32).unwrap();
+        let hidden = bound(Expr::from(0))
+            .divide(bound(Expr::add([x.clone(), Expr::from(-1)])), 32)
+            .unwrap();
         let hole = DomainExpression::add([source.clone(), hidden], 32).unwrap();
-        let result = ctx.analytic_limit_at_zero(&hole, &variable, direction).unwrap();
+        let result = ctx
+            .analytic_limit_at_zero(&hole, &variable, direction)
+            .unwrap();
         assert_eq!(result.value, LimitValue::Finite(r(1)));
         assert_eq!(result.source.conditions(), hole.conditions());
-        assert_eq!(good.verify(&ctx, &hole, &variable, direction), Err(AnalyticLimitError::InvalidCertificate));
+        assert_eq!(
+            good.verify(&ctx, &hole, &variable, direction),
+            Err(AnalyticLimitError::InvalidCertificate)
+        );
 
         let restricted = EvaluationContext::new(ResourceLimits {
             max_work_units: 0,

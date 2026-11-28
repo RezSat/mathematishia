@@ -100,7 +100,11 @@ impl DomainPreconditionReport {
     }
 }
 
-fn inspect(expression: &Expr, remaining: &mut usize) -> Result<(), DomainPreconditionError> {
+fn inspect(
+    expression: &Expr,
+    remaining: &mut usize,
+    allow_real_abs: bool,
+) -> Result<(), DomainPreconditionError> {
     let mut pending = vec![(expression, 0)];
     while let Some((node, depth)) = pending.pop() {
         *remaining = remaining
@@ -123,6 +127,9 @@ fn inspect(expression: &Expr, remaining: &mut usize) -> Result<(), DomainPrecond
                 return Err(DomainPreconditionError::NameLimit);
             }
             ExprView::Function { name, argument } => {
+                if name.name() == "abs" && !allow_real_abs {
+                    return Err(DefinednessError::UnsupportedFunction.into());
+                }
                 if name.name().len() > MAX_NAME_BYTES {
                     return Err(DomainPreconditionError::NameLimit);
                 }
@@ -200,6 +207,9 @@ fn exact_sign(expression: &Expr) -> Option<Ordering> {
                 }
             }
         }
+        ExprView::Function { name, argument } if name.name() == "abs" => {
+            exact_sign(argument).map(|sign| if sign == Equal { Equal } else { Greater })
+        }
         ExprView::Mul(factors) => {
             let mut negative = false;
             for factor in factors {
@@ -243,6 +253,7 @@ fn assess(condition: &Condition, assumptions: &Assumptions) -> ConditionStatus {
 /// Bound sources must be checked in their original construction domain.
 /// For legacy unbound sources the caller supplies the domain; admission does
 /// not recover missing provenance and is not a domain conversion API.
+/// Newly admitted real absolute values require bound, non-external history.
 ///
 /// All input trees share a fixed node budget. Assumed conditions never become
 /// unconditional facts. Unrecognized functions and noninteger powers refuse
@@ -291,11 +302,13 @@ fn check_preconditions(
     {
         return Err(DefinednessError::ConditionLimitExceeded.into());
     }
+    let allow_real_abs =
+        source.construction_domain() == Some(ScalarDomain::Real) && !source.has_external_history();
     let mut remaining = MAX_NODES;
-    inspect(source.expression(), &mut remaining)?;
+    inspect(source.expression(), &mut remaining, allow_real_abs)?;
     let inputs = source.conditions().iter().chain(assumptions.premises());
     for condition in inputs.clone() {
-        inspect(condition.expression(), &mut remaining)?;
+        inspect(condition.expression(), &mut remaining, allow_real_abs)?;
     }
 
     let mut conditions = Vec::new();
@@ -630,6 +643,17 @@ mod principal_root_tests {
             )
             .is_err()
         );
+    }
+
+    #[test]
+    fn absolute_zero_cannot_be_admitted_as_a_nonzero_denominator() {
+        let source = bound(Expr::pow(Expr::abs(0.into()), (-1).into()));
+        let premise = Condition::NonZero(Expr::abs(0.into()));
+        let assumptions = Assumptions::from_conditions([premise]).unwrap();
+        let report =
+            DomainPreconditionReport::check_bound(&source, ScalarDomain::Real, &assumptions)
+                .unwrap();
+        assert_eq!(report.status(), DomainPreconditionStatus::Refuted);
     }
 
     #[test]

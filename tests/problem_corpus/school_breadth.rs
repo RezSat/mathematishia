@@ -20,7 +20,11 @@ fn execute(args: &[&str]) -> Result<ProcessResult, String> {
         .spawn()
         .map_err(|error| error.to_string())?;
     loop {
-        if child.try_wait().map_err(|error| error.to_string())?.is_some() {
+        if child
+            .try_wait()
+            .map_err(|error| error.to_string())?
+            .is_some()
+        {
             break;
         }
         if start.elapsed() >= TIME_LIMIT {
@@ -30,7 +34,9 @@ fn execute(args: &[&str]) -> Result<ProcessResult, String> {
         }
         thread::sleep(Duration::from_millis(1));
     }
-    let output = child.wait_with_output().map_err(|error| error.to_string())?;
+    let output = child
+        .wait_with_output()
+        .map_err(|error| error.to_string())?;
     Ok((
         output.status.code().unwrap_or(-1),
         String::from_utf8(output.stdout).map_err(|error| error.to_string())?,
@@ -121,8 +127,7 @@ fn classify(
     }
     if mode == "gap" {
         return if stdout.lines().any(|line| {
-            line == "status: partial"
-                || (line.starts_with("expression: ") && line.contains("log("))
+            line == "status: partial" || (line.starts_with("expression: ") && line.contains("log("))
         }) {
             "partial_unchecked"
         } else {
@@ -156,9 +161,10 @@ fn school_breadth_compiled_cli() {
     let mut failures = Vec::new();
     let mut runnable = 0;
     let mut bytes = 0;
-    for line in CORPUS.lines().filter(|line| {
-        !line.is_empty() && !line.starts_with('#') && !line.starts_with("id\t")
-    }) {
+    for line in CORPUS
+        .lines()
+        .filter(|line| !line.is_empty() && !line.starts_with('#') && !line.starts_with("id\t"))
+    {
         let columns: Vec<_> = line.split('\t').collect();
         assert_eq!(columns.len(), 7);
         let [id, category, _family, kind, mode, command, expected] =

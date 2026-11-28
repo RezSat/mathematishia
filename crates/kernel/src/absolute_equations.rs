@@ -560,7 +560,6 @@ pub fn verify_absolute_equation(
     verify_cases(context, equation, result, layers, &mut work)
 }
 
-
 const MAX_PIECEWISE_TERMS: usize = 16;
 
 /// Finite rational endpoints may be open or closed; infinite endpoints are open.
@@ -662,9 +661,13 @@ impl fmt::Display for PiecewiseEquationError {
             Self::InvalidGuard => f.write_str("invalid piecewise interval guard"),
             Self::Gap => f.write_str("piecewise guards do not cover the real domain"),
             Self::Overlap => f.write_str("piecewise guards overlap"),
-            Self::CaseLimit => f.write_str("piecewise equations support at most sixteen terms or guards"),
+            Self::CaseLimit => {
+                f.write_str("piecewise equations support at most sixteen terms or guards")
+            }
             Self::Arithmetic(error) => write!(f, "{error}"),
-            Self::VerificationFailed => f.write_str("piecewise equation evidence failed verification"),
+            Self::VerificationFailed => {
+                f.write_str("piecewise equation evidence failed verification")
+            }
         }
     }
 }
@@ -906,9 +909,9 @@ fn choose_piecewise_branch(
     work: &mut WorkBudget,
 ) -> Result<PiecewiseBranch, PiecewiseEquationError> {
     match side {
-        PiecewiseAffine::Explicit(cases) => {
-            Ok(PiecewiseBranch::Explicit(explicit_branch(cases, cell, work)?))
-        }
+        PiecewiseAffine::Explicit(cases) => Ok(PiecewiseBranch::Explicit(explicit_branch(
+            cases, cell, work,
+        )?)),
         PiecewiseAffine::AbsoluteSum { terms, .. } => {
             let hull = cell.hull();
             let mut signs = Vec::with_capacity(terms.len());
@@ -1209,7 +1212,10 @@ mod piecewise_tests {
         let left = sum(0, 0, &[(1, 1, -1), (1, 1, 1)]);
         assert_solutions(
             &equation(left.clone(), sum(0, 4, &[])),
-            vec![PiecewiseInterval::point(q(-2)), PiecewiseInterval::point(q(2))],
+            vec![
+                PiecewiseInterval::point(q(-2)),
+                PiecewiseInterval::point(q(2)),
+            ],
         );
         assert_solutions(
             &equation(left.clone(), sum(0, 2, &[])),
@@ -1230,13 +1236,20 @@ mod piecewise_tests {
         );
         assert_solutions(
             &equation(sum(0, 0, &[(1, 2, -5)]), sum(0, 7, &[])),
-            vec![PiecewiseInterval::point(q(-1)), PiecewiseInterval::point(q(6))],
+            vec![
+                PiecewiseInterval::point(q(-1)),
+                PiecewiseInterval::point(q(6)),
+            ],
         );
         assert_solutions(
             &equation(sum(0, 0, &[(1, 2, 0)]), sum(0, 1, &[])),
             vec![
-                PiecewiseInterval::point(Rational::new(Integer::from(-1), Integer::from(2)).unwrap()),
-                PiecewiseInterval::point(Rational::new(Integer::from(1), Integer::from(2)).unwrap()),
+                PiecewiseInterval::point(
+                    Rational::new(Integer::from(-1), Integer::from(2)).unwrap(),
+                ),
+                PiecewiseInterval::point(
+                    Rational::new(Integer::from(1), Integer::from(2)).unwrap(),
+                ),
             ],
         );
         assert_solutions(
@@ -1289,7 +1302,10 @@ mod piecewise_tests {
         ]);
         assert_solutions(
             &equation(left, right),
-            vec![PiecewiseInterval::point(q(-1)), PiecewiseInterval::point(q(2))],
+            vec![
+                PiecewiseInterval::point(q(-1)),
+                PiecewiseInterval::point(q(2)),
+            ],
         );
     }
 
@@ -1335,22 +1351,40 @@ mod piecewise_tests {
         let result = context.solve_piecewise_equation(&source).unwrap();
         let mut forged = result.clone();
         forged.cases.remove(1);
-        assert_eq!(context.verify_piecewise_equation(&source, &forged), Ok(false));
+        assert_eq!(
+            context.verify_piecewise_equation(&source, &forged),
+            Ok(false)
+        );
         let mut forged = result.clone();
         forged.cases[0].interval.upper = Some(q(0));
-        assert_eq!(context.verify_piecewise_equation(&source, &forged), Ok(false));
+        assert_eq!(
+            context.verify_piecewise_equation(&source, &forged),
+            Ok(false)
+        );
         let mut forged = result.clone();
         forged.cases[0].left = PiecewiseBranch::Signs(vec![AbsoluteSign::Nonnegative; 2]);
-        assert_eq!(context.verify_piecewise_equation(&source, &forged), Ok(false));
+        assert_eq!(
+            context.verify_piecewise_equation(&source, &forged),
+            Ok(false)
+        );
         let mut forged = result.clone();
         forged.cases[2].residual.constant = q(1);
-        assert_eq!(context.verify_piecewise_equation(&source, &forged), Ok(false));
+        assert_eq!(
+            context.verify_piecewise_equation(&source, &forged),
+            Ok(false)
+        );
         let mut forged = result.clone();
         forged.cases[1].solution = None;
-        assert_eq!(context.verify_piecewise_equation(&source, &forged), Ok(false));
+        assert_eq!(
+            context.verify_piecewise_equation(&source, &forged),
+            Ok(false)
+        );
         let mut forged = result;
         forged.solutions[0].lower_closed = false;
-        assert_eq!(context.verify_piecewise_equation(&source, &forged), Ok(false));
+        assert_eq!(
+            context.verify_piecewise_equation(&source, &forged),
+            Ok(false)
+        );
     }
 
     #[test]
@@ -1368,10 +1402,16 @@ mod piecewise_tests {
         let mut forged = result.clone();
         forged.cases[0].solution = Some(PiecewiseInterval::point(q(0)));
         forged.solutions.push(PiecewiseInterval::point(q(0)));
-        assert_eq!(context.verify_piecewise_equation(&source, &forged), Ok(false));
+        assert_eq!(
+            context.verify_piecewise_equation(&source, &forged),
+            Ok(false)
+        );
         let mut forged = result;
         forged.cases[1].left = PiecewiseBranch::Explicit(0);
-        assert_eq!(context.verify_piecewise_equation(&source, &forged), Ok(false));
+        assert_eq!(
+            context.verify_piecewise_equation(&source, &forged),
+            Ok(false)
+        );
     }
 
     #[test]
@@ -1404,7 +1444,10 @@ mod piecewise_tests {
             EvaluationError::Limit(ResourceLimitKind::WorkUnits),
         ));
         assert_eq!(limited.solve_piecewise_equation(&source), Err(error));
-        assert_eq!(limited.verify_piecewise_equation(&source, &result), Err(error));
+        assert_eq!(
+            limited.verify_piecewise_equation(&source, &result),
+            Err(error)
+        );
     }
 
     fn eval_sum(side: &PiecewiseAffine, x: &Rational) -> Rational {

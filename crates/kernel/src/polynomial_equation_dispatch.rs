@@ -231,7 +231,6 @@ pub fn verify_polynomial_equation(
     }
 }
 
-
 use mathema::{Integer, Rational};
 
 use crate::{
@@ -417,7 +416,10 @@ fn collect_pattern_roots(
     multiplicity: usize,
     domain: ScalarDomain,
 ) -> bool {
-    for entry in values.iter().filter(|entry| in_domain(entry.root(), domain)) {
+    for entry in values
+        .iter()
+        .filter(|entry| in_domain(entry.root(), domain))
+    {
         if roots.iter().any(|existing| existing.root() == entry.root()) {
             return false;
         }
@@ -605,7 +607,11 @@ impl EvaluationContext {
             || result.domain != domain
             || result.original != original
             || !(2..=MAX_SUBSTITUTION_POWER).contains(&result.power)
-            || result.outer.original().degree().is_none_or(|d| d == 0 || d > 2)
+            || result
+                .outer
+                .original()
+                .degree()
+                .is_none_or(|d| !(1..=2).contains(&d))
         {
             return Ok(false);
         }
@@ -623,8 +629,10 @@ impl EvaluationContext {
         let Some(factors) = outer_factors(&result.outer, power, domain) else {
             return Ok(false);
         };
-        Ok(checked_lifts(self, &factors, power, domain, &result.lifts)?.as_ref()
-            == Some(&result.solutions))
+        Ok(
+            checked_lifts(self, &factors, power, domain, &result.lifts)?.as_ref()
+                == Some(&result.solutions),
+        )
     }
 }
 
@@ -698,8 +706,8 @@ mod pattern_tests {
         );
         let context = EvaluationContext::default();
         let x = Symbol::new("x").unwrap();
-        let alternative = solve_polynomial_equation(&context, &original, &x, ScalarDomain::Real)
-            .unwrap();
+        let alternative =
+            solve_polynomial_equation(&context, &original, &x, ScalarDomain::Real).unwrap();
         assert_eq!(alternative.solutions(), &result.solutions);
         assert!(
             verify_polynomial_equation(&context, &original, &x, ScalarDomain::Real, &alternative)
@@ -725,8 +733,14 @@ mod pattern_tests {
         };
         assert_eq!(roots.len(), 4);
         assert_eq!(roots[2].root().minimal_polynomial(), Some(&p(&[4, 0, 1])));
-        assert_eq!(roots[2].root().branch(), Some(QuadraticBranch::NegativeImaginary));
-        assert_eq!(roots[3].root().branch(), Some(QuadraticBranch::PositiveImaginary));
+        assert_eq!(
+            roots[2].root().branch(),
+            Some(QuadraticBranch::NegativeImaginary)
+        );
+        assert_eq!(
+            roots[3].root().branch(),
+            Some(QuadraticBranch::PositiveImaginary)
+        );
         let no_real = solve(&p(&[1, 0, 0, 0, 1]), ScalarDomain::Real);
         assert_eq!(no_real.solutions, CertifiedSolutionSet::None);
         assert!(matches!(
@@ -839,6 +853,40 @@ mod pattern_tests {
                 .solve_pattern_polynomial_equation(&above_bound, &zero, &x, domain)
                 .unwrap()
                 .is_none()
+        );
+    }
+
+    #[test]
+    fn resource_refusals_and_nested_radicals() {
+        use crate::{ResourceLimitKind, ResourceLimits};
+
+        let domain = ScalarDomain::Real;
+        let x = Symbol::new("x").unwrap();
+        let left = source(&p(&[4, 0, -5, 0, 1]), domain);
+        let right = source(&p(&[]), domain);
+        let valid = solve(&p(&[4, 0, -5, 0, 1]), domain);
+        let limited = EvaluationContext::new(ResourceLimits {
+            max_work_units: 0,
+            ..ResourceLimits::default()
+        });
+        let error = PolynomialEquationError::Evaluation(EvaluationError::Limit(
+            ResourceLimitKind::WorkUnits,
+        ));
+        assert_eq!(
+            limited.solve_pattern_polynomial_equation(&left, &right, &x, domain),
+            Err(error)
+        );
+        assert_eq!(
+            limited.verify_pattern_polynomial_equation(&left, &right, &x, domain, &valid),
+            Err(error)
+        );
+        let nested = solve(&p(&[-2, 0, 0, 0, 1]), domain);
+        assert_eq!(
+            nested.solutions,
+            CertifiedSolutionSet::Partial {
+                roots: vec![],
+                unresolved_cofactor: p(&[-2, 0, 0, 0, 1]),
+            }
         );
     }
 }

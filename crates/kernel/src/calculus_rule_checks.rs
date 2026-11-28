@@ -454,7 +454,9 @@ impl Checker<'_> {
                 1 => Expr::mul([coefficient, variable.clone()]),
                 _ => {
                     if degree > self.context.limits().max_symbolic_power {
-                        return Err(EvaluationError::Limit(ResourceLimitKind::SymbolicPower).into());
+                        return Err(
+                            EvaluationError::Limit(ResourceLimitKind::SymbolicPower).into()
+                        );
                     }
                     Expr::mul([
                         coefficient,
@@ -671,15 +673,18 @@ mod derivative_trace_tests {
         let trace = context
             .differentiate_rational_domain_expression(&reciprocal, &variable())
             .unwrap();
-        let expected = Expr::mul([Expr::from(-1), Expr::pow(x(), Expr::from(-2))]);
+        let expected = Expr::mul([
+            Expr::from(-1),
+            Expr::pow(Expr::pow(x(), Expr::from(2)), Expr::from(-1)),
+        ]);
         assert_eq!(trace[1].candidate.expression(), &expected);
         assert_eq!(
-            trace[0].value.evaluate(&Rational::from(0)),
+            trace[0].value.evaluate(&Rational::from(Integer::from(0))),
             Err(RationalFunctionError::UndefinedAtPoint)
         );
         assert_eq!(
-            trace[0].value.evaluate(&Rational::from(-1)),
-            Ok(Rational::from(-1))
+            trace[0].value.evaluate(&Rational::from(Integer::from(-1))),
+            Ok(Rational::from(Integer::from(-1)))
         );
         assert_eq!(
             context.verify_rational_domain_derivative(&reciprocal, &variable(), &trace),
@@ -693,11 +698,11 @@ mod derivative_trace_tests {
             .differentiate_rational_domain_expression(&quotient, &variable())
             .unwrap();
         assert_eq!(
-            trace[0].value.evaluate(&Rational::from(2)),
-            Ok(Rational::from(-2))
+            trace[0].value.evaluate(&Rational::from(Integer::from(2))),
+            Ok(Rational::from(Integer::from(-2)))
         );
         assert_eq!(
-            trace[0].value.evaluate(&Rational::from(1)),
+            trace[0].value.evaluate(&Rational::from(Integer::from(1))),
             Err(RationalFunctionError::UndefinedAtPoint)
         );
         assert_eq!(
@@ -723,12 +728,12 @@ mod derivative_trace_tests {
         assert_eq!(trace[1].candidate.expression(), &Expr::from(1));
         assert_eq!(trace[1].candidate.conditions(), canceled.conditions());
         assert_eq!(
-            trace[0].value.evaluate(&Rational::from(1)),
+            trace[0].value.evaluate(&Rational::from(Integer::from(1))),
             Err(RationalFunctionError::UndefinedAtPoint)
         );
         assert_eq!(
-            trace[0].value.evaluate(&Rational::from(0)),
-            Ok(Rational::from(1))
+            trace[0].value.evaluate(&Rational::from(Integer::from(0))),
+            Ok(Rational::from(Integer::from(1)))
         );
         assert_eq!(
             context.verify_rational_domain_derivative(&canceled, &variable(), &trace),
@@ -745,7 +750,7 @@ mod derivative_trace_tests {
             .unwrap();
         assert_eq!(trace[1].candidate.expression(), &Expr::from(0));
         assert_eq!(
-            trace[0].value.evaluate(&Rational::from(0)),
+            trace[0].value.evaluate(&Rational::from(Integer::from(0))),
             Err(RationalFunctionError::UndefinedAtPoint)
         );
         assert_eq!(
@@ -814,7 +819,7 @@ mod derivative_trace_tests {
             .unwrap();
         assert_eq!(trace[1].candidate.expression(), &Expr::from(0));
         assert_eq!(
-            trace[0].value.evaluate(&Rational::from(0)),
+            trace[0].value.evaluate(&Rational::from(Integer::from(0))),
             Err(RationalFunctionError::UndefinedAtPoint)
         );
         let unsupported = source(Expr::from(Symbol::new("y").unwrap()));
@@ -822,13 +827,9 @@ mod derivative_trace_tests {
             context.differentiate_rational_domain_expression(&unsupported, &variable()),
             Err(RationalCalculusError::UnsupportedSymbol)
         );
-        let complex = DomainExpression::from_expr_in_domain(
-            x(),
-            mathema::ScalarDomain::Complex,
-            128,
-            16,
-        )
-        .unwrap();
+        let complex =
+            DomainExpression::from_expr_in_domain(x(), mathema::ScalarDomain::Complex, 128, 16)
+                .unwrap();
         assert_eq!(
             context.differentiate_rational_domain_expression(&complex, &variable()),
             Err(RationalCalculusError::DomainMismatch)

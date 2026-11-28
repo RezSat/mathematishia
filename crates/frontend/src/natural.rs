@@ -778,8 +778,8 @@ mod tests {
         let request = parse_v2(&context, "((1/2+1/4)×2)÷3", "x").unwrap();
         let result = dispatch_problem(&context, &request).unwrap();
         assert_eq!(
-            result.outcome,
-            ProblemOutcome::SolvedExact(ExactAnswer::Rational(ratio(1, 2)))
+            result.outcome(),
+            &ProblemOutcome::SolvedExact(ExactAnswer::Rational(ratio(1, 2)))
         );
     }
 

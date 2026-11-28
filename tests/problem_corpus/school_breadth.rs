@@ -1,4 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet};
+use std::io::{self, Write as _};
 use std::process::{Command, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -6,6 +7,7 @@ use std::time::{Duration, Instant};
 use mathematishia_cli::{CliErrorKind, run};
 
 const CORPUS: &str = include_str!("school_breadth.tsv");
+const KNOWN_PARTIALS: &str = include_str!("school_breadth_partial.tsv");
 const LEGACY: &str = include_str!("user_questions.tsv");
 const TIME_LIMIT: Duration = Duration::from_secs(5);
 
@@ -104,6 +106,7 @@ fn classify(
     mode: &str,
     args: &[&str],
     expected: &[&str],
+    baseline_partial: Option<&str>,
     code: i32,
     stdout: &str,
     stderr: &str,
@@ -135,7 +138,11 @@ fn classify(
         };
     }
     if !matches_answer(stdout, expected) {
-        return "wrong_answer";
+        return if baseline_partial.is_some_and(|line| stdout.trim_end() == line) {
+            "partial_known_unevaluated"
+        } else {
+            "wrong_answer"
+        };
     }
     if mode == "trace" {
         if has_checked_records(stdout) {
@@ -154,6 +161,12 @@ fn school_breadth_compiled_cli() {
         .lines()
         .filter_map(|line| line.split('\t').nth(6))
         .collect();
+    let known_partial: BTreeMap<_, _> = KNOWN_PARTIALS
+        .lines()
+        .filter(|line| !line.starts_with('#') && !line.is_empty())
+        .map(|line| line.split_once('\t').expect("known partial record"))
+        .collect();
+    assert_eq!(known_partial.len(), 24);
     let mut ids = BTreeSet::new();
     let mut commands = BTreeSet::new();
     let mut counts = BTreeMap::<(&str, &str, &str), usize>::new();
@@ -191,13 +204,22 @@ fn school_breadth_compiled_cli() {
                     failures.push(format!("{id}: nondeterministic output"));
                     "nondeterministic"
                 } else {
-                    let outcome = classify(mode, &args, &expected, code, &stdout, &stderr);
+                    let outcome = classify(
+                        mode,
+                        &args,
+                        &expected,
+                        known_partial.get(id).copied(),
+                        code,
+                        &stdout,
+                        &stderr,
+                    );
                     if !matches!(
                         outcome,
                         "complete_answer"
                             | "complete_checked_steps"
                             | "unsupported"
                             | "partial_unchecked"
+                            | "partial_known_unevaluated"
                     ) {
                         failures.push(format!(
                             "{id}: {outcome}; expected {expected:?}; got {stdout} {stderr}"
@@ -209,25 +231,32 @@ fn school_breadth_compiled_cli() {
         };
         *counts.entry((category, kind, outcome)).or_default() += 1;
     }
-    println!(
+    assert!(known_partial.keys().all(|id| ids.contains(id)));
+    let mut report = io::stdout().lock();
+    writeln!(
+        report,
         "school_breadth_cases={} runnable={runnable} output_bytes={bytes}",
         ids.len()
-    );
-    println!("category\tkind\toutcome\tcount");
+    )
+    .unwrap();
+    writeln!(report, "category\tkind\toutcome\tcount").unwrap();
     for ((category, kind, outcome), count) in counts {
-        println!("{category}\t{kind}\t{outcome}\t{count}");
+        writeln!(report, "{category}\t{kind}\t{outcome}\t{count}").unwrap();
     }
-    println!("category\tprocesses\tmedian_us\tp95_us\tmax_us");
+    writeln!(report, "category\tprocesses\tmedian_us\tp95_us\tmax_us").unwrap();
     for (category, mut samples) in timings {
         samples.sort_unstable();
         let n = samples.len();
-        println!(
+        writeln!(
+            report,
             "{category}\t{n}\t{}\t{}\t{}",
             samples[n / 2],
             samples[(95 * n).div_ceil(100) - 1],
             samples[n - 1]
-        );
+        )
+        .unwrap();
     }
+    drop(report);
     assert!(runnable >= 250, "minimum executable breadth");
     assert!(failures.is_empty(), "breadth regressions: {failures:#?}");
 }
@@ -266,4 +295,22 @@ fn breadth_invalid_inputs_are_separate() {
         assert!(run(&args).is_err());
     }
     println!("school_breadth_invalid_cases=4");
+}
+
+#[test]
+fn breadth_partial_baseline_cannot_hide_wrong_answers() {
+    let args = ["expr", "2^3"];
+    let expected = ["expression: 8"];
+    let baseline = Some("expression: 2 ^ 3");
+    for (output, outcome) in [
+        ("expression: 2 ^ 3\n", "partial_known_unevaluated"),
+        ("expression: 7\n", "wrong_answer"),
+        ("expression: 2 ^ 4\n", "wrong_answer"),
+        ("expression: 8\n", "complete_answer"),
+    ] {
+        assert_eq!(
+            classify("exact", &args, &expected, baseline, 0, output, ""),
+            outcome
+        );
+    }
 }

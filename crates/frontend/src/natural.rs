@@ -1,4 +1,4 @@
-//! Opt-in natural input v1. This adapter does not change the legacy parser.
+//! Opt-in natural input. These adapters do not change the legacy parser.
 //!
 //! Angles: sin/cos/tan(signed integer coefficient times pi or π, optionally
 //! divided by a positive integer). Multiplication before pi may be implicit.
@@ -10,8 +10,8 @@ use mathema::{DefinednessError, Integer, Rational, ScalarDomain, Symbol};
 use mathematishia_kernel::{
     AbsoluteAffine, AbsoluteEquation, AbsoluteEquationError, AbsoluteEquationResult,
     AbsoluteExpression, EvaluationContext, EvaluationError, PiMultiple, SpecialAngleCertificate,
-    TrigError, TrigFunction, TrigLimits, evaluate_special_angle, solve_absolute_equation,
-    verify_absolute_equation, verify_special_angle,
+    ProblemRequest, ProblemStatement, TrigError, TrigFunction, TrigLimits, evaluate_special_angle,
+    solve_absolute_equation, verify_absolute_equation, verify_special_angle,
 };
 
 use crate::advanced::AdvancedError;
@@ -300,6 +300,242 @@ pub fn parse_v1(
     })
 }
 
+/// Parse opt-in school notation into an existing checked-kernel request.
+///
+/// Bare equations select real source-bound solving; comparisons select the
+/// real inequality operation. Bare expressions and `evaluate:` select exact
+/// evaluation. The other explicit prefixes are `solve:`, `expand:`,
+/// `differentiate:` and `integrate:`. No operation is inferred from prose.
+/// Existing pi-angle and affine absolute equation requests retain their v1
+/// meanings. Admission is not a promise that the kernel can solve the request.
+pub fn parse_v2(
+    context: &EvaluationContext,
+    source: &str,
+    variable: &str,
+) -> Result<ProblemRequest, AdvancedError> {
+    if source.len() > MAX_BYTES || variable.len() > MAX_LITERAL_DIGITS {
+        return Err(resource());
+    }
+    let variable = problem::variable(context, variable).map_err(request_error)?;
+    if matches!(
+        variable.name(),
+        "pi" | "π" | "abs" | "sqrt" | "log" | "ln" | "sin" | "cos" | "tan" | "exp"
+    ) {
+        return Err(invalid("reserved natural variable"));
+    }
+    let normalized: String = source
+        .chars()
+        .map(|c| match c {
+            '−' => '-',
+            '×' => '*',
+            '÷' => '/',
+            _ => c,
+        })
+        .collect();
+    let (operation, input) = match normalized.split_once(':') {
+        Some((operation, input)) => (operation.trim(), input.trim()),
+        None => ("", normalized.trim()),
+    };
+    if input.is_empty() || input.contains(':') {
+        return Err(invalid("expected one natural expression or relation"));
+    }
+    if !matches!(
+        operation,
+        "" | "solve" | "evaluate" | "expand" | "differentiate" | "integrate"
+    ) {
+        return Err(unsupported("unknown explicit natural operation"));
+    }
+    // Bars are only parsed by the existing absolute-equation adapter. Replacing
+    // them with spaces here counts the whole input without lowering it.
+    let lexical = input.replace('|', " ");
+    let kinds = school_tokens(&lexical)?;
+    let relation = kinds.iter().any(|kind| {
+        matches!(
+            kind,
+            TokenKind::Equal
+                | TokenKind::Less
+                | TokenKind::LessOrEqual
+                | TokenKind::Greater
+                | TokenKind::GreaterOrEqual
+        )
+    });
+    let comparison = kinds.iter().any(|kind| {
+        matches!(
+            kind,
+            TokenKind::Less
+                | TokenKind::LessOrEqual
+                | TokenKind::Greater
+                | TokenKind::GreaterOrEqual
+        )
+    });
+    let absolute = input.contains('|') || kinds.contains(&TokenKind::Identifier("abs"));
+    let pi = kinds
+        .iter()
+        .any(|kind| matches!(kind, TokenKind::Identifier("pi" | "π")));
+    let radical = kinds.contains(&TokenKind::Identifier("sqrt"));
+    let v1 = absolute || pi || radical;
+    validate_school_tokens(&kinds, variable.name(), v1)?;
+
+    if relation && !matches!(operation, "" | "solve") {
+        return Err(invalid("expression operation cannot consume a relation"));
+    }
+    if operation == "solve" && !relation {
+        return Err(invalid("solve requires an equation or comparison"));
+    }
+    if v1 {
+        if absolute && !matches!(operation, "" | "solve") {
+            return Err(unsupported("only affine absolute equations are admitted"));
+        }
+        if !absolute && !matches!(operation, "" | "evaluate") {
+            return Err(unsupported("this function operation is not admitted"));
+        }
+        return problem::request(context, &["natural", input, variable.name()])
+            .map_err(school_request_error);
+    }
+    let name = variable.name();
+    let request = if comparison {
+        problem::request(context, &["inequality", input, name])
+    } else if relation {
+        problem::request(context, &["solvefield", input, name, "R"])
+    } else {
+        match operation {
+            "expand" => problem::request(context, &["expandall", input, name]),
+            "differentiate" => problem::request(context, &["diffreal", input, name]),
+            "integrate" => problem::request(context, &["integrate", input, name]),
+            _ => problem::request(context, &["evalexact", input]),
+        }
+    }
+    .map_err(school_request_error)?;
+    match &request.statement {
+        ProblemStatement::Expression(source) => {
+            context
+                .check_expression(source.expression())
+                .map_err(evaluation)?;
+        }
+        ProblemStatement::SourceEquation { left, right }
+        | ProblemStatement::Comparison { left, right, .. } => {
+            context
+                .check_expression(left.expression())
+                .map_err(evaluation)?;
+            context
+                .check_expression(right.expression())
+                .map_err(evaluation)?;
+        }
+        _ => {}
+    }
+    Ok(request)
+}
+
+fn school_request_error(error: RequestError) -> AdvancedError {
+    match error {
+        RequestError::Advanced(error) => *error,
+        RequestError::Parse(DomainParseError::Domain(
+            DefinednessError::UnsupportedExponent | DefinednessError::UnsupportedFunction,
+        )) => unsupported("function or exponent semantics are not admitted"),
+        RequestError::Parse(DomainParseError::Syntax(error))
+            if matches!(
+                error.kind(),
+                crate::ParseErrorKind::InputLimitExceeded
+                    | crate::ParseErrorKind::TokenLimitExceeded
+                    | crate::ParseErrorKind::NestingLimitExceeded
+                    | crate::ParseErrorKind::DecimalDigitLimitExceeded
+            ) =>
+        {
+            resource()
+        }
+        error => request_error(error),
+    }
+}
+
+fn school_tokens(input: &str) -> Result<Vec<TokenKind<'_>>, AdvancedError> {
+    let tokens = crate::tokenize_with_comparisons(input, true)
+        .map_err(|error| school_request_error(RequestError::Parse(error.into())))?;
+    if tokens.len() > MAX_TOKENS
+        || tokens.iter().any(|token| match token.kind {
+            TokenKind::Integer(digits) | TokenKind::Decimal(digits) => {
+                digits.len() > MAX_LITERAL_DIGITS
+            }
+            _ => false,
+        })
+    {
+        return Err(resource());
+    }
+    Ok(tokens
+        .into_iter()
+        .filter_map(|token| (token.kind != TokenKind::End).then_some(token.kind))
+        .collect())
+}
+
+const MAX_SCHOOL_NESTING: usize = 32;
+
+fn validate_school_tokens(
+    kinds: &[TokenKind<'_>],
+    variable: &str,
+    v1: bool,
+) -> Result<(), AdvancedError> {
+    use TokenKind::*;
+
+    // Each parenthesis level has its own multiplicative term. After division
+    // or a power, require an explicit product until a binary sum or relation.
+    // In particular 1/2x, 1/-2x, and 1/(2)(x) are not silently interpreted.
+    let mut explicit = vec![false];
+    let mut previous = End;
+    for (index, &kind) in kinds.iter().enumerate() {
+        if let Identifier(name) = kind {
+            let call = kinds.get(index + 1) == Some(&LeftParen);
+            match name {
+                "log" | "ln" => return Err(unsupported("logarithm admission is gated")),
+                "sin" | "cos" | "tan" | "exp" if call => {}
+                "sqrt" | "abs" if v1 && call => {}
+                "pi" | "π" if v1 && !call => {}
+                name if name == variable && !call => {}
+                _ => return Err(unsupported("unknown or ambiguous natural identifier")),
+            }
+        }
+        let implicit = matches!(
+            (previous, kind),
+            (Integer(_) | Decimal(_), Identifier(_) | LeftParen) | (RightParen, LeftParen)
+        );
+        if implicit && explicit.last() == Some(&true) {
+            return Err(invalid("ambiguous juxtaposition after division or power"));
+        }
+        match kind {
+            LeftParen => {
+                if explicit.len() > MAX_SCHOOL_NESTING {
+                    return Err(resource());
+                }
+                explicit.push(false);
+            }
+            RightParen => {
+                if explicit.len() == 1 {
+                    return Err(invalid("unmatched closing parenthesis"));
+                }
+                explicit.pop();
+            }
+            Slash | Caret => {
+                *explicit.last_mut().expect("nonempty nesting stack") = true;
+            }
+            Equal | Less | LessOrEqual | Greater | GreaterOrEqual => {
+                *explicit.last_mut().expect("nonempty nesting stack") = false;
+            }
+            Plus | Minus
+                if matches!(
+                    previous,
+                    Integer(_) | Decimal(_) | Identifier(_) | RightParen
+                ) =>
+            {
+                *explicit.last_mut().expect("nonempty nesting stack") = false;
+            }
+            _ => {}
+        }
+        previous = kind;
+    }
+    if explicit.len() != 1 {
+        return Err(invalid("unclosed parenthesis"));
+    }
+    Ok(())
+}
+
 fn trig_error(error: TrigError) -> AdvancedError {
     match error {
         TrigError::ScalarLimit | TrigError::InvalidLimits => {
@@ -508,5 +744,136 @@ mod tests {
             parse_v1(&context, &" ".repeat(MAX_BYTES + 1), "x"),
             Err(AdvancedError::Resource(_))
         ));
+    }
+
+    #[test]
+    fn school_routes_existing_operations() {
+        use mathematishia_kernel::ProblemOperation;
+
+        let context = context();
+        for (source, operation) in [
+            ("2x−5=7", ProblemOperation::SolveSourceEquation),
+            ("solve: x^2=4", ProblemOperation::SolveSourceEquation),
+            ("x÷2≤3", ProblemOperation::Inequality),
+            ("evaluate: (1/2+1/4)", ProblemOperation::EvaluateExact),
+            ("expand: (x+1)(x−1)", ProblemOperation::Expand),
+            ("differentiate: x^2", ProblemOperation::Differentiate),
+            ("integrate: 2×x", ProblemOperation::Integrate),
+            ("sin(π/6)", ProblemOperation::EvaluateSpecialAngle),
+            ("|2x−5|=7", ProblemOperation::SolveAbsolute),
+        ] {
+            let request = parse_v2(&context, source, "x").unwrap();
+            assert_eq!(request.operation, operation, "{source}");
+            assert_eq!(request.domain, ScalarDomain::Real);
+            assert_eq!(parse_v2(&context, source, "x").unwrap(), request);
+        }
+    }
+
+    #[test]
+    fn school_exact_arithmetic_uses_checked_dispatch() {
+        use mathematishia_kernel::{ExactAnswer, ProblemOutcome, dispatch_problem};
+
+        let context = context();
+        let request = parse_v2(&context, "((1/2+1/4)×2)÷3", "x").unwrap();
+        let result = dispatch_problem(&context, &request).unwrap();
+        assert_eq!(
+            result.outcome,
+            ProblemOutcome::SolvedExact(ExactAnswer::Rational(ratio(1, 2)))
+        );
+    }
+
+    #[test]
+    fn school_source_restrictions_survive_cancellation() {
+        let context = context();
+        let request = parse_v2(&context, "0/x=0", "x").unwrap();
+        let ProblemStatement::SourceEquation { left, right } = request.statement else {
+            panic!("expected a source equation");
+        };
+        assert_eq!(left, problem::source("0/x", ScalarDomain::Real).unwrap());
+        assert!(!left.conditions().is_empty());
+        assert!(right.conditions().is_empty());
+        let request = parse_v2(&context, "0/x≤1", "x").unwrap();
+        let ProblemStatement::Comparison { left, .. } = request.statement else {
+            panic!("expected a comparison");
+        };
+        assert!(!left.conditions().is_empty());
+        assert!(matches!(
+            parse_v2(&context, "|0/x|=0", "x"),
+            Err(AdvancedError::Domain(_))
+        ));
+    }
+
+    #[test]
+    fn school_rejects_ambiguous_notation_before_lowering() {
+        let context = context();
+        for source in [
+            "1/2x=1",
+            "1/-2x=1",
+            "1/2^2x=1",
+            "1/(2)(x)=1",
+            "1/2(x+1)=0",
+            "xy=1",
+            "x(y)=1",
+            "0*y+x=1",
+            "x x=1",
+            "x<2<3",
+            "||x||=1",
+            "|x=1",
+            "solve: x+1",
+            "evaluate: x=1",
+            "please solve x=1",
+        ] {
+            assert!(parse_v2(&context, source, "x").is_err(), "{source}");
+        }
+        for source in ["1/(2x)=1", "2x/3=1", "1/2*x=1", "((x+1))^2=4"] {
+            assert!(parse_v2(&context, source, "x").is_ok(), "{source}");
+        }
+    }
+
+    #[test]
+    fn school_semantic_gates_remain_explicit() {
+        let context = context();
+        for source in [
+            "sqrt(16)",
+            "sqrt(2)",
+            "ln(x)",
+            "log(x)",
+            "x^(1/2)",
+            "differentiate: sqrt(x)",
+            "integrate: log(abs(x))",
+        ] {
+            assert!(
+                matches!(
+                    parse_v2(&context, source, "x"),
+                    Err(AdvancedError::Unsupported(_))
+                ),
+                "{source}"
+            );
+        }
+        assert!(matches!(
+            parse_v2(&context, "sqrt(−1)", "x"),
+            Err(AdvancedError::Domain(_))
+        ));
+        assert!(matches!(
+            parse_v2(&context, "1/0=1", "x"),
+            Err(AdvancedError::Domain(_))
+        ));
+        assert!(parse_v2(&context, "pi=1", "pi").is_err());
+    }
+
+    #[test]
+    fn school_resource_limits_cover_whole_input() {
+        let context = context();
+        for source in [
+            " ".repeat(MAX_BYTES + 1),
+            format!("{}=1", "1".repeat(MAX_LITERAL_DIGITS + 1)),
+            format!("{}1{}=1", "(".repeat(33), ")".repeat(33)),
+            format!("{}1=1", "1+".repeat(MAX_TOKENS)),
+        ] {
+            assert!(matches!(
+                parse_v2(&context, &source, "x"),
+                Err(AdvancedError::Resource(_))
+            ));
+        }
     }
 }

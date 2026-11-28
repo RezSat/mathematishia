@@ -166,7 +166,7 @@ fn school_breadth_compiled_cli() {
         .filter(|line| !line.starts_with('#') && !line.is_empty())
         .map(|line| line.split_once('\t').expect("known partial record"))
         .collect();
-    assert_eq!(known_partial.len(), 24);
+    assert_eq!(known_partial.len(), 25);
     let mut ids = BTreeSet::new();
     let mut commands = BTreeSet::new();
     let mut counts = BTreeMap::<(&str, &str, &str), usize>::new();

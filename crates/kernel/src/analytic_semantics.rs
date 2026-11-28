@@ -7,7 +7,9 @@ use mathema::{
     definedness_obligations, definedness_obligations_in_domain,
 };
 
-use crate::{Assumptions, ConditionStatus, ExactQuadraticRoot, QuadraticBranch, RationalPolynomial};
+use crate::{
+    Assumptions, ConditionStatus, ExactQuadraticRoot, QuadraticBranch, RationalPolynomial,
+};
 
 const MAX_NODES: usize = 2_048;
 const MAX_DEPTH: usize = 64;

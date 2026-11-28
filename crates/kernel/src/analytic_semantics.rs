@@ -3,11 +3,11 @@
 use std::{cmp::Ordering, error::Error, fmt};
 
 use mathema::{
-    Condition, DefinednessError, DomainExpression, Expr, ExprView, Integer, ScalarDomain,
+    Condition, DefinednessError, DomainExpression, Expr, ExprView, Integer, Rational, ScalarDomain,
     definedness_obligations, definedness_obligations_in_domain,
 };
 
-use crate::{Assumptions, ConditionStatus};
+use crate::{Assumptions, ConditionStatus, ExactQuadraticRoot, QuadraticBranch, RationalPolynomial};
 
 const MAX_NODES: usize = 2_048;
 const MAX_DEPTH: usize = 64;
@@ -327,4 +327,322 @@ fn check_preconditions(
         external_history: source.has_external_history(),
         conditions,
     })
+}
+
+/// A real principal square-root operation with its original radicand and
+/// checked source restrictions. The result is only valid on that source domain.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PrincipalSquareRootClaim {
+    pub source: DomainExpression,
+    pub preconditions: DomainPreconditionReport,
+    pub value: PrincipalSquareRootValue,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum PrincipalSquareRootValue {
+    Exact(ExactQuadraticRoot),
+    Symbolic(DomainExpression),
+    Undefined,
+    Unsupported,
+}
+
+impl PrincipalSquareRootClaim {
+    pub fn exact_value(&self) -> Option<&ExactQuadraticRoot> {
+        match &self.value {
+            PrincipalSquareRootValue::Exact(value) => Some(value),
+            _ => None,
+        }
+    }
+
+    pub fn symbolic_value(&self) -> Option<&DomainExpression> {
+        match &self.value {
+            PrincipalSquareRootValue::Symbolic(value) => Some(value),
+            _ => None,
+        }
+    }
+
+    pub fn is_undefined(&self) -> bool {
+        self.value == PrincipalSquareRootValue::Undefined
+    }
+
+    pub fn is_unsupported(&self) -> bool {
+        self.value == PrincipalSquareRootValue::Unsupported
+    }
+}
+
+fn literal_rational(expression: &Expr) -> Option<Rational> {
+    match expression.view() {
+        ExprView::Integer(value) => Some(value.clone().into()),
+        ExprView::Rational(value) => Some(value.clone()),
+        _ => None,
+    }
+}
+
+fn square_base(expression: &Expr) -> Option<&Expr> {
+    match expression.view() {
+        ExprView::Pow { base, exponent } if exponent == &Expr::from(2) => Some(base),
+        _ => None,
+    }
+}
+
+fn square_root_polynomial(radicand: &Rational) -> RationalPolynomial {
+    RationalPolynomial::new(vec![
+        -radicand,
+        Integer::zero().into(),
+        Integer::one().into(),
+    ])
+}
+
+fn bounded_scalar(value: &Rational) -> bool {
+    value.numerator().bit_len() <= MAX_SCALAR_BITS
+        && value.denominator().bit_len() <= MAX_SCALAR_BITS
+}
+
+impl DomainPreconditionReport {
+    /// Evaluate a real principal square root of an explicitly bound radicand.
+    /// Admits rational literals and syntactic squares, i.e. a bounded subset
+    /// of exponent 1/2. Other rational powers and variable powers are refused.
+    /// A square rewrites to abs(base), never to base. Unknown source
+    /// conditions remain prerequisites, not unconditional facts.
+    pub fn principal_square_root(
+        source: &DomainExpression,
+        assumptions: &Assumptions,
+    ) -> Result<PrincipalSquareRootClaim, DomainPreconditionError> {
+        let preconditions = Self::check_bound(source, ScalarDomain::Real, assumptions)?;
+        let value = if preconditions.status() == DomainPreconditionStatus::Refuted {
+            PrincipalSquareRootValue::Undefined
+        } else if let Some(radicand) = literal_rational(source.expression()) {
+            if radicand.numerator() < &Integer::zero() {
+                PrincipalSquareRootValue::Undefined
+            } else if let Some(root) = radicand.exact_sqrt() {
+                PrincipalSquareRootValue::Exact(ExactQuadraticRoot::Rational(root))
+            } else {
+                PrincipalSquareRootValue::Exact(ExactQuadraticRoot::Algebraic {
+                    minimal_polynomial: square_root_polynomial(&radicand),
+                    branch: QuadraticBranch::UpperReal,
+                })
+            }
+        } else if let Some(base) = square_base(source.expression()) {
+            PrincipalSquareRootValue::Symbolic(source.rebuild_with_expression(
+                Expr::abs(base.clone()),
+                MAX_NODES,
+                MAX_CONDITIONS,
+            )?)
+        } else {
+            PrincipalSquareRootValue::Unsupported
+        };
+        Ok(PrincipalSquareRootClaim {
+            source: source.clone(),
+            preconditions,
+            value,
+        })
+    }
+
+    /// Independently check the source, domain report, branch and local identity.
+    /// Does not invoke the square-root generator.
+    pub fn verify_principal_square_root(
+        expected_source: &DomainExpression,
+        assumptions: &Assumptions,
+        claim: &PrincipalSquareRootClaim,
+    ) -> Result<bool, DomainPreconditionError> {
+        let report = Self::check_bound(expected_source, ScalarDomain::Real, assumptions)?;
+        Self::check_bound(&claim.source, ScalarDomain::Real, assumptions)?;
+        if claim.source != *expected_source || claim.preconditions != report {
+            return Ok(false);
+        }
+        let literal = literal_rational(expected_source.expression());
+        if report.status() == DomainPreconditionStatus::Refuted
+            || literal
+                .as_ref()
+                .is_some_and(|value| value.numerator() < &Integer::zero())
+        {
+            return Ok(claim.is_undefined());
+        }
+        if let Some(radicand) = literal {
+            return Ok(match &claim.value {
+                PrincipalSquareRootValue::Exact(ExactQuadraticRoot::Rational(root)) => {
+                    bounded_scalar(root)
+                        && root.numerator() >= &Integer::zero()
+                        && root * root == radicand
+                }
+                PrincipalSquareRootValue::Exact(ExactQuadraticRoot::Algebraic {
+                    minimal_polynomial,
+                    branch,
+                }) => {
+                    *branch == QuadraticBranch::UpperReal
+                        && minimal_polynomial.coefficients().len() == 3
+                        && minimal_polynomial.coefficients().iter().all(bounded_scalar)
+                        && *minimal_polynomial == square_root_polynomial(&radicand)
+                        && radicand.exact_sqrt().is_none()
+                }
+                _ => false,
+            });
+        }
+        if let Some(base) = square_base(expected_source.expression()) {
+            let Some(result) = claim.symbolic_value() else {
+                return Ok(false);
+            };
+            Self::check_bound(result, ScalarDomain::Real, assumptions)?;
+            return Ok(result.expression() == &Expr::abs(base.clone())
+                && result.conditions() == expected_source.conditions());
+        }
+        Ok(claim.is_unsupported())
+    }
+}
+
+#[cfg(test)]
+mod principal_root_tests {
+    use super::*;
+    use mathema::Symbol;
+
+    fn bound(expression: Expr) -> DomainExpression {
+        DomainExpression::from_expr_in_domain(
+            expression,
+            ScalarDomain::Real,
+            MAX_NODES,
+            MAX_CONDITIONS,
+        )
+        .unwrap()
+    }
+
+    fn claim(source: &DomainExpression) -> PrincipalSquareRootClaim {
+        DomainPreconditionReport::principal_square_root(source, &Assumptions::new()).unwrap()
+    }
+
+    fn verify(source: &DomainExpression, claim: &PrincipalSquareRootClaim) -> bool {
+        DomainPreconditionReport::verify_principal_square_root(source, &Assumptions::new(), claim)
+            .unwrap()
+    }
+
+    #[test]
+    fn literal_roots_are_exact_and_nonnegative() {
+        let fraction = Rational::new(9.into(), 25.into()).unwrap();
+        let fraction_root = Rational::new(3.into(), 5.into()).unwrap();
+        for (radicand, expected) in [
+            (16.into(), Rational::from(Integer::from(4))),
+            (0.into(), Rational::from(Integer::zero())),
+            (fraction.into(), fraction_root),
+        ] {
+            let source = bound(radicand);
+            let result = claim(&source);
+            assert_eq!(
+                result.exact_value(),
+                Some(&ExactQuadraticRoot::Rational(expected))
+            );
+            assert!(verify(&source, &result));
+        }
+    }
+
+    #[test]
+    fn irrational_root_has_checked_upper_branch() {
+        let source = bound(2.into());
+        let mut result = claim(&source);
+        assert_eq!(
+            result.exact_value().unwrap().branch(),
+            Some(QuadraticBranch::UpperReal)
+        );
+        assert!(verify(&source, &result));
+        result.value = PrincipalSquareRootValue::Exact(ExactQuadraticRoot::Algebraic {
+            minimal_polynomial: square_root_polynomial(&Integer::from(2).into()),
+            branch: QuadraticBranch::LowerReal,
+        });
+        assert!(!verify(&source, &result));
+    }
+
+    #[test]
+    fn negative_radicand_and_general_symbol_are_distinct() {
+        let negative = bound((-1).into());
+        let result = claim(&negative);
+        assert!(result.is_undefined());
+        assert!(verify(&negative, &result));
+        let x = bound(Symbol::new("x").unwrap().into());
+        assert!(claim(&x).is_unsupported());
+    }
+
+    #[test]
+    fn square_rewrite_retains_erased_denominator_and_rejects_forgery() {
+        let x = Expr::from(Symbol::new("x").unwrap());
+        let erased = bound(0.into()).divide(bound(x.clone()), 16).unwrap();
+        let sum = DomainExpression::add([erased, bound(x.clone())], 16).unwrap();
+        let source = sum.pow_integer(2.into(), 16).unwrap();
+        let mut result = claim(&source);
+        let symbolic = result.symbolic_value().unwrap();
+        assert_eq!(symbolic.expression(), &Expr::abs(x.clone()));
+        assert_eq!(symbolic.conditions(), &[Condition::NonZero(x.clone())]);
+        assert_eq!(
+            result.preconditions.status(),
+            DomainPreconditionStatus::Blocked
+        );
+        assert!(verify(&source, &result));
+        result.value = PrincipalSquareRootValue::Symbolic(bound(Expr::abs(x.clone())));
+        assert!(!verify(&source, &result));
+        result.value = PrincipalSquareRootValue::Symbolic(bound(x));
+        assert!(!verify(&source, &result));
+    }
+
+    #[test]
+    fn root_admission_refuses_unbound_external_and_complex_sources() {
+        let assumptions = Assumptions::new();
+        let raw = DomainExpression::from_expr(16.into(), 16).unwrap();
+        assert_eq!(
+            DomainPreconditionReport::principal_square_root(&raw, &assumptions),
+            Err(DomainPreconditionError::UnboundSource)
+        );
+        let external =
+            DomainExpression::with_conditions(0.into(), [Condition::NonZero(2.into())], 16, 16)
+                .unwrap();
+        let source = DomainExpression::add([external, bound(16.into())], 16).unwrap();
+        assert_eq!(
+            DomainPreconditionReport::principal_square_root(&source, &assumptions),
+            Err(DomainPreconditionError::UnboundSource)
+        );
+        let complex =
+            DomainExpression::from_expr_in_domain(16.into(), ScalarDomain::Complex, 16, 16)
+                .unwrap();
+        assert!(DomainPreconditionReport::principal_square_root(&complex, &assumptions).is_err());
+    }
+
+    #[test]
+    fn log_absolute_value_requires_nonzero_not_positive_argument() {
+        for (argument, status) in [
+            (-2, DomainPreconditionStatus::Proven),
+            (0, DomainPreconditionStatus::Refuted),
+            (2, DomainPreconditionStatus::Proven),
+        ] {
+            let source = bound(Expr::log(Expr::abs(argument.into())));
+            assert_eq!(source.conditions(), &[Condition::NonZero(argument.into())]);
+            let report = DomainPreconditionReport::check_bound(
+                &source,
+                ScalarDomain::Real,
+                &Assumptions::new(),
+            )
+            .unwrap();
+            assert_eq!(report.status(), status);
+        }
+        assert!(
+            DomainExpression::from_expr_in_domain(
+                Expr::abs(2.into()),
+                ScalarDomain::Complex,
+                16,
+                16,
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn zero_power_and_resource_limits_remain_explicit() {
+        let source = bound(Expr::pow(0.into(), 0.into()));
+        assert!(claim(&source).is_undefined());
+        let two = Integer::from(2);
+        let mut value = two.clone();
+        for _ in 0..MAX_SCALAR_BITS {
+            value = &value * &two;
+        }
+        let source = bound(value.into());
+        assert_eq!(
+            DomainPreconditionReport::principal_square_root(&source, &Assumptions::new()),
+            Err(DomainPreconditionError::ScalarLimit)
+        );
+    }
 }

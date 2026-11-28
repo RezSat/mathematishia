@@ -53,7 +53,10 @@ fn check_case(args: &[&str], expected: &[&str], outcome: &str) {
     assert!(stderr.is_empty());
     let actual: Vec<_> = stdout.lines().collect();
     for line in expected {
-        assert!(actual.contains(line), "{args:?}: missing {line:?}: {stdout}");
+        assert!(
+            actual.contains(line),
+            "{args:?}: missing {line:?}: {stdout}"
+        );
     }
     let selected = |lines: &[&str]| {
         lines

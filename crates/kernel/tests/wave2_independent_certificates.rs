@@ -33,9 +33,8 @@ fn source_bound_root_certificate_rejects_incomplete_and_forged_sets() {
         .unwrap();
         let domain = ScalarDomain::Real;
         let cert = certify_solution_set(&ctx, &left, &right, &variable, domain, &[]).unwrap();
-        let expected = [-a, a].map(|n| {
-            PolynomialRootMultiplicity::new(ExactQuadraticRoot::Rational(q(n, 1)), 1)
-        });
+        let expected = [-a, a]
+            .map(|n| PolynomialRootMultiplicity::new(ExactQuadraticRoot::Rational(q(n, 1)), 1));
         assert_eq!(
             cert.solutions,
             CertifiedSolutionSet::Finite(expected.to_vec())
@@ -174,13 +173,15 @@ fn exact_resource_boundary_admits_at_limit_and_rejects_beyond() {
     );
 
     let angle = PiMultiple::new(q(8, 1));
-    assert!(evaluate_special_angle(
-        &angle,
-        TrigFunction::Cos,
-        ScalarDomain::Real,
-        TrigLimits { max_input_bits: 4 },
-    )
-    .is_ok());
+    assert!(
+        evaluate_special_angle(
+            &angle,
+            TrigFunction::Cos,
+            ScalarDomain::Real,
+            TrigLimits { max_input_bits: 4 },
+        )
+        .is_ok()
+    );
     assert_eq!(
         evaluate_special_angle(
             &angle,

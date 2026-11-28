@@ -1,0 +1,130 @@
+# Independent W19 cases; baseline 41d78278c50ca9f42c6050592613473bee1cfb6c.
+# Exact expectations derived from factorization, signed intervals, polynomial primitives and unit-circle identities, not engine output.
+# The periodic and cubic cases intentionally distinguish partial evidence from completeness.
+id	category	outcome	arguments	exact_lines_or_error_kind	oracle
+W19-001	repeated_roots	solved	roots¦(x-3)^2	status: exact¦verified: true¦roots: 1¦root 1: 3 ; multiplicity: 2	square of a linear factor; double root
+W19-002	repeated_roots	solved	roots¦(x-4)^2	status: exact¦verified: true¦roots: 1¦root 1: 4 ; multiplicity: 2	square of a linear factor; double root
+W19-003	repeated_roots	solved	roots¦(x-5)^2	status: exact¦verified: true¦roots: 1¦root 1: 5 ; multiplicity: 2	square of a linear factor; double root
+W19-004	repeated_roots	solved	roots¦(x-6)^2	status: exact¦verified: true¦roots: 1¦root 1: 6 ; multiplicity: 2	square of a linear factor; double root
+W19-005	repeated_roots	solved	roots¦(x-7)^2	status: exact¦verified: true¦roots: 1¦root 1: 7 ; multiplicity: 2	square of a linear factor; double root
+W19-006	repeated_roots	solved	roots¦(x-8)^2	status: exact¦verified: true¦roots: 1¦root 1: 8 ; multiplicity: 2	square of a linear factor; double root
+W19-007	repeated_roots	solved	roots¦(x-9)^2	status: exact¦verified: true¦roots: 1¦root 1: 9 ; multiplicity: 2	square of a linear factor; double root
+W19-008	repeated_roots	solved	roots¦(x-10)^2	status: exact¦verified: true¦roots: 1¦root 1: 10 ; multiplicity: 2	square of a linear factor; double root
+W19-009	repeated_roots	solved	roots¦(x-11)^2	status: exact¦verified: true¦roots: 1¦root 1: 11 ; multiplicity: 2	square of a linear factor; double root
+W19-010	repeated_roots	solved	roots¦(x-12)^2	status: exact¦verified: true¦roots: 1¦root 1: 12 ; multiplicity: 2	square of a linear factor; double root
+W19-011	repeated_roots	solved	roots¦(x-13)^2	status: exact¦verified: true¦roots: 1¦root 1: 13 ; multiplicity: 2	square of a linear factor; double root
+W19-012	repeated_roots	solved	roots¦(x-14)^2	status: exact¦verified: true¦roots: 1¦root 1: 14 ; multiplicity: 2	square of a linear factor; double root
+W19-013	distinct_roots	solved	roots¦(x+3)(x-5)	status: exact¦verified: true¦roots: 2¦root 1: -3 ; multiplicity: 1¦root 2: 5 ; multiplicity: 1	two distinct linear factors; complete root set
+W19-014	distinct_roots	solved	roots¦(x+4)(x-6)	status: exact¦verified: true¦roots: 2¦root 1: -4 ; multiplicity: 1¦root 2: 6 ; multiplicity: 1	two distinct linear factors; complete root set
+W19-015	distinct_roots	solved	roots¦(x+5)(x-7)	status: exact¦verified: true¦roots: 2¦root 1: -5 ; multiplicity: 1¦root 2: 7 ; multiplicity: 1	two distinct linear factors; complete root set
+W19-016	distinct_roots	solved	roots¦(x+6)(x-8)	status: exact¦verified: true¦roots: 2¦root 1: -6 ; multiplicity: 1¦root 2: 8 ; multiplicity: 1	two distinct linear factors; complete root set
+W19-017	distinct_roots	solved	roots¦(x+7)(x-9)	status: exact¦verified: true¦roots: 2¦root 1: -7 ; multiplicity: 1¦root 2: 9 ; multiplicity: 1	two distinct linear factors; complete root set
+W19-018	distinct_roots	solved	roots¦(x+8)(x-10)	status: exact¦verified: true¦roots: 2¦root 1: -8 ; multiplicity: 1¦root 2: 10 ; multiplicity: 1	two distinct linear factors; complete root set
+W19-019	distinct_roots	solved	roots¦(x+9)(x-11)	status: exact¦verified: true¦roots: 2¦root 1: -9 ; multiplicity: 1¦root 2: 11 ; multiplicity: 1	two distinct linear factors; complete root set
+W19-020	distinct_roots	solved	roots¦(x+10)(x-12)	status: exact¦verified: true¦roots: 2¦root 1: -10 ; multiplicity: 1¦root 2: 12 ; multiplicity: 1	two distinct linear factors; complete root set
+W19-021	distinct_roots	solved	roots¦(x+11)(x-13)	status: exact¦verified: true¦roots: 2¦root 1: -11 ; multiplicity: 1¦root 2: 13 ; multiplicity: 1	two distinct linear factors; complete root set
+W19-022	distinct_roots	solved	roots¦(x+12)(x-14)	status: exact¦verified: true¦roots: 2¦root 1: -12 ; multiplicity: 1¦root 2: 14 ; multiplicity: 1	two distinct linear factors; complete root set
+W19-023	distinct_roots	solved	roots¦(x+13)(x-15)	status: exact¦verified: true¦roots: 2¦root 1: -13 ; multiplicity: 1¦root 2: 15 ; multiplicity: 1	two distinct linear factors; complete root set
+W19-024	distinct_roots	solved	roots¦(x+14)(x-16)	status: exact¦verified: true¦roots: 2¦root 1: -14 ; multiplicity: 1¦root 2: 16 ; multiplicity: 1	two distinct linear factors; complete root set
+W19-025	inequality_boundary	solved	inequality¦(x-5)^2<=0	status: exact¦verified: true¦intervals: 1¦interval: [5, 5]¦conditions: none	square nonnegative; equality only at its zero
+W19-026	inequality_boundary	solved	inequality¦(x-5)^2>0	status: exact¦verified: true¦intervals: 2¦interval: (-infinity, 5)¦interval: (5, infinity)¦conditions: none	strict inequality excludes double root
+W19-027	inequality_boundary	solved	inequality¦(x-6)^2<=0	status: exact¦verified: true¦intervals: 1¦interval: [6, 6]¦conditions: none	square nonnegative; equality only at its zero
+W19-028	inequality_boundary	solved	inequality¦(x-6)^2>0	status: exact¦verified: true¦intervals: 2¦interval: (-infinity, 6)¦interval: (6, infinity)¦conditions: none	strict inequality excludes double root
+W19-029	inequality_boundary	solved	inequality¦(x-7)^2<=0	status: exact¦verified: true¦intervals: 1¦interval: [7, 7]¦conditions: none	square nonnegative; equality only at its zero
+W19-030	inequality_boundary	solved	inequality¦(x-7)^2>0	status: exact¦verified: true¦intervals: 2¦interval: (-infinity, 7)¦interval: (7, infinity)¦conditions: none	strict inequality excludes double root
+W19-031	inequality_boundary	solved	inequality¦(x-8)^2<=0	status: exact¦verified: true¦intervals: 1¦interval: [8, 8]¦conditions: none	square nonnegative; equality only at its zero
+W19-032	inequality_boundary	solved	inequality¦(x-8)^2>0	status: exact¦verified: true¦intervals: 2¦interval: (-infinity, 8)¦interval: (8, infinity)¦conditions: none	strict inequality excludes double root
+W19-033	inequality_boundary	solved	inequality¦(x-9)^2<=0	status: exact¦verified: true¦intervals: 1¦interval: [9, 9]¦conditions: none	square nonnegative; equality only at its zero
+W19-034	inequality_boundary	solved	inequality¦(x-9)^2>0	status: exact¦verified: true¦intervals: 2¦interval: (-infinity, 9)¦interval: (9, infinity)¦conditions: none	strict inequality excludes double root
+W19-035	inequality_boundary	solved	inequality¦(x-10)^2<=0	status: exact¦verified: true¦intervals: 1¦interval: [10, 10]¦conditions: none	square nonnegative; equality only at its zero
+W19-036	inequality_boundary	solved	inequality¦(x-10)^2>0	status: exact¦verified: true¦intervals: 2¦interval: (-infinity, 10)¦interval: (10, infinity)¦conditions: none	strict inequality excludes double root
+W19-037	inequality_boundary	solved	inequality¦(x-11)^2<=0	status: exact¦verified: true¦intervals: 1¦interval: [11, 11]¦conditions: none	square nonnegative; equality only at its zero
+W19-038	inequality_boundary	solved	inequality¦(x-11)^2>0	status: exact¦verified: true¦intervals: 2¦interval: (-infinity, 11)¦interval: (11, infinity)¦conditions: none	strict inequality excludes double root
+W19-039	inequality_boundary	solved	inequality¦(x-12)^2<=0	status: exact¦verified: true¦intervals: 1¦interval: [12, 12]¦conditions: none	square nonnegative; equality only at its zero
+W19-040	inequality_boundary	solved	inequality¦(x-12)^2>0	status: exact¦verified: true¦intervals: 2¦interval: (-infinity, 12)¦interval: (12, infinity)¦conditions: none	strict inequality excludes double root
+W19-041	inequality_boundary	solved	inequality¦(x-13)^2<=0	status: exact¦verified: true¦intervals: 1¦interval: [13, 13]¦conditions: none	square nonnegative; equality only at its zero
+W19-042	inequality_boundary	solved	inequality¦(x-13)^2>0	status: exact¦verified: true¦intervals: 2¦interval: (-infinity, 13)¦interval: (13, infinity)¦conditions: none	strict inequality excludes double root
+W19-043	inequality_boundary	solved	inequality¦(x-14)^2<=0	status: exact¦verified: true¦intervals: 1¦interval: [14, 14]¦conditions: none	square nonnegative; equality only at its zero
+W19-044	inequality_boundary	solved	inequality¦(x-14)^2>0	status: exact¦verified: true¦intervals: 2¦interval: (-infinity, 14)¦interval: (14, infinity)¦conditions: none	strict inequality excludes double root
+W19-045	cancellation	solved	limit¦(x-3)*(x+4)/(x-3)¦x¦3	status: exact¦verified: true¦limit: 7¦excluded_at_point: true¦condition: -3 + x != 0	cancel on punctured neighborhood only
+W19-046	cancellation	refused	rateval¦(x-3)*(x+4)¦x-3¦x¦3	InvalidInput¦error: rational function is undefined at this point	original denominator vanishes even after cancellation
+W19-047	cancellation	solved	limit¦(x-4)*(x+5)/(x-4)¦x¦4	status: exact¦verified: true¦limit: 9¦excluded_at_point: true¦condition: -4 + x != 0	cancel on punctured neighborhood only
+W19-048	cancellation	refused	rateval¦(x-4)*(x+5)¦x-4¦x¦4	InvalidInput¦error: rational function is undefined at this point	original denominator vanishes even after cancellation
+W19-049	cancellation	solved	limit¦(x-5)*(x+6)/(x-5)¦x¦5	status: exact¦verified: true¦limit: 11¦excluded_at_point: true¦condition: -5 + x != 0	cancel on punctured neighborhood only
+W19-050	cancellation	refused	rateval¦(x-5)*(x+6)¦x-5¦x¦5	InvalidInput¦error: rational function is undefined at this point	original denominator vanishes even after cancellation
+W19-051	cancellation	solved	limit¦(x-6)*(x+7)/(x-6)¦x¦6	status: exact¦verified: true¦limit: 13¦excluded_at_point: true¦condition: -6 + x != 0	cancel on punctured neighborhood only
+W19-052	cancellation	refused	rateval¦(x-6)*(x+7)¦x-6¦x¦6	InvalidInput¦error: rational function is undefined at this point	original denominator vanishes even after cancellation
+W19-053	cancellation	solved	limit¦(x-7)*(x+8)/(x-7)¦x¦7	status: exact¦verified: true¦limit: 15¦excluded_at_point: true¦condition: -7 + x != 0	cancel on punctured neighborhood only
+W19-054	cancellation	refused	rateval¦(x-7)*(x+8)¦x-7¦x¦7	InvalidInput¦error: rational function is undefined at this point	original denominator vanishes even after cancellation
+W19-055	cancellation	solved	limit¦(x-8)*(x+9)/(x-8)¦x¦8	status: exact¦verified: true¦limit: 17¦excluded_at_point: true¦condition: -8 + x != 0	cancel on punctured neighborhood only
+W19-056	cancellation	refused	rateval¦(x-8)*(x+9)¦x-8¦x¦8	InvalidInput¦error: rational function is undefined at this point	original denominator vanishes even after cancellation
+W19-057	cancellation	solved	limit¦(x-9)*(x+10)/(x-9)¦x¦9	status: exact¦verified: true¦limit: 19¦excluded_at_point: true¦condition: -9 + x != 0	cancel on punctured neighborhood only
+W19-058	cancellation	refused	rateval¦(x-9)*(x+10)¦x-9¦x¦9	InvalidInput¦error: rational function is undefined at this point	original denominator vanishes even after cancellation
+W19-059	cancellation	solved	limit¦(x-10)*(x+11)/(x-10)¦x¦10	status: exact¦verified: true¦limit: 21¦excluded_at_point: true¦condition: -10 + x != 0	cancel on punctured neighborhood only
+W19-060	cancellation	refused	rateval¦(x-10)*(x+11)¦x-10¦x¦10	InvalidInput¦error: rational function is undefined at this point	original denominator vanishes even after cancellation
+W19-061	cancellation	solved	limit¦(x-11)*(x+12)/(x-11)¦x¦11	status: exact¦verified: true¦limit: 23¦excluded_at_point: true¦condition: -11 + x != 0	cancel on punctured neighborhood only
+W19-062	cancellation	refused	rateval¦(x-11)*(x+12)¦x-11¦x¦11	InvalidInput¦error: rational function is undefined at this point	original denominator vanishes even after cancellation
+W19-063	cancellation	solved	limit¦(x-12)*(x+13)/(x-12)¦x¦12	status: exact¦verified: true¦limit: 25¦excluded_at_point: true¦condition: -12 + x != 0	cancel on punctured neighborhood only
+W19-064	cancellation	refused	rateval¦(x-12)*(x+13)¦x-12¦x¦12	InvalidInput¦error: rational function is undefined at this point	original denominator vanishes even after cancellation
+W19-065	integral	solved	integrate¦x^2+2¦x¦0¦3	status: exact¦verified: true¦integral: 15¦from: 0¦to: 3¦conditions: none	primitive x^3/3+c*x; exact endpoint difference
+W19-066	integral	solved	integrate¦x^2+2¦x¦3¦0	status: exact¦verified: true¦integral: -15¦from: 3¦to: 0¦conditions: none	reversed bounds negate integral
+W19-067	integral	solved	integrate¦x^2+3¦x¦0¦3	status: exact¦verified: true¦integral: 18¦from: 0¦to: 3¦conditions: none	primitive x^3/3+c*x; exact endpoint difference
+W19-068	integral	solved	integrate¦x^2+3¦x¦3¦0	status: exact¦verified: true¦integral: -18¦from: 3¦to: 0¦conditions: none	reversed bounds negate integral
+W19-069	integral	solved	integrate¦x^2+4¦x¦0¦3	status: exact¦verified: true¦integral: 21¦from: 0¦to: 3¦conditions: none	primitive x^3/3+c*x; exact endpoint difference
+W19-070	integral	solved	integrate¦x^2+4¦x¦3¦0	status: exact¦verified: true¦integral: -21¦from: 3¦to: 0¦conditions: none	reversed bounds negate integral
+W19-071	integral	solved	integrate¦x^2+5¦x¦0¦3	status: exact¦verified: true¦integral: 24¦from: 0¦to: 3¦conditions: none	primitive x^3/3+c*x; exact endpoint difference
+W19-072	integral	solved	integrate¦x^2+5¦x¦3¦0	status: exact¦verified: true¦integral: -24¦from: 3¦to: 0¦conditions: none	reversed bounds negate integral
+W19-073	integral	solved	integrate¦x^2+6¦x¦0¦3	status: exact¦verified: true¦integral: 27¦from: 0¦to: 3¦conditions: none	primitive x^3/3+c*x; exact endpoint difference
+W19-074	integral	solved	integrate¦x^2+6¦x¦3¦0	status: exact¦verified: true¦integral: -27¦from: 3¦to: 0¦conditions: none	reversed bounds negate integral
+W19-075	integral	solved	integrate¦x^2+7¦x¦0¦3	status: exact¦verified: true¦integral: 30¦from: 0¦to: 3¦conditions: none	primitive x^3/3+c*x; exact endpoint difference
+W19-076	integral	solved	integrate¦x^2+7¦x¦3¦0	status: exact¦verified: true¦integral: -30¦from: 3¦to: 0¦conditions: none	reversed bounds negate integral
+W19-077	integral	solved	integrate¦x^2+8¦x¦0¦3	status: exact¦verified: true¦integral: 33¦from: 0¦to: 3¦conditions: none	primitive x^3/3+c*x; exact endpoint difference
+W19-078	integral	solved	integrate¦x^2+8¦x¦3¦0	status: exact¦verified: true¦integral: -33¦from: 3¦to: 0¦conditions: none	reversed bounds negate integral
+W19-079	integral	solved	integrate¦x^2+9¦x¦0¦3	status: exact¦verified: true¦integral: 36¦from: 0¦to: 3¦conditions: none	primitive x^3/3+c*x; exact endpoint difference
+W19-080	integral	solved	integrate¦x^2+9¦x¦3¦0	status: exact¦verified: true¦integral: -36¦from: 3¦to: 0¦conditions: none	reversed bounds negate integral
+W19-081	integral	solved	integrate¦x^2+10¦x¦0¦3	status: exact¦verified: true¦integral: 39¦from: 0¦to: 3¦conditions: none	primitive x^3/3+c*x; exact endpoint difference
+W19-082	integral	solved	integrate¦x^2+10¦x¦3¦0	status: exact¦verified: true¦integral: -39¦from: 3¦to: 0¦conditions: none	reversed bounds negate integral
+W19-083	integral	solved	integrate¦x^2+11¦x¦0¦3	status: exact¦verified: true¦integral: 42¦from: 0¦to: 3¦conditions: none	primitive x^3/3+c*x; exact endpoint difference
+W19-084	integral	solved	integrate¦x^2+11¦x¦3¦0	status: exact¦verified: true¦integral: -42¦from: 3¦to: 0¦conditions: none	reversed bounds negate integral
+W19-085	piecewise_partition	solved	abssolve¦abs(abs(x)-3)=1	status: exact¦verified: true¦complete: true¦components: 4¦interval: [-4, -4]¦interval: [-2, -2]¦interval: [2, 2]¦interval: [4, 4]	two inner absolute magnitudes; four distinct roots
+W19-086	piecewise_partition	solved	abssolve¦abs(abs(x)-4)=1	status: exact¦verified: true¦complete: true¦components: 4¦interval: [-5, -5]¦interval: [-3, -3]¦interval: [3, 3]¦interval: [5, 5]	two inner absolute magnitudes; four distinct roots
+W19-087	piecewise_partition	solved	abssolve¦abs(abs(x)-5)=1	status: exact¦verified: true¦complete: true¦components: 4¦interval: [-6, -6]¦interval: [-4, -4]¦interval: [4, 4]¦interval: [6, 6]	two inner absolute magnitudes; four distinct roots
+W19-088	piecewise_partition	solved	abssolve¦abs(abs(x)-6)=1	status: exact¦verified: true¦complete: true¦components: 4¦interval: [-7, -7]¦interval: [-5, -5]¦interval: [5, 5]¦interval: [7, 7]	two inner absolute magnitudes; four distinct roots
+W19-089	piecewise_partition	solved	abssolve¦abs(abs(x)-7)=1	status: exact¦verified: true¦complete: true¦components: 4¦interval: [-8, -8]¦interval: [-6, -6]¦interval: [6, 6]¦interval: [8, 8]	two inner absolute magnitudes; four distinct roots
+W19-090	piecewise_partition	solved	abssolve¦abs(abs(x)-8)=1	status: exact¦verified: true¦complete: true¦components: 4¦interval: [-9, -9]¦interval: [-7, -7]¦interval: [7, 7]¦interval: [9, 9]	two inner absolute magnitudes; four distinct roots
+W19-091	piecewise_partition	solved	abssolve¦abs(abs(x)-9)=1	status: exact¦verified: true¦complete: true¦components: 4¦interval: [-10, -10]¦interval: [-8, -8]¦interval: [8, 8]¦interval: [10, 10]	two inner absolute magnitudes; four distinct roots
+W19-092	piecewise_partition	solved	abssolve¦abs(abs(x)-10)=1	status: exact¦verified: true¦complete: true¦components: 4¦interval: [-11, -11]¦interval: [-9, -9]¦interval: [9, 9]¦interval: [11, 11]	two inner absolute magnitudes; four distinct roots
+W19-093	piecewise_partition	solved	abssolve¦abs(abs(x)-11)=1	status: exact¦verified: true¦complete: true¦components: 4¦interval: [-12, -12]¦interval: [-10, -10]¦interval: [10, 10]¦interval: [12, 12]	two inner absolute magnitudes; four distinct roots
+W19-094	piecewise_partition	solved	abssolve¦abs(abs(x)-12)=1	status: exact¦verified: true¦complete: true¦components: 4¦interval: [-13, -13]¦interval: [-11, -11]¦interval: [11, 11]¦interval: [13, 13]	two inner absolute magnitudes; four distinct roots
+W19-095	periodic_value	solved	trig¦sin¦13/6	status: exact¦verified: true¦value: 1/2	sin(pi/6+2k*pi)=1/2
+W19-096	periodic_value	solved	trig¦cos¦-5/3	status: exact¦verified: true¦value: 1/2	cos(pi/3-2k*pi)=1/2
+W19-097	periodic_value	refused	trig¦tan¦5/2	status: undefined¦reason: tangent pole¦verified: true	cosine zero; tangent undefined
+W19-098	periodic_value	solved	trig¦sin¦25/6	status: exact¦verified: true¦value: 1/2	sin(pi/6+2k*pi)=1/2
+W19-099	periodic_value	solved	trig¦cos¦-11/3	status: exact¦verified: true¦value: 1/2	cos(pi/3-2k*pi)=1/2
+W19-100	periodic_value	refused	trig¦tan¦9/2	status: undefined¦reason: tangent pole¦verified: true	cosine zero; tangent undefined
+W19-101	periodic_value	solved	trig¦sin¦37/6	status: exact¦verified: true¦value: 1/2	sin(pi/6+2k*pi)=1/2
+W19-102	periodic_value	solved	trig¦cos¦-17/3	status: exact¦verified: true¦value: 1/2	cos(pi/3-2k*pi)=1/2
+W19-103	periodic_value	refused	trig¦tan¦13/2	status: undefined¦reason: tangent pole¦verified: true	cosine zero; tangent undefined
+W19-104	periodic_value	solved	trig¦sin¦49/6	status: exact¦verified: true¦value: 1/2	sin(pi/6+2k*pi)=1/2
+W19-105	periodic_value	solved	trig¦cos¦-23/3	status: exact¦verified: true¦value: 1/2	cos(pi/3-2k*pi)=1/2
+W19-106	periodic_value	refused	trig¦tan¦17/2	status: undefined¦reason: tangent pole¦verified: true	cosine zero; tangent undefined
+W19-107	malformed	refused	solveauto¦x^3+1	InvalidInput¦error: solveauto expects an equation containing '='	missing equality
+W19-108	malformed	refused	solveauto¦x^4+1	InvalidInput¦error: solveauto expects an equation containing '='	missing equality
+W19-109	malformed	refused	solveauto¦x^5+1	InvalidInput¦error: solveauto expects an equation containing '='	missing equality
+W19-110	malformed	refused	solveauto¦x^6+1	InvalidInput¦error: solveauto expects an equation containing '='	missing equality
+W19-111	malformed	refused	solveauto¦x^7+1	InvalidInput¦error: solveauto expects an equation containing '='	missing equality
+W19-112	resource	refused	roots¦x^34	Resource	degree exceeds baseline maximum 32
+W19-113	resource	refused	roots¦x^35	Resource	degree exceeds baseline maximum 32
+W19-114	resource	refused	roots¦x^36	Resource	degree exceeds baseline maximum 32
+W19-115	resource	refused	roots¦x^37	Resource	degree exceeds baseline maximum 32
+W19-116	resource	refused	roots¦x^38	Resource	degree exceeds baseline maximum 32
+W19-117	resource	refused	roots¦x^39	Resource	degree exceeds baseline maximum 32
+W19-118	resource	refused	roots¦x^40	Resource	degree exceeds baseline maximum 32
+W19-119	periodic_completeness	partial	trigzeros¦sin	status: partial¦known_pi_coefficient: 0¦known_pi_coefficient: 1¦reason: integer-parameter completeness unavailable¦verified: true	two checked examples are not a periodic solution set
+W19-120	unresolved_roots	partial	roots¦x^3-3	status: partial¦unresolved_cofactor: -3 + x ^ 3¦verified: true	irreducible rational cubic; unresolved exact complex roots
+W19-121	unresolved_roots	partial	roots¦x^3-5	status: partial¦unresolved_cofactor: -5 + x ^ 3¦verified: true	irreducible rational cubic; unresolved exact complex roots
+W19-122	unresolved_roots	partial	roots¦x^3-7	status: partial¦unresolved_cofactor: -7 + x ^ 3¦verified: true	irreducible rational cubic; unresolved exact complex roots
+W19-123	branch	solved	solveauto¦x^2+3=0	status: exact¦verified: true¦domain: C¦roots: 2¦root 1: negative_imaginary of minimal polynomial 3 + x ^ 2 ; multiplicity: 1¦root 2: positive_imaginary of minimal polynomial 3 + x ^ 2 ; multiplicity: 1	conjugate nonreal roots; both branches
+W19-124	branch	solved	solveauto¦x^2+5=0	status: exact¦verified: true¦domain: C¦roots: 2¦root 1: negative_imaginary of minimal polynomial 5 + x ^ 2 ; multiplicity: 1¦root 2: positive_imaginary of minimal polynomial 5 + x ^ 2 ; multiplicity: 1	conjugate nonreal roots; both branches
+W19-125	branch	solved	solveauto¦x^2+7=0	status: exact¦verified: true¦domain: C¦roots: 2¦root 1: negative_imaginary of minimal polynomial 7 + x ^ 2 ; multiplicity: 1¦root 2: positive_imaginary of minimal polynomial 7 + x ^ 2 ; multiplicity: 1	conjugate nonreal roots; both branches
+W19-126	branch	solved	solveauto¦x^2+11=0	status: exact¦verified: true¦domain: C¦roots: 2¦root 1: negative_imaginary of minimal polynomial 11 + x ^ 2 ; multiplicity: 1¦root 2: positive_imaginary of minimal polynomial 11 + x ^ 2 ; multiplicity: 1	conjugate nonreal roots; both branches

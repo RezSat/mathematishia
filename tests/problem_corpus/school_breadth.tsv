@@ -1,0 +1,294 @@
+# Public W18 breadth cases; no held-out inputs. Arguments and expected lines separated by ¦.
+id	category	family	kind	mode	arguments	expected
+W18-001	arithmetic_surds_powers_logs	fraction_operations	typed_calculation	exact	expr¦7/12+5/18	expression: 31/36
+W18-002	arithmetic_surds_powers_logs	fraction_operations	typed_calculation	exact	expr¦11/15-7/20	expression: 23/60
+W18-003	arithmetic_surds_powers_logs	fraction_operations	typed_calculation	exact	expr¦(-5/6)*(9/14)	expression: -15/28
+W18-004	arithmetic_surds_powers_logs	fraction_operations	typed_calculation	exact	expr¦(8/21)/(4/9)	expression: 6/7
+W18-005	arithmetic_surds_powers_logs	fraction_operations	typed_calculation	exact	expr¦(1/2+2/3)/(5/6)	expression: 7/5
+W18-006	arithmetic_surds_powers_logs	fraction_operations	typed_calculation	exact	expr¦3/8-(1/4-5/12)	expression: 13/24
+W18-007	arithmetic_surds_powers_logs	exact_decimals	typed_calculation	exact	expr¦1.125+0.375	expression: 3/2
+W18-008	arithmetic_surds_powers_logs	exact_decimals	typed_calculation	exact	expr¦2.04-0.875	expression: 233/200
+W18-009	arithmetic_surds_powers_logs	exact_decimals	typed_calculation	exact	expr¦0.125*3.2	expression: 2/5
+W18-010	arithmetic_surds_powers_logs	exact_decimals	typed_calculation	exact	expr¦7.5/0.12	expression: 125/2
+W18-011	arithmetic_surds_powers_logs	exact_decimals	typed_calculation	exact	expr¦0.08+0.006	expression: 43/500
+W18-012	arithmetic_surds_powers_logs	exact_decimals	typed_calculation	exact	expr¦(1.25-0.75)^2	expression: 1/4
+W18-013	arithmetic_surds_powers_logs	integer_powers	typed_calculation	exact	expr¦2^7/2^3	expression: 16
+W18-014	arithmetic_surds_powers_logs	integer_powers	typed_calculation	exact	expr¦(3/5)^3	expression: 27/125
+W18-015	arithmetic_surds_powers_logs	integer_powers	typed_calculation	exact	expr¦5^0	expression: 1
+W18-016	arithmetic_surds_powers_logs	integer_powers	typed_calculation	exact	expr¦(-2)^5	expression: -32
+W18-017	arithmetic_surds_powers_logs	integer_powers	typed_calculation	exact	expr¦(2^3)^2	expression: 64
+W18-018	arithmetic_surds_powers_logs	integer_powers	typed_calculation	exact	expr¦4^(-2)	expression: 1/16
+W18-019	arithmetic_surds_powers_logs	order_of_operations	typed_calculation	exact	expr¦2+3*4^2	expression: 50
+W18-020	arithmetic_surds_powers_logs	order_of_operations	typed_calculation	exact	expr¦(2+3)*4^2	expression: 80
+W18-021	arithmetic_surds_powers_logs	order_of_operations	typed_calculation	exact	expr¦-7+2*(9-4)	expression: 3
+W18-022	arithmetic_surds_powers_logs	order_of_operations	typed_calculation	exact	expr¦18/(3*(2+1))	expression: 2
+W18-023	arithmetic_surds_powers_logs	order_of_operations	typed_calculation	exact	expr¦(5-9)^2-3^2	expression: 7
+W18-024	arithmetic_surds_powers_logs	order_of_operations	typed_calculation	exact	expr¦3*(2-5)^2+4	expression: 31
+W18-025	arithmetic_surds_powers_logs	special_constants	typed_calculation	exact	evalexact¦exp(0)+cos(0)	status: exact¦value: 2¦verified: true
+W18-026	arithmetic_surds_powers_logs	special_constants	typed_calculation	exact	evalexact¦2*cos(0)-exp(0)	status: exact¦value: 1¦verified: true
+W18-027	arithmetic_surds_powers_logs	special_constants	typed_calculation	exact	evalexact¦sin(0)+3*exp(0)	status: exact¦value: 3¦verified: true
+W18-028	arithmetic_surds_powers_logs	special_constants	typed_calculation	exact	evalexact¦exp(0)-cos(0)	status: exact¦value: 0¦verified: true
+W18-029	arithmetic_surds_powers_logs	radical_log_gap	typed_calculation	gap	expr¦sqrt(49)	answer: 7
+W18-030	arithmetic_surds_powers_logs	radical_log_gap	typed_calculation	gap	expr¦sqrt(18)	answer: 3*sqrt(2)
+W18-031	arithmetic_surds_powers_logs	radical_log_gap	typed_calculation	gap	expr¦sqrt(5)*sqrt(20)	answer: 10
+W18-032	arithmetic_surds_powers_logs	radical_log_gap	typed_calculation	gap	expr¦log(8)/log(2)	answer: 3
+W18-033	arithmetic_surds_powers_logs	radical_log_gap	typed_calculation	gap	expr¦log(exp(2))	answer: 2
+W18-034	equations	affine_trace	typed_calculation	trace	steps¦linear¦3*x-7=11¦x	conclusion: x = 6¦verified: true
+W18-035	equations	affine_trace	typed_calculation	trace	steps¦linear¦5-2*x=17¦x	conclusion: x = -6¦verified: true
+W18-036	equations	affine_trace	typed_calculation	trace	steps¦linear¦x/3+5=2¦x	conclusion: x = -9¦verified: true
+W18-037	equations	affine_trace	typed_calculation	trace	steps¦linear¦4*(x-2)=2*x+6¦x	conclusion: x = 7¦verified: true
+W18-038	equations	affine_trace	typed_calculation	trace	steps¦linear¦7*x+1=3*x-9¦x	conclusion: x = -5/2¦verified: true
+W18-039	equations	affine_trace	typed_calculation	trace	steps¦linear¦(2*x+3)/5=7¦x	conclusion: x = 16¦verified: true
+W18-040	equations	affine_boundary	typed_calculation	exact	solve¦3*(x+2)=3*x+7¦x	solution: none in Q
+W18-041	equations	affine_boundary	typed_calculation	exact	solve¦2*(x+3)=2*x+6¦x	solution: all rational values
+W18-042	equations	affine_boundary	typed_calculation	exact	solve¦0*x=5¦x	solution: none in Q
+W18-043	equations	affine_boundary	typed_calculation	exact	solve¦5*x=0¦x	solution: x = 0
+W18-044	equations	factored_quadratic_Q	typed_calculation	exact	solveq¦(x+4)*(x-3)¦x	rational roots: -4, 3
+W18-045	equations	factored_quadratic_Q	typed_calculation	exact	solveq¦2*(x+2)*(x-5)¦x	rational roots: -2, 5
+W18-046	equations	factored_quadratic_Q	typed_calculation	exact	solveq¦3*(x-1)*(x-7)¦x	rational roots: 1, 7
+W18-047	equations	factored_quadratic_Q	typed_calculation	exact	solveq¦(x+6)*(x+1)¦x	rational roots: -6, -1
+W18-048	equations	factored_quadratic_Q	typed_calculation	exact	solveq¦2*x*(x-8)¦x	rational roots: 0, 8
+W18-049	equations	factored_quadratic_Q	typed_calculation	exact	solveq¦2*(x-3)^2¦x	rational roots: 3
+W18-050	equations	factored_quadratic_Q	typed_calculation	exact	solveq¦3*(x+5)^2¦x	rational roots: -5
+W18-051	equations	factored_quadratic_Q	typed_calculation	exact	solveq¦-2*(x+3)*(x-2)¦x	rational roots: -3, 2
+W18-052	equations	quadratic_discriminant_Q	typed_calculation	exact	solveq¦2*x^2+x-3¦x	rational roots: -3/2, 1
+W18-053	equations	quadratic_discriminant_Q	typed_calculation	exact	solveq¦6*x^2-x-2¦x	rational roots: -1/2, 2/3
+W18-054	equations	quadratic_discriminant_Q	typed_calculation	exact	solveq¦9*x^2-12*x+4¦x	rational roots: 2/3
+W18-055	equations	quadratic_discriminant_Q	typed_calculation	exact	solveq¦x^2+4*x+8¦x	rational roots: none (other roots may exist)
+W18-056	equations	quadratic_discriminant_Q	typed_calculation	exact	solveq¦4*x^2-1¦x	rational roots: -1/2, 1/2
+W18-057	equations	quadratic_discriminant_Q	typed_calculation	exact	solveq¦3*x^2-7*x¦x	rational roots: 0, 7/3
+W18-058	equations	absolute_value	typed_calculation	exact	abssolve¦abs(x+4)=6	status: exact¦components: 2¦interval: [-10, -10]¦interval: [2, 2]¦complete: true¦verified: true
+W18-059	equations	absolute_value	typed_calculation	exact	abssolve¦abs(3*x-1)=2	status: exact¦components: 2¦interval: [-1/3, -1/3]¦interval: [1, 1]¦complete: true¦verified: true
+W18-060	equations	absolute_value	typed_calculation	exact	abssolve¦abs(2*x+7)=0	status: exact¦components: 1¦interval: [-7/2, -7/2]¦complete: true¦verified: true
+W18-061	equations	absolute_value	typed_calculation	exact	abssolve¦abs(x-8)=-1	status: exact¦components: 0¦complete: true¦verified: true
+W18-062	equations	absolute_value	typed_calculation	exact	abssolve¦abs(abs(x)-4)=2	status: exact¦components: 4¦interval: [-6, -6]¦interval: [-2, -2]¦interval: [2, 2]¦interval: [6, 6]¦complete: true¦verified: true
+W18-063	equations	absolute_value	typed_calculation	exact	abssolve¦abs(abs(x+1)-3)=0	status: exact¦components: 2¦interval: [-4, -4]¦interval: [2, 2]¦complete: true¦verified: true
+W18-064	equations	absolute_value	typed_calculation	exact	abssolve¦abs(x+2)=0	status: exact¦components: 1¦interval: [-2, -2]¦complete: true¦verified: true
+W18-065	equations	simultaneous_affine	typed_calculation	exact	linsystem¦x,y¦x+2*y=7¦3*x-y=7	solution: unique¦values: 3,2¦verified: true¦conditions: none
+W18-066	equations	simultaneous_affine	typed_calculation	exact	linsystem¦x,y¦2*x-y=5¦x+y=4	solution: unique¦values: 3,1¦verified: true¦conditions: none
+W18-067	equations	simultaneous_affine	typed_calculation	exact	linsystem¦x,y¦x-y=-3¦2*x+y=9	solution: unique¦values: 2,5¦verified: true¦conditions: none
+W18-068	equations	simultaneous_affine	typed_calculation	exact	linsystem¦x,y¦3*x+2*y=1¦x-y=2	solution: unique¦values: 1,-1¦verified: true¦conditions: none
+W18-069	equations	simultaneous_affine	typed_calculation	exact	linsystem¦x,y¦x/2+y=4¦x-y=2	solution: unique¦values: 4,2¦verified: true¦conditions: none
+W18-070	equations	simultaneous_affine	typed_calculation	exact	linsystem¦x,y¦x+3*y=2¦2*x-y=11	solution: unique¦values: 5,-1¦verified: true¦conditions: none
+W18-071	inequalities	linear_intervals	typed_calculation	exact	inequality¦3*x-9>=0	status: exact¦intervals: 1¦interval: [3, infinity)¦conditions: none¦verified: true
+W18-072	inequalities	linear_intervals	typed_calculation	exact	inequality¦7-2*x<1	status: exact¦intervals: 1¦interval: (3, infinity)¦conditions: none¦verified: true
+W18-073	inequalities	linear_intervals	typed_calculation	exact	inequality¦-5*x+4>=9	status: exact¦intervals: 1¦interval: (-infinity, -1]¦conditions: none¦verified: true
+W18-074	inequalities	linear_intervals	typed_calculation	exact	inequality¦x/3+1<0	status: exact¦intervals: 1¦interval: (-infinity, -3)¦conditions: none¦verified: true
+W18-075	inequalities	linear_intervals	typed_calculation	exact	inequality¦2*x+3<=5*x-6	status: exact¦intervals: 1¦interval: [3, infinity)¦conditions: none¦verified: true
+W18-076	inequalities	linear_intervals	typed_calculation	exact	inequality¦4*x-1>2*x+7	status: exact¦intervals: 1¦interval: (4, infinity)¦conditions: none¦verified: true
+W18-077	inequalities	quadratic_sign_chart	typed_calculation	exact	inequality¦x^2-9>=0	status: exact¦intervals: 2¦interval: (-infinity, -3]¦interval: [3, infinity)¦conditions: none¦verified: true
+W18-078	inequalities	quadratic_sign_chart	typed_calculation	exact	inequality¦x^2-16<0	status: exact¦intervals: 1¦interval: (-4, 4)¦conditions: none¦verified: true
+W18-079	inequalities	quadratic_sign_chart	typed_calculation	exact	inequality¦(x-2)*(x+5)<=0	status: exact¦intervals: 1¦interval: [-5, 2]¦conditions: none¦verified: true
+W18-080	inequalities	quadratic_sign_chart	typed_calculation	exact	inequality¦(x-4)*(x-1)>0	status: exact¦intervals: 2¦interval: (-infinity, 1)¦interval: (4, infinity)¦conditions: none¦verified: true
+W18-081	inequalities	quadratic_sign_chart	typed_calculation	exact	inequality¦-(x+1)*(x-3)>=0	status: exact¦intervals: 1¦interval: [-1, 3]¦conditions: none¦verified: true
+W18-082	inequalities	quadratic_sign_chart	typed_calculation	exact	inequality¦(x-3)^2>0	status: exact¦intervals: 2¦interval: (-infinity, 3)¦interval: (3, infinity)¦conditions: none¦verified: true
+W18-083	inequalities	quadratic_sign_chart	typed_calculation	exact	inequality¦(x+2)^2<=0	status: exact¦intervals: 1¦interval: [-2, -2]¦conditions: none¦verified: true
+W18-084	inequalities	quadratic_sign_chart	typed_calculation	exact	inequality¦x^2+7>=0	status: exact¦intervals: 1¦interval: (-infinity, infinity)¦conditions: none¦verified: true
+W18-085	inequalities	quadratic_sign_chart	typed_calculation	exact	inequality¦x^2+5<0	status: exact¦intervals: 0¦conditions: none¦verified: true
+W18-086	inequalities	quadratic_sign_chart	typed_calculation	exact	inequality¦-x^2-3>0	status: exact¦intervals: 0¦conditions: none¦verified: true
+W18-087	inequalities	rational_sign_chart	typed_calculation	exact	inequality¦(x-3)/(x+4)>0	status: exact¦intervals: 2¦interval: (-infinity, -4)¦interval: (3, infinity)¦condition: 4 + x != 0¦verified: true
+W18-088	inequalities	rational_sign_chart	typed_calculation	exact	inequality¦(x+2)/(x-5)<=0	status: exact¦intervals: 1¦interval: [-2, 5)¦condition: -5 + x != 0¦verified: true
+W18-089	inequalities	rational_sign_chart	typed_calculation	exact	inequality¦1/(x+7)<0	status: exact¦intervals: 1¦interval: (-infinity, -7)¦condition: 7 + x != 0¦verified: true
+W18-090	inequalities	rational_sign_chart	typed_calculation	exact	inequality¦1/(x-6)>=0	status: exact¦intervals: 1¦interval: (6, infinity)¦condition: -6 + x != 0¦verified: true
+W18-091	inequalities	advanced_gap	typed_calculation	gap	inequality¦(x-1)*(x+2)*(x-4)>0	answer: (-2,1) union (4,infinity)
+W18-092	inequalities	advanced_gap	typed_calculation	gap	inequality¦x^4-16<=0	answer: [-2,2]
+W18-093	inequalities	advanced_gap	typed_calculation	gap	inequality¦exp(x)<1	answer: (-infinity,0)
+W18-094	trigonometry	sin_unit_circle	typed_calculation	exact	trig¦sin¦0	status: exact¦value: 0¦verified: true
+W18-095	trigonometry	sin_unit_circle	typed_calculation	exact	trig¦sin¦1/2	status: exact¦value: 1¦verified: true
+W18-096	trigonometry	sin_unit_circle	typed_calculation	exact	trig¦sin¦5/6	status: exact¦value: 1/2¦verified: true
+W18-097	trigonometry	sin_unit_circle	typed_calculation	exact	trig¦sin¦1	status: exact¦value: 0¦verified: true
+W18-098	trigonometry	sin_unit_circle	typed_calculation	exact	trig¦sin¦7/6	status: exact¦value: -1/2¦verified: true
+W18-099	trigonometry	sin_unit_circle	typed_calculation	exact	trig¦sin¦3/2	status: exact¦value: -1¦verified: true
+W18-100	trigonometry	sin_unit_circle	typed_calculation	exact	trig¦sin¦11/6	status: exact¦value: -1/2¦verified: true
+W18-101	trigonometry	sin_unit_circle	typed_calculation	exact	trig¦sin¦-1/6	status: exact¦value: -1/2¦verified: true
+W18-102	trigonometry	sin_unit_circle	typed_calculation	exact	trig¦sin¦5/2	status: exact¦value: 1¦verified: true
+W18-103	trigonometry	cos_unit_circle	typed_calculation	exact	trig¦cos¦0	status: exact¦value: 1¦verified: true
+W18-104	trigonometry	cos_unit_circle	typed_calculation	exact	trig¦cos¦1/2	status: exact¦value: 0¦verified: true
+W18-105	trigonometry	cos_unit_circle	typed_calculation	exact	trig¦cos¦2/3	status: exact¦value: -1/2¦verified: true
+W18-106	trigonometry	cos_unit_circle	typed_calculation	exact	trig¦cos¦1	status: exact¦value: -1¦verified: true
+W18-107	trigonometry	cos_unit_circle	typed_calculation	exact	trig¦cos¦4/3	status: exact¦value: -1/2¦verified: true
+W18-108	trigonometry	cos_unit_circle	typed_calculation	exact	trig¦cos¦3/2	status: exact¦value: 0¦verified: true
+W18-109	trigonometry	cos_unit_circle	typed_calculation	exact	trig¦cos¦5/3	status: exact¦value: 1/2¦verified: true
+W18-110	trigonometry	cos_unit_circle	typed_calculation	exact	trig¦cos¦-1/3	status: exact¦value: 1/2¦verified: true
+W18-111	trigonometry	cos_unit_circle	typed_calculation	exact	trig¦cos¦2	status: exact¦value: 1¦verified: true
+W18-112	trigonometry	tan_unit_circle	typed_calculation	exact	trig¦tan¦0	status: exact¦value: 0¦verified: true
+W18-113	trigonometry	tan_unit_circle	typed_calculation	exact	trig¦tan¦1/4	status: exact¦value: 1¦verified: true
+W18-114	trigonometry	tan_unit_circle	typed_calculation	exact	trig¦tan¦3/4	status: exact¦value: -1¦verified: true
+W18-115	trigonometry	tan_unit_circle	typed_calculation	exact	trig¦tan¦1	status: exact¦value: 0¦verified: true
+W18-116	trigonometry	tan_unit_circle	typed_calculation	exact	trig¦tan¦5/4	status: exact¦value: 1¦verified: true
+W18-117	trigonometry	tan_unit_circle	typed_calculation	exact	trig¦tan¦7/4	status: exact¦value: -1¦verified: true
+W18-118	trigonometry	tan_unit_circle	typed_calculation	exact	trig¦tan¦-1/4	status: exact¦value: -1¦verified: true
+W18-119	trigonometry	irrational_angles	typed_calculation	exact	trig¦sin¦1/4	status: exact¦minimal_polynomial: -1/2 + t ^ 2¦branch: upper_real¦verified: true
+W18-120	trigonometry	irrational_angles	typed_calculation	exact	trig¦cos¦3/4	status: exact¦minimal_polynomial: -1/2 + t ^ 2¦branch: lower_real¦verified: true
+W18-121	trigonometry	irrational_angles	typed_calculation	exact	trig¦sin¦4/3	status: exact¦minimal_polynomial: -3/4 + t ^ 2¦branch: lower_real¦verified: true
+W18-122	trigonometry	irrational_angles	typed_calculation	exact	trig¦cos¦1/6	status: exact¦minimal_polynomial: -3/4 + t ^ 2¦branch: upper_real¦verified: true
+W18-123	trigonometry	irrational_angles	typed_calculation	exact	trig¦tan¦1/3	status: exact¦minimal_polynomial: -3 + t ^ 2¦branch: upper_real¦verified: true
+W18-124	trigonometry	periodic_gap	typed_calculation	gap	trigzeros¦sin	answer: x=n*pi, n integer
+W18-125	calculus	definite_integral	typed_calculation	exact	integrate¦3*x^2¦x¦0¦4	status: exact¦integral: 64¦verified: true¦conditions: none
+W18-126	calculus	definite_integral	typed_calculation	exact	integrate¦2*x+3¦x¦-2¦3	status: exact¦integral: 20¦verified: true¦conditions: none
+W18-127	calculus	definite_integral	typed_calculation	exact	integrate¦x^3¦x¦-2¦2	status: exact¦integral: 0¦verified: true¦conditions: none
+W18-128	calculus	definite_integral	typed_calculation	exact	integrate¦x^4¦x¦0¦3	status: exact¦integral: 243/5¦verified: true¦conditions: none
+W18-129	calculus	definite_integral	typed_calculation	exact	integrate¦5¦x¦-3¦2	status: exact¦integral: 25¦verified: true¦conditions: none
+W18-130	calculus	definite_integral	typed_calculation	exact	integrate¦x^2-4¦x¦0¦2	status: exact¦integral: -16/3¦verified: true¦conditions: none
+W18-131	calculus	definite_integral	typed_calculation	exact	integrate¦2*x^3+x¦x¦1¦3	status: exact¦integral: 44¦verified: true¦conditions: none
+W18-132	calculus	definite_integral	typed_calculation	exact	integrate¦x^2+2*x+1¦x¦-1¦2	status: exact¦integral: 9¦verified: true¦conditions: none
+W18-133	calculus	definite_integral	typed_calculation	exact	integrate¦x^5¦x¦1¦2	status: exact¦integral: 21/2¦verified: true¦conditions: none
+W18-134	calculus	definite_integral	typed_calculation	exact	integrate¦x^2¦x¦3¦1	status: exact¦integral: -26/3¦verified: true¦conditions: none
+W18-135	calculus	definite_integral	typed_calculation	exact	integrate¦(x-1)^2¦x¦0¦3	status: exact¦integral: 3¦verified: true¦conditions: none
+W18-136	calculus	definite_integral	typed_calculation	exact	integrate¦x^3+2*x^2¦x¦0¦1	status: exact¦integral: 11/12¦verified: true¦conditions: none
+W18-137	calculus	definite_integral	typed_calculation	exact	integrate¦7*x^2¦x¦0¦0	status: exact¦integral: 0¦verified: true¦conditions: none
+W18-138	calculus	definite_integral	typed_calculation	exact	integrate¦1/2*x^2¦x¦0¦3	status: exact¦integral: 9/2¦verified: true¦conditions: none
+W18-139	calculus	definite_integral	typed_calculation	exact	integrate¦(2*x+1)^2¦x¦0¦2	status: exact¦integral: 62/3¦verified: true¦conditions: none
+W18-140	calculus	finite_limits	typed_calculation	exact	limit¦x^3+2*x-1¦x¦2	status: exact¦limit: 11¦excluded_at_point: false¦conditions: none¦verified: true
+W18-141	calculus	finite_limits	typed_calculation	exact	limit¦(x+3)^2¦x¦-1	status: exact¦limit: 4¦excluded_at_point: false¦conditions: none¦verified: true
+W18-142	calculus	finite_limits	typed_calculation	exact	limit¦2*x^4-x¦x¦-2	status: exact¦limit: 34¦excluded_at_point: false¦conditions: none¦verified: true
+W18-143	calculus	finite_limits	typed_calculation	exact	limit¦5*x-7¦x¦3/2	status: exact¦limit: 1/2¦excluded_at_point: false¦conditions: none¦verified: true
+W18-144	calculus	finite_limits	typed_calculation	exact	limit¦(x^2+1)^2¦x¦0	status: exact¦limit: 1¦excluded_at_point: false¦conditions: none¦verified: true
+W18-145	calculus	finite_limits	typed_calculation	exact	limit¦x^3-2*x^2+7¦x¦-1	status: exact¦limit: 4¦excluded_at_point: false¦conditions: none¦verified: true
+W18-146	calculus	finite_limits	typed_calculation	exact	limit¦1/3*x^2+1/2¦x¦3	status: exact¦limit: 7/2¦excluded_at_point: false¦conditions: none¦verified: true
+W18-147	calculus	finite_limits	typed_calculation	exact	limit¦(x-4)*(x+2)¦x¦4	status: exact¦limit: 0¦excluded_at_point: false¦conditions: none¦verified: true
+W18-148	calculus	removable_limits	typed_calculation	exact	limit¦(x^2-9)/(x-3)¦x¦3	status: exact¦limit: 6¦excluded_at_point: true¦condition: -3 + x != 0¦verified: true
+W18-149	calculus	removable_limits	typed_calculation	exact	limit¦(x^2-16)/(x+4)¦x¦-4	status: exact¦limit: -8¦excluded_at_point: true¦condition: 4 + x != 0¦verified: true
+W18-150	calculus	removable_limits	typed_calculation	exact	limit¦(x^2+5*x+6)/(x+2)¦x¦-2	status: exact¦limit: 1¦excluded_at_point: true¦condition: 2 + x != 0¦verified: true
+W18-151	calculus	removable_limits	typed_calculation	exact	limit¦(x^2-4*x+4)/(x-2)¦x¦2	status: exact¦limit: 0¦excluded_at_point: true¦condition: -2 + x != 0¦verified: true
+W18-152	calculus	pole_limits	typed_calculation	exact	limit¦1/(x-3)¦x¦3¦left	status: exact¦limit: -infinity¦excluded_at_point: true¦condition: -3 + x != 0¦verified: true
+W18-153	calculus	pole_limits	typed_calculation	exact	limit¦-1/(x+2)¦x¦-2¦right	status: exact¦limit: -infinity¦excluded_at_point: true¦condition: 2 + x != 0¦verified: true
+W18-154	calculus	pole_limits	typed_calculation	exact	limit¦1/(x-4)¦x¦4¦two-sided	status: exact¦limit: does not exist¦excluded_at_point: true¦condition: -4 + x != 0¦verified: true
+W18-155	calculus	derivative_trace	typed_calculation	trace	steps¦derivative¦x^4¦x	conclusion: derivative: 4 * x ^ 3¦verified: true
+W18-156	calculus	derivative_trace	typed_calculation	trace	steps¦derivative¦5*x^3¦x	conclusion: derivative: 15 * x ^ 2¦verified: true
+W18-157	calculus	derivative_trace	typed_calculation	trace	steps¦derivative¦x^7¦x	conclusion: derivative: 7 * x ^ 6¦verified: true
+W18-158	calculus	derivative_trace	typed_calculation	trace	steps¦derivative¦3*x^2¦x	conclusion: derivative: 6 * x¦verified: true
+W18-159	calculus	derivative_trace	typed_calculation	trace	steps¦derivative¦sin(3*x)¦x	conclusion: derivative: 3 * cos(3 * x)¦verified: true
+W18-160	calculus	derivative_trace	typed_calculation	trace	steps¦derivative¦cos(2*x)¦x	conclusion: derivative: -2 * sin(2 * x)¦verified: true
+W18-161	calculus	derivative_trace	typed_calculation	trace	steps¦derivative¦exp(4*x)¦x	conclusion: derivative: 4 * exp(4 * x)¦verified: true
+W18-162	calculus	derivative_trace	typed_calculation	trace	steps¦derivative¦7*x+5¦x	conclusion: derivative: 7¦verified: true
+W18-163	calculus	derivative_trace	typed_calculation	trace	steps¦derivative¦x^2+3¦x	conclusion: derivative: 2 * x¦verified: true
+W18-164	calculus	derivative_trace	typed_calculation	trace	steps¦derivative¦x^3+4¦x	conclusion: derivative: 3 * x ^ 2¦verified: true
+W18-165	calculus	primitive	typed_calculation	exact	integrate¦x^3¦x	status: exact¦primitive: 1/4 * x ^ 4¦conditions: none¦verified: true
+W18-166	calculus	primitive	typed_calculation	exact	integrate¦2*x¦x	status: exact¦primitive: x ^ 2¦conditions: none¦verified: true
+W18-167	calculus	primitive	typed_calculation	exact	integrate¦6*x^2¦x	status: exact¦primitive: 2 * x ^ 3¦conditions: none¦verified: true
+W18-168	calculus	primitive	typed_calculation	exact	integrate¦-4*x^3¦x	status: exact¦primitive: -1 * x ^ 4¦conditions: none¦verified: true
+W18-169	calculus	primitive	typed_calculation	exact	integrate¦sin(3*x)¦x	status: exact¦primitive: -1/3 * cos(3 * x)¦conditions: none¦verified: true
+W18-170	calculus	primitive	typed_calculation	exact	integrate¦cos(5*x)¦x	status: exact¦primitive: 1/5 * sin(5 * x)¦conditions: none¦verified: true
+W18-171	calculus	primitive	typed_calculation	exact	integrate¦exp(2*x)¦x	status: exact¦primitive: 1/2 * exp(2 * x)¦conditions: none¦verified: true
+W18-172	calculus	analytic_infinite_gap	typed_calculation	gap	limit¦sin(3*x)/x¦x¦0	answer: 3
+W18-173	calculus	analytic_infinite_gap	typed_calculation	gap	limit¦(1-cos(x))/x^2¦x¦0	answer: 1/2
+W18-174	calculus	analytic_infinite_gap	typed_calculation	gap	limit¦(2*x+1)/(x-2)¦x¦infinity	answer: 2
+W18-175	sequences_binomial	binomial_coefficients	typed_calculation	exact	poly¦(1+2*x)^3¦x	degree: 3¦coefficients: [1, 6, 12, 8]
+W18-176	sequences_binomial	binomial_coefficients	typed_calculation	exact	poly¦(2+x)^4¦x	degree: 4¦coefficients: [16, 32, 24, 8, 1]
+W18-177	sequences_binomial	binomial_coefficients	typed_calculation	exact	poly¦(-1+x)^5¦x	degree: 5¦coefficients: [-1, 5, -10, 10, -5, 1]
+W18-178	sequences_binomial	binomial_coefficients	typed_calculation	exact	poly¦(3+2*x)^3¦x	degree: 3¦coefficients: [27, 54, 36, 8]
+W18-179	sequences_binomial	binomial_coefficients	typed_calculation	exact	poly¦(2-x)^4¦x	degree: 4¦coefficients: [16, -32, 24, -8, 1]
+W18-180	sequences_binomial	binomial_coefficients	typed_calculation	exact	poly¦(1+3*x)^5¦x	degree: 5¦coefficients: [1, 15, 90, 270, 405, 243]
+W18-181	sequences_binomial	binomial_coefficients	typed_calculation	exact	poly¦(1-2*x)^6¦x	degree: 6¦coefficients: [1, -12, 60, -160, 240, -192, 64]
+W18-182	sequences_binomial	binomial_coefficients	typed_calculation	exact	poly¦(2+3*x)^2¦x	degree: 2¦coefficients: [4, 12, 9]
+W18-183	sequences_binomial	preformulated_sequence	typed_formula	exact	expr¦7+12*4	expression: 55
+W18-184	sequences_binomial	preformulated_sequence	typed_formula	exact	expr¦-3+19*2	expression: 35
+W18-185	sequences_binomial	preformulated_sequence	typed_formula	exact	expr¦5*3^6	expression: 3645
+W18-186	sequences_binomial	preformulated_sequence	typed_formula	exact	expr¦64*(1/2)^5	expression: 2
+W18-187	sequences_binomial	preformulated_sequence	typed_formula	exact	expr¦15*(2*4+14*3)/2	expression: 375
+W18-188	sequences_binomial	preformulated_sequence	typed_formula	exact	expr¦6*(2^8-1)	expression: 1530
+W18-189	sequences_binomial	preformulated_sequence	typed_formula	exact	expr¦12*(1-(1/3)^3)/(1-1/3)	expression: 52/3
+W18-190	sequences_binomial	preformulated_sequence	typed_formula	exact	expr¦9/(1-2/5)	expression: 15
+W18-191	algebra	polynomial_products	typed_calculation	exact	poly¦(x+2)*(x-5)¦x	degree: 2¦coefficients: [-10, -3, 1]
+W18-192	algebra	polynomial_products	typed_calculation	exact	poly¦(2*x-3)*(x+4)¦x	degree: 2¦coefficients: [-12, 5, 2]
+W18-193	algebra	polynomial_products	typed_calculation	exact	poly¦(x^2+2)*(x-3)¦x	degree: 3¦coefficients: [-6, 2, -3, 1]
+W18-194	algebra	polynomial_products	typed_calculation	exact	poly¦(x-2)^2*(x+1)¦x	degree: 3¦coefficients: [4, 0, -3, 1]
+W18-195	algebra	polynomial_products	typed_calculation	exact	poly¦(x^2+x+1)*(x-1)¦x	degree: 3¦coefficients: [-1, 0, 0, 1]
+W18-196	algebra	polynomial_products	typed_calculation	exact	poly¦(3*x+1)^2-4*x¦x	degree: 2¦coefficients: [1, 2, 9]
+W18-197	algebra	polynomial_products	typed_calculation	exact	poly¦(x^2+1)^2-x^4¦x	degree: 2¦coefficients: [1, 0, 2]
+W18-198	algebra	polynomial_products	typed_calculation	exact	poly¦(x+1)*(x^2-x+1)¦x	degree: 3¦coefficients: [1, 0, 0, 1]
+W18-199	algebra	polynomial_value	typed_calculation	exact	eval¦3*x^3-2*x+5¦x¦2	value: 25
+W18-200	algebra	polynomial_value	typed_calculation	exact	eval¦(x-3)^2¦x¦-2	value: 25
+W18-201	algebra	polynomial_value	typed_calculation	exact	eval¦x^4-2*x^2+1¦x¦1/2	value: 9/16
+W18-202	algebra	polynomial_value	typed_calculation	exact	eval¦2*x^2+3*x-4¦x¦-3	value: 5
+W18-203	algebra	polynomial_value	typed_calculation	exact	eval¦(x+1)^3¦x¦1/3	value: 64/27
+W18-204	algebra	polynomial_value	typed_calculation	exact	eval¦x^3+x^2+x+1¦x¦-1	value: 0
+W18-205	algebra	polynomial_value	typed_calculation	exact	eval¦4*x^2-1¦x¦3/4	value: 5/4
+W18-206	algebra	polynomial_value	typed_calculation	exact	eval¦x^2-3*x+7¦x¦5/2	value: 23/4
+W18-207	algebra	polynomial_division	typed_calculation	exact	divide¦x^2+3*x+2¦x+1¦x	quotient: 2 + x¦remainder: 0
+W18-208	algebra	polynomial_division	typed_calculation	exact	divide¦x^2-4*x+8¦x-2¦x	quotient: -2 + x¦remainder: 4
+W18-209	algebra	polynomial_division	typed_calculation	exact	divide¦x^3-8¦x-2¦x	quotient: 4 + x ^ 2 + 2 * x¦remainder: 0
+W18-210	algebra	polynomial_division	typed_calculation	exact	divide¦x^2+2*x+5¦x+3¦x	quotient: -1 + x¦remainder: 8
+W18-211	algebra	polynomial_division	typed_calculation	exact	divide¦2*x^2+7*x+3¦2*x+1¦x	quotient: 3 + x¦remainder: 0
+W18-212	algebra	polynomial_division	typed_calculation	exact	divide¦x^3+x¦x^2+1¦x	quotient: x¦remainder: 0
+W18-213	complex	gaussian_rational	typed_calculation	exact	qop¦add¦x^2+1¦positive_imaginary¦2¦3¦-4¦1¦x	value: -2 + (4)*alpha¦embedding: positive_imaginary¦root_branch: positive_imaginary
+W18-214	complex	gaussian_rational	typed_calculation	exact	qop¦add¦x^2+1¦positive_imaginary¦-1¦2¦5¦-7¦x	value: 4 + (-5)*alpha¦embedding: positive_imaginary¦root_branch: negative_imaginary
+W18-215	complex	gaussian_rational	typed_calculation	exact	qop¦sub¦x^2+1¦positive_imaginary¦4¦-3¦2¦6¦x	value: 2 + (-9)*alpha¦embedding: positive_imaginary¦root_branch: negative_imaginary
+W18-216	complex	gaussian_rational	typed_calculation	exact	qop¦sub¦x^2+1¦positive_imaginary¦-5¦0¦3¦-2¦x	value: -8 + (2)*alpha¦embedding: positive_imaginary¦root_branch: positive_imaginary
+W18-217	complex	gaussian_rational	typed_calculation	exact	qop¦mul¦x^2+1¦positive_imaginary¦2¦3¦4¦-1¦x	value: 11 + (10)*alpha¦embedding: positive_imaginary¦root_branch: positive_imaginary
+W18-218	complex	gaussian_rational	typed_calculation	exact	qop¦mul¦x^2+1¦positive_imaginary¦0¦5¦0¦-2¦x	value: 10 + (0)*alpha¦embedding: positive_imaginary¦root_branch: rational
+W18-219	complex	gaussian_rational	typed_calculation	exact	qop¦mul¦x^2+1¦positive_imaginary¦-3¦2¦-3¦-2¦x	value: 13 + (0)*alpha¦embedding: positive_imaginary¦root_branch: rational
+W18-220	complex	gaussian_rational	typed_calculation	exact	qop¦div¦x^2+1¦positive_imaginary¦1¦1¦1¦-1¦x	value: 0 + (1)*alpha¦embedding: positive_imaginary¦root_branch: positive_imaginary
+W18-221	complex	gaussian_rational	typed_calculation	exact	qop¦div¦x^2+1¦positive_imaginary¦3¦4¦1¦2¦x	value: 11/5 + (-2/5)*alpha¦embedding: positive_imaginary¦root_branch: negative_imaginary
+W18-222	complex	gaussian_rational	typed_calculation	exact	qop¦div¦x^2+1¦positive_imaginary¦5¦0¦0¦2¦x	value: 0 + (-5/2)*alpha¦embedding: positive_imaginary¦root_branch: negative_imaginary
+W18-223	matrices_vectors_geometry	determinant_2x2	typed_calculation	exact	matdet¦4,1;2,3	determinant: 10
+W18-224	matrices_vectors_geometry	determinant_2x2	typed_calculation	exact	matdet¦0,5;3,1	determinant: -15
+W18-225	matrices_vectors_geometry	determinant_2x2	typed_calculation	exact	matdet¦-2,4;3,-6	determinant: 0
+W18-226	matrices_vectors_geometry	determinant_2x2	typed_calculation	exact	matdet¦1,2;3,5	determinant: -1
+W18-227	matrices_vectors_geometry	determinant_2x2	typed_calculation	exact	matdet¦7,-3;2,1	determinant: 13
+W18-228	matrices_vectors_geometry	determinant_2x2	typed_calculation	exact	matdet¦2,0;0,-4	determinant: -8
+W18-229	matrices_vectors_geometry	determinant_3x3	typed_calculation	exact	matdet¦1,2,3;0,4,5;1,0,6	determinant: 22
+W18-230	matrices_vectors_geometry	determinant_3x3	typed_calculation	exact	matdet¦2,0,1;3,1,0;0,4,2	determinant: 16
+W18-231	matrices_vectors_geometry	determinant_3x3	typed_calculation	exact	matdet¦1,3,2;2,6,4;0,1,1	determinant: 0
+W18-232	matrices_vectors_geometry	determinant_3x3	typed_calculation	exact	matdet¦0,2,0;0,0,3;5,0,0	determinant: 30
+W18-233	matrices_vectors_geometry	determinant_3x3	typed_calculation	exact	matdet¦4,1,2;0,3,-1;0,0,2	determinant: 24
+W18-234	matrices_vectors_geometry	determinant_3x3	typed_calculation	exact	matdet¦1,0,-2;3,1,0;0,4,1	determinant: -23
+W18-235	matrices_vectors_geometry	matrix_inverse	typed_calculation	exact	matinv¦3,1;2,1	inverse: 1,-1;-2,3
+W18-236	matrices_vectors_geometry	matrix_inverse	typed_calculation	exact	matinv¦4,2;1,3	inverse: 3/10,-1/5;-1/10,2/5
+W18-237	matrices_vectors_geometry	matrix_inverse	typed_calculation	exact	matinv¦0,2;3,1	inverse: -1/6,1/3;1/2,0
+W18-238	matrices_vectors_geometry	matrix_inverse	typed_calculation	exact	matinv¦2,5;4,10	inverse: none (singular)
+W18-239	matrices_vectors_geometry	matrix_inverse	typed_calculation	exact	matinv¦1,-2;3,4	inverse: 2/5,1/5;-3/10,1/10
+W18-240	matrices_vectors_geometry	matrix_inverse	typed_calculation	exact	matinv¦2,0;0,5	inverse: 1/2,0;0,1/5
+W18-241	matrices_vectors_geometry	matrix_product	typed_calculation	exact	matmul¦1,2,3;4,5,6¦1;0;-1	product: -2;-2
+W18-242	matrices_vectors_geometry	matrix_product	typed_calculation	exact	matmul¦2,-1;0,3¦1,4;2,0	product: 0,8;6,0
+W18-243	matrices_vectors_geometry	matrix_product	typed_calculation	exact	matmul¦1,0;0,1¦2,3,4;5,6,7	product: 2,3,4;5,6,7
+W18-244	matrices_vectors_geometry	matrix_product	typed_calculation	exact	matmul¦2,3¦4;5	product: 23
+W18-245	matrices_vectors_geometry	matrix_product	typed_calculation	exact	matmul¦1;2;3¦4,5	product: 4,5;8,10;12,15
+W18-246	matrices_vectors_geometry	matrix_product	typed_calculation	exact	matmul¦1,2;3,4¦0,1;-1,0	product: -2,1;-4,3
+W18-247	matrices_vectors_geometry	matrix_system	typed_calculation	exact	matsolve¦2,1;1,3¦4,-3	solution: unique¦value: 3,-2
+W18-248	matrices_vectors_geometry	matrix_system	typed_calculation	exact	matsolve¦5,-1;2,4¦2,14	solution: unique¦value: 1,3
+W18-249	matrices_vectors_geometry	matrix_system	typed_calculation	exact	matsolve¦1,2,0;0,1,3;2,0,1¦0,8,7	solution: unique¦value: 2,-1,3
+W18-250	matrices_vectors_geometry	matrix_system	typed_calculation	exact	matsolve¦3,0;0,2¦3,8	solution: unique¦value: 1,4
+W18-251	matrices_vectors_geometry	matrix_system	typed_calculation	exact	matsolve¦1,1;2,3¦3,11	solution: unique¦value: -2,5
+W18-252	matrices_vectors_geometry	matrix_system	typed_calculation	exact	matsolve¦2,3;4,5¦-3,-5	solution: unique¦value: 0,-1
+W18-253	matrices_vectors_geometry	matrix_rref	typed_calculation	exact	matrref¦2,4,6;1,2,3	rref: 1,2,3;0,0,0¦rank: 1
+W18-254	matrices_vectors_geometry	matrix_rref	typed_calculation	exact	matrref¦1,2;3,4	rref: 1,0;0,1¦rank: 2
+W18-255	matrices_vectors_geometry	matrix_rref	typed_calculation	exact	matrref¦0,0;0,0	rref: 0,0;0,0¦rank: 0
+W18-256	matrices_vectors_geometry	matrix_rref	typed_calculation	exact	matrref¦0,2,4;0,1,2	rref: 0,1,2;0,0,0¦rank: 1
+W18-257	matrices_vectors_geometry	preformulated_geometry_vector	typed_formula	exact	expr¦(7-1)^2+(5-(-3))^2	expression: 100
+W18-258	matrices_vectors_geometry	preformulated_geometry_vector	typed_formula	exact	expr¦(2+8)/2	expression: 5
+W18-259	matrices_vectors_geometry	preformulated_geometry_vector	typed_formula	exact	expr¦(9-3)/(4-1)	expression: 2
+W18-260	matrices_vectors_geometry	preformulated_geometry_vector	typed_formula	exact	expr¦3*4+(-2)*5	expression: 2
+W18-261	matrices_vectors_geometry	preformulated_geometry_vector	typed_formula	exact	expr¦(4^2+(-3)^2)	expression: 25
+W18-262	matrices_vectors_geometry	preformulated_geometry_vector	typed_formula	exact	expr¦1/2*(7*5-2*3)	expression: 29/2
+W18-263	matrices_vectors_geometry	preformulated_geometry_vector	typed_formula	exact	expr¦(3-(-1))^2+(6-3)^2	expression: 25
+W18-264	matrices_vectors_geometry	preformulated_geometry_vector	typed_formula	exact	expr¦(-5)*2+4*3+1*7	expression: 9
+W18-265	probability_statistics	preformulated_probability	typed_formula	exact	expr¦3/8*2/7	expression: 3/28
+W18-266	probability_statistics	preformulated_probability	typed_formula	exact	expr¦1-(5/6)^3	expression: 91/216
+W18-267	probability_statistics	preformulated_probability	typed_formula	exact	expr¦2*(1/4)*(3/4)	expression: 3/8
+W18-268	probability_statistics	preformulated_probability	typed_formula	exact	expr¦(2/5)*(3/7)+(3/5)*(1/7)	expression: 9/35
+W18-269	probability_statistics	preformulated_probability	typed_formula	exact	expr¦(1/3*3/4)/(1/3*3/4+2/3*1/4)	expression: 3/5
+W18-270	probability_statistics	preformulated_probability	typed_formula	exact	expr¦10*(1/5)^2*(4/5)^3	expression: 128/625
+W18-271	probability_statistics	preformulated_probability	typed_formula	exact	expr¦1-7/12-1/6	expression: 1/4
+W18-272	probability_statistics	preformulated_probability	typed_formula	exact	expr¦(4/9)/(2/3)	expression: 2/3
+W18-273	probability_statistics	preformulated_statistics	typed_formula	exact	expr¦(3+7+8+12)/4	expression: 15/2
+W18-274	probability_statistics	preformulated_statistics	typed_formula	exact	expr¦(2*4+5*7+3*10)/10	expression: 73/10
+W18-275	probability_statistics	preformulated_statistics	typed_formula	exact	expr¦(1^2+3^2+5^2)/3-3^2	expression: 8/3
+W18-276	probability_statistics	preformulated_statistics	typed_formula	exact	expr¦(2+4+9+11+14)/5	expression: 8
+W18-277	probability_statistics	preformulated_statistics	typed_formula	exact	expr¦1/4*0+1/2*2+1/4*4	expression: 2
+W18-278	probability_statistics	preformulated_statistics	typed_formula	exact	expr¦(3^2+5^2+7^2)/3-5^2	expression: 8/3
+W18-279	probability_statistics	preformulated_statistics	typed_formula	exact	expr¦(15-8)/(20-10)	expression: 7/10
+W18-280	probability_statistics	preformulated_statistics	typed_formula	exact	expr¦(2*5+3*8)/5	expression: 34/5
+W18-281	mechanics	preformulated_mechanics	typed_formula	exact	expr¦3+2*5	expression: 13
+W18-282	mechanics	preformulated_mechanics	typed_formula	exact	expr¦4*6+1/2*3*6^2	expression: 78
+W18-283	mechanics	preformulated_mechanics	typed_formula	exact	expr¦(20-8)/3	expression: 4
+W18-284	mechanics	preformulated_mechanics	typed_formula	exact	expr¦2*5*12	expression: 120
+W18-285	mechanics	preformulated_mechanics	typed_formula	exact	expr¦1/2*6*7^2	expression: 147
+W18-286	mechanics	preformulated_mechanics	typed_formula	exact	expr¦8*(11-3)	expression: 64
+W18-287	mechanics	preformulated_mechanics	typed_formula	exact	expr¦9*10-35	expression: 55
+W18-288	mechanics	preformulated_mechanics	typed_formula	exact	expr¦(2*3+4*6)/(2+4)	expression: 5
+W18-289	mechanics	preformulated_mechanics	typed_formula	exact	expr¦(18-6)*4/2	expression: 24
+W18-290	mechanics	preformulated_mechanics	typed_formula	exact	expr¦3*8^2/2	expression: 96
+W18-291	mechanics	preformulated_mechanics	typed_formula	exact	expr¦(5*12)/4	expression: 15
+W18-292	mechanics	preformulated_mechanics	typed_formula	exact	expr¦7*10*3	expression: 210

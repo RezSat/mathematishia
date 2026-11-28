@@ -1,0 +1,26 @@
+# Baseline incomplete-output fingerprints, not answer keys. Independently audited for equivalence.
+W18-012	expression: (1/2) ^ 2
+W18-013	expression: 2 ^ 7 * (2 ^ 3) ^ (-1)
+W18-014	expression: (3/5) ^ 3
+W18-015	expression: 5 ^ 0
+W18-016	expression: (-2) ^ 5
+W18-017	expression: (2 ^ 3) ^ 2
+W18-018	expression: 4 ^ (-2)
+W18-019	expression: 2 + 3 * 4 ^ 2
+W18-020	expression: 5 * 4 ^ 2
+W18-023	expression: (-4) ^ 2 + -1 * 3 ^ 2
+W18-024	expression: 4 + 3 * (-3) ^ 2
+W18-185	expression: 5 * 3 ^ 6
+W18-186	expression: 64 * (1/2) ^ 5
+W18-188	expression: 6 * (-1 + 2 ^ 8)
+W18-189	expression: 18 * (1 + -1 * (1/3) ^ 3)
+W18-257	expression: 6 ^ 2 + 8 ^ 2
+W18-261	expression: (-3) ^ 2 + 4 ^ 2
+W18-263	expression: 3 ^ 2 + 4 ^ 2
+W18-266	expression: 1 + -1 * (5/6) ^ 3
+W18-270	expression: 10 * (1/5) ^ 2 * (4/5) ^ 3
+W18-275	expression: -1 * 3 ^ 2 + 1/3 * (1 ^ 2 + 3 ^ 2 + 5 ^ 2)
+W18-278	expression: -1 * 5 ^ 2 + 1/3 * (3 ^ 2 + 5 ^ 2 + 7 ^ 2)
+W18-282	expression: 24 + 3/2 * 6 ^ 2
+W18-285	expression: 3 * 7 ^ 2
+W18-290	expression: 3/2 * 8 ^ 2

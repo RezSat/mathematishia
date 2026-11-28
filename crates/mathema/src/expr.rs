@@ -158,6 +158,11 @@ impl Expr {
         Self::builtin("log", argument)
     }
 
+    /// Constructs a symbolic real absolute value. Complex admission is unsupported.
+    pub fn abs(argument: Self) -> Self {
+        Self::builtin("abs", argument)
+    }
+
     fn builtin(name: &str, argument: Self) -> Self {
         Self::function(
             Symbol::new(name).expect("builtin name is nonempty"),
@@ -173,14 +178,27 @@ impl Expr {
     /// not inspect nested arguments or prove those obligations. For real log,
     /// the argument must be positive. For complex log, the argument must be
     /// nonzero (principal branch). Tangent requires cos(argument) != 0 in
-    /// either domain. All other built-ins are total over real and complex inputs.
+    /// either domain. Real abs is total; log(abs(u)) requires u != 0.
+    /// The remaining built-ins are total over real and complex inputs.
     pub fn function_domain_conditions(&self, domain: ScalarDomain) -> Option<Vec<Condition>> {
         let ExprNode::Function { name, argument } = self.0.as_ref() else {
             return None;
         };
         match (name.name(), domain) {
             ("sin" | "cos" | "exp", ScalarDomain::Real | ScalarDomain::Complex) => Some(Vec::new()),
-            ("log", ScalarDomain::Real) => Some(vec![Condition::Positive(argument.clone())]),
+            ("abs", ScalarDomain::Real) => Some(Vec::new()),
+            ("log", ScalarDomain::Real) => {
+                if let ExprView::Function {
+                    name,
+                    argument: inner,
+                } = argument.view()
+                    && name.name() == "abs"
+                {
+                    Some(vec![Condition::NonZero(inner.clone())])
+                } else {
+                    Some(vec![Condition::Positive(argument.clone())])
+                }
+            }
             ("log", ScalarDomain::Complex) => Some(vec![Condition::NonZero(argument.clone())]),
             ("tan", ScalarDomain::Real | ScalarDomain::Complex) => {
                 Some(vec![Condition::NonZero(Self::cos(argument.clone()))])

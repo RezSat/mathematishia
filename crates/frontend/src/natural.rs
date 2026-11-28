@@ -9,9 +9,10 @@
 use mathema::{DefinednessError, Integer, Rational, ScalarDomain, Symbol};
 use mathematishia_kernel::{
     AbsoluteAffine, AbsoluteEquation, AbsoluteEquationError, AbsoluteEquationResult,
-    AbsoluteExpression, EvaluationContext, EvaluationError, PiMultiple, SpecialAngleCertificate,
-    ProblemRequest, ProblemStatement, TrigError, TrigFunction, TrigLimits, evaluate_special_angle,
-    solve_absolute_equation, verify_absolute_equation, verify_special_angle,
+    AbsoluteExpression, EvaluationContext, EvaluationError, PiMultiple, ProblemRequest,
+    ProblemStatement, SpecialAngleCertificate, TrigError, TrigFunction, TrigLimits,
+    evaluate_special_angle, solve_absolute_equation, verify_absolute_equation,
+    verify_special_angle,
 };
 
 use crate::advanced::AdvancedError;

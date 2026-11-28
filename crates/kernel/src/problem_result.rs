@@ -4,6 +4,7 @@
 //! Inputs are already-normalized mathematical statements; conditions inherited
 //! from construction must be carried by `DomainExpression` or `RationalFunction`.
 
+pub mod methods;
 mod native;
 mod wire;
 pub use wire::ProblemWireError;

@@ -947,3 +947,100 @@ impl crate::step_records::division_trace::OrderedDivisionTrace {
         Ok(writer.text)
     }
 }
+
+impl super::methods::MethodEnvelope {
+    /// Separate version-1 envelope. The legacy result JSON is unchanged.
+    pub fn to_json(&self) -> Result<String, ProblemWireError> {
+        let mut writer = Encoder::default();
+        writer.method_envelope(self)?;
+        Ok(writer.text)
+    }
+}
+
+impl Encoder {
+    fn method_envelope(&mut self, value: &super::methods::MethodEnvelope) -> WireResult {
+        use super::methods::{AlternativeError, AlternativeStatus};
+        object!(self,
+            "schema_version" => |w| w.count(VERSION),
+            "kind" => |w| w.string("checked_method_results"),
+            "primary_method" => |w| match value.primary_method() {
+                Some(method) => w.string(method.stable_id()),
+                None => w.raw("null"),
+            },
+            "primary" => |w| w.raw(&value.primary().to_json()?),
+            "alternative" => |w| match value.alternative() {
+                AlternativeStatus::NotRequested => object!(w,
+                    "status" => |w| w.string("not_requested"),
+                ),
+                AlternativeStatus::NotApplicable => object!(w,
+                    "status" => |w| w.string("not_applicable"),
+                ),
+                AlternativeStatus::PrimaryNotComplete => object!(w,
+                    "status" => |w| w.string("primary_not_complete"),
+                ),
+                AlternativeStatus::Failed(error) => object!(w,
+                    "status" => |w| w.string("failed"),
+                    "reason" => |w| w.string(match error {
+                        AlternativeError::Problem(_) => "native_error",
+                        AlternativeError::ResourceRefusal(_) => "resource_refusal",
+                        AlternativeError::NotApplicable => "not_applicable",
+                        AlternativeError::RepeatedMethod => "repeated_method",
+                        AlternativeError::Incomplete => "incomplete",
+                        AlternativeError::DifferentResult => "different_result",
+                    }),
+                    "resource" => |w| match error {
+                        AlternativeError::ResourceRefusal(kind) => w.string(resource_id(*kind)),
+                        _ => w.raw("null"),
+                    },
+                ),
+                AlternativeStatus::Verified(alternative) => object!(w,
+                    "status" => |w| w.string("verified"),
+                    "method" => |w| w.string(alternative.method().stable_id()),
+                    "result" => |w| w.raw(&alternative.result().to_json()?),
+                    "factorization" => |w| {
+                        let factorization = alternative.factorization();
+                        object!(w,
+                            "unit" => |w| w.rational(factorization.unit()),
+                            "factors" => |w| w.array(factorization.factors(), |w, factor| {
+                                object!(w,
+                                    "polynomial" => |w| w.polynomial(factor.polynomial()),
+                                    "multiplicity" => |w| w.count(factor.multiplicity()),
+                                )
+                            }),
+                        )
+                    },
+                ),
+            },
+        )
+    }
+}
+
+#[cfg(test)]
+mod method_wire_tests {
+    use super::*;
+
+    #[test]
+    fn method_envelope_obeys_aggregate_output_limit() {
+        let request = ProblemRequest {
+            operation: ProblemOperation::PolynomialEquation,
+            statement: ProblemStatement::PolynomialZero(RationalPolynomial::new(vec![
+                Rational::from(Integer::from(1)),
+                Rational::from(Integer::from(-2)),
+                Rational::from(Integer::from(1)),
+            ])),
+            variables: vec![Symbol::new("x").unwrap()],
+            domain: ScalarDomain::Complex,
+        };
+        let checked =
+            ProblemResult::dispatch_with_methods(&EvaluationContext::default(), &request, true)
+                .unwrap();
+        let bytes = checked.to_json().unwrap().len();
+        let mut writer = Encoder {
+            text: " ".repeat(MAX_BYTES - bytes + 1),
+        };
+        assert_eq!(
+            writer.method_envelope(&checked),
+            Err(ProblemWireError::OutputLimit)
+        );
+    }
+}

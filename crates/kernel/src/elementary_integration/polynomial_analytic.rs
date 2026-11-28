@@ -411,7 +411,11 @@ impl EvaluationContext {
         let derivative = work.differentiate(&input.polynomial)?;
         let leading = derivative.coefficients().last().ok_or(Failure::ZeroSlope)?;
         let factor = work.quotient(
-            input.multiplier.coefficients().last().ok_or(Failure::UnsupportedForm)?,
+            input
+                .multiplier
+                .coefficients()
+                .last()
+                .ok_or(Failure::UnsupportedForm)?,
             leading,
         )?;
         if scale(&mut work, &derivative, &factor)? != input.multiplier {
@@ -494,7 +498,12 @@ mod tests {
             .integrate_polynomial_trigonometric(&source, &variable(), ScalarDomain::Real)
             .unwrap();
         context
-            .verify_polynomial_trigonometric_primitive(&source, &variable(), ScalarDomain::Real, &claim)
+            .verify_polynomial_trigonometric_primitive(
+                &source,
+                &variable(),
+                ScalarDomain::Real,
+                &claim,
+            )
             .unwrap();
         claim
     }
@@ -510,10 +519,7 @@ mod tests {
 
     #[test]
     fn cosine_product() {
-        let claim = trig(Expr::mul([
-            x(),
-            Expr::cos(Expr::mul([Expr::from(2), x()])),
-        ]));
+        let claim = trig(Expr::mul([x(), Expr::cos(Expr::mul([Expr::from(2), x()]))]));
         assert_eq!(claim.sine.coefficients(), &[q(0, 1), q(1, 2)]);
         assert_eq!(claim.cosine.coefficients(), &[q(1, 4)]);
     }
@@ -542,7 +548,10 @@ mod tests {
         for (function, expected) in [
             (Expr::cos(inner.clone()), Expr::sin(inner.clone())),
             (Expr::exp(inner.clone()), Expr::exp(inner.clone())),
-            (Expr::sin(inner.clone()), Expr::mul([Expr::from(-1), Expr::cos(inner.clone())])),
+            (
+                Expr::sin(inner.clone()),
+                Expr::mul([Expr::from(-1), Expr::cos(inner.clone())]),
+            ),
         ] {
             let input = source(Expr::mul([Expr::from(2), x(), function]));
             let claim = context
@@ -557,15 +566,15 @@ mod tests {
     #[test]
     fn historical_hole_is_preserved() {
         let hole = DomainExpression::multiply(
-            [source(Expr::from(0)), source(Expr::pow(x(), Expr::from(-1)))],
+            [
+                source(Expr::from(0)),
+                source(Expr::pow(x(), Expr::from(-1))),
+            ],
             32,
         )
         .unwrap();
-        let input = DomainExpression::add(
-            [hole, source(Expr::mul([x(), Expr::sin(x())]))],
-            32,
-        )
-        .unwrap();
+        let input =
+            DomainExpression::add([hole, source(Expr::mul([x(), Expr::sin(x())]))], 32).unwrap();
         let context = EvaluationContext::default();
         let claim = context
             .integrate_polynomial_trigonometric(&input, &variable(), ScalarDomain::Real)
@@ -584,12 +593,16 @@ mod tests {
             Expr::mul([x(), Expr::cos(Expr::from(3))]),
         ] {
             let input = source(expression);
-            assert!(context
-                .integrate_polynomial_substitution(&input, &variable(), ScalarDomain::Real)
-                .is_err());
-            assert!(context
-                .integrate_polynomial_trigonometric(&input, &variable(), ScalarDomain::Real)
-                .is_err());
+            assert!(
+                context
+                    .integrate_polynomial_substitution(&input, &variable(), ScalarDomain::Real)
+                    .is_err()
+            );
+            assert!(
+                context
+                    .integrate_polynomial_trigonometric(&input, &variable(), ScalarDomain::Real)
+                    .is_err()
+            );
         }
     }
 
@@ -602,19 +615,40 @@ mod tests {
             .unwrap();
         let mut forged = claim.clone();
         forged.steps[0].boundary = RationalPolynomial::zero();
-        assert!(context
-            .verify_polynomial_trigonometric_primitive(&input, &variable(), ScalarDomain::Real, &forged)
-            .is_err());
+        assert!(
+            context
+                .verify_polynomial_trigonometric_primitive(
+                    &input,
+                    &variable(),
+                    ScalarDomain::Real,
+                    &forged
+                )
+                .is_err()
+        );
         let mut forged = claim.clone();
         forged.steps.pop();
-        assert!(context
-            .verify_polynomial_trigonometric_primitive(&input, &variable(), ScalarDomain::Real, &forged)
-            .is_err());
+        assert!(
+            context
+                .verify_polynomial_trigonometric_primitive(
+                    &input,
+                    &variable(),
+                    ScalarDomain::Real,
+                    &forged
+                )
+                .is_err()
+        );
         let mut forged = claim;
         forged.primitive = source(x());
-        assert!(context
-            .verify_polynomial_trigonometric_primitive(&input, &variable(), ScalarDomain::Real, &forged)
-            .is_err());
+        assert!(
+            context
+                .verify_polynomial_trigonometric_primitive(
+                    &input,
+                    &variable(),
+                    ScalarDomain::Real,
+                    &forged
+                )
+                .is_err()
+        );
     }
 
     #[test]
@@ -626,9 +660,16 @@ mod tests {
             .unwrap();
         assert_eq!(claim.scale, q(1, 2));
         claim.scale = q(1, 1);
-        assert!(context
-            .verify_polynomial_substitution_primitive(&input, &variable(), ScalarDomain::Real, &claim)
-            .is_err());
+        assert!(
+            context
+                .verify_polynomial_substitution_primitive(
+                    &input,
+                    &variable(),
+                    ScalarDomain::Real,
+                    &claim
+                )
+                .is_err()
+        );
     }
 
     #[test]
@@ -637,16 +678,20 @@ mod tests {
         assert_eq!(trig(expression.clone()), trig(expression));
         let context = EvaluationContext::default();
         let input = source(Expr::mul([Expr::pow(x(), Expr::from(17)), Expr::sin(x())]));
-        assert!(context
-            .integrate_polynomial_trigonometric(&input, &variable(), ScalarDomain::Real)
-            .is_err());
+        assert!(
+            context
+                .integrate_polynomial_trigonometric(&input, &variable(), ScalarDomain::Real)
+                .is_err()
+        );
         let context = EvaluationContext::new(ResourceLimits {
             max_work_units: 0,
             ..ResourceLimits::default()
         });
         let input = source(Expr::mul([x(), Expr::sin(x())]));
-        assert!(context
-            .integrate_polynomial_trigonometric(&input, &variable(), ScalarDomain::Real)
-            .is_err());
+        assert!(
+            context
+                .integrate_polynomial_trigonometric(&input, &variable(), ScalarDomain::Real)
+                .is_err()
+        );
     }
 }

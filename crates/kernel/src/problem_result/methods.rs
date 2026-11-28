@@ -173,7 +173,8 @@ fn verified_alternative(
     }
     let mut request = primary.request().clone();
     request.operation = ProblemOperation::ComplexPolynomialRoots;
-    let result = adapt_verified_problem(context, &request, ProblemEvidence::ComplexRoots(candidate))?;
+    let result =
+        adapt_verified_problem(context, &request, ProblemEvidence::ComplexRoots(candidate))?;
     if let ProblemOutcome::ResourceRefusal(kind) = result.outcome() {
         return Err(AlternativeError::ResourceRefusal(*kind));
     }
@@ -221,7 +222,11 @@ impl ProblemResult {
                 .map_err(ProblemError::PolynomialRoots)
                 .map_err(AlternativeError::from)
                 .and_then(|candidate| {
-                    verified_alternative(context, &primary, ProblemEvidence::ComplexRoots(&candidate))
+                    verified_alternative(
+                        context,
+                        &primary,
+                        ProblemEvidence::ComplexRoots(&candidate),
+                    )
                 }) {
                 Ok(result) => AlternativeStatus::Verified(Box::new(result)),
                 Err(error) => AlternativeStatus::Failed(error),
@@ -244,8 +249,11 @@ impl ProblemResult {
         direct: &PolynomialEquationResult,
         alternative: ProblemEvidence<'_>,
     ) -> Result<MethodEnvelope, AlternativeError> {
-        let primary =
-            adapt_verified_problem(context, request, ProblemEvidence::PolynomialEquation(direct))?;
+        let primary = adapt_verified_problem(
+            context,
+            request,
+            ProblemEvidence::PolynomialEquation(direct),
+        )?;
         if let ProblemOutcome::ResourceRefusal(kind) = primary.outcome() {
             return Err(AlternativeError::ResourceRefusal(*kind));
         }
@@ -340,7 +348,10 @@ mod tests {
         let context = EvaluationContext::default();
         let repeated = request(&[1, -4, 4]);
         let result = ProblemResult::dispatch_with_methods(&context, &repeated, true).unwrap();
-        assert!(matches!(result.alternative(), AlternativeStatus::Verified(_)));
+        assert!(matches!(
+            result.alternative(),
+            AlternativeStatus::Verified(_)
+        ));
         for coefficients in [&[6, -5, 1][..], &[1, 0, 1], &[1], &[0], &[1, 1]] {
             let request = request(coefficients);
             let result = ProblemResult::dispatch_with_methods(&context, &request, true).unwrap();
@@ -361,7 +372,8 @@ mod tests {
         let original = request(&[9, -6, 1]);
         let p = polynomial(&original);
         let direct =
-            solve_polynomial_equation(&context, p, &original.variables[0], original.domain).unwrap();
+            solve_polynomial_equation(&context, p, &original.variables[0], original.domain)
+                .unwrap();
         let alternative = context.partial_polynomial_roots(p).unwrap();
         let adapt = |candidate| {
             ProblemResult::adapt_with_alternative(&context, &original, &direct, candidate)

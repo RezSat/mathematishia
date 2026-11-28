@@ -32,7 +32,8 @@ fn problem_json(args: Vec<String>) -> PyResult<String> {
 #[pyfunction]
 fn school_json(args: Vec<String>) -> PyResult<String> {
     let args = args.iter().map(String::as_str).collect::<Vec<_>>();
-    mathema_frontend::school::evaluate_json(&EvaluationContext::default(), &args).map_err(request_error)
+    mathema_frontend::school::evaluate_json(&EvaluationContext::default(), &args)
+        .map_err(request_error)
 }
 
 fn isolation_error(error: RealRootIsolationError) -> PyErr {

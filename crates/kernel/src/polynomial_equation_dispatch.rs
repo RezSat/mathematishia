@@ -241,9 +241,9 @@ const MAX_SUBSTITUTION_POWER: usize = 4;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PatternExclusion {
-    NonrationalPower,
-    NonrealPower,
-    NegativeEvenPower,
+    Nonrational,
+    Nonreal,
+    NegativeEven,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -276,6 +276,10 @@ pub struct PolynomialPatternResult {
 }
 
 impl PolynomialPatternResult {
+    pub const fn method_id(&self) -> &'static str {
+        "polynomial.power_substitution"
+    }
+
     pub fn is_complete(&self) -> bool {
         !matches!(self.solutions, CertifiedSolutionSet::Partial { .. })
     }
@@ -376,9 +380,9 @@ fn outer_factors(
     }
     if let Some(minimal) = roots[0].minimal_polynomial() {
         let exclusion = match domain {
-            ScalarDomain::Rational => Some(PatternExclusion::NonrationalPower),
+            ScalarDomain::Rational => Some(PatternExclusion::Nonrational),
             ScalarDomain::Real if !in_domain(&roots[0], domain) => {
-                Some(PatternExclusion::NonrealPower)
+                Some(PatternExclusion::Nonreal)
             }
             _ => None,
         };
@@ -397,7 +401,7 @@ fn outer_factors(
                 && power.is_multiple_of(2)
                 && value < &pattern_zero()
             {
-                Some(PatternExclusion::NegativeEvenPower)
+                Some(PatternExclusion::NegativeEven)
             } else {
                 None
             };
@@ -589,6 +593,38 @@ impl EvaluationContext {
         Ok(Some(result))
     }
 
+    /// Independently check a distinct direct factorization of the original
+    /// polynomial, only when the substitution method did not itself use a
+    /// factor search and both methods prove the same complete solution set.
+    pub fn polynomial_pattern_factor_alternative(
+        &self,
+        left: &DomainExpression,
+        right: &DomainExpression,
+        variable: &Symbol,
+        domain: ScalarDomain,
+        pattern: &PolynomialPatternResult,
+    ) -> Result<Option<PolynomialEquationResult>, PolynomialEquationError> {
+        if !self.verify_pattern_polynomial_equation(left, right, variable, domain, pattern)? {
+            return Err(PolynomialEquationError::IncorrectCertificate);
+        }
+        if !pattern.is_complete()
+            || pattern
+                .lifts
+                .iter()
+                .any(|lift| matches!(lift.evidence, PolynomialLiftEvidence::FactorSearch(_)))
+        {
+            return Ok(None);
+        }
+        let alternative = solve_polynomial_equation(self, &pattern.original, variable, domain)?;
+        if !alternative.is_complete() || alternative.solutions() != &pattern.solutions {
+            return Ok(None);
+        }
+        if !verify_polynomial_equation(self, &pattern.original, variable, domain, &alternative)? {
+            return Err(PolynomialEquationError::IncorrectCertificate);
+        }
+        Ok(Some(alternative))
+    }
+
     /// Check the external source, exact substitution identity, outer root
     /// proof, every lifted factor and multiplicity, and domain classification.
     /// Does not call the pattern solver or trust the claimed solution list.
@@ -706,8 +742,17 @@ mod pattern_tests {
         );
         let context = EvaluationContext::default();
         let x = Symbol::new("x").unwrap();
-        let alternative =
-            solve_polynomial_equation(&context, &original, &x, ScalarDomain::Real).unwrap();
+        let alternative = context
+            .polynomial_pattern_factor_alternative(
+                &result.left,
+                &result.right,
+                &x,
+                ScalarDomain::Real,
+                &result,
+            )
+            .unwrap()
+            .unwrap();
+        assert_eq!(result.method_id(), "polynomial.power_substitution");
         assert_eq!(alternative.solutions(), &result.solutions);
         assert!(
             verify_polynomial_equation(&context, &original, &x, ScalarDomain::Real, &alternative)
@@ -725,7 +770,7 @@ mod pattern_tests {
         );
         assert!(matches!(
             real.lifts[0].evidence,
-            PolynomialLiftEvidence::Excluded(PatternExclusion::NegativeEvenPower)
+            PolynomialLiftEvidence::Excluded(PatternExclusion::NegativeEven)
         ));
         let complex = solve(&original, ScalarDomain::Complex);
         let CertifiedSolutionSet::Finite(roots) = complex.solutions else {
@@ -745,7 +790,7 @@ mod pattern_tests {
         assert_eq!(no_real.solutions, CertifiedSolutionSet::None);
         assert!(matches!(
             no_real.lifts[0].evidence,
-            PolynomialLiftEvidence::Excluded(PatternExclusion::NonrealPower)
+            PolynomialLiftEvidence::Excluded(PatternExclusion::Nonreal)
         ));
         assert_eq!(
             solve(&p(&[-2, 0, 0, 0, 1]), ScalarDomain::Rational).solutions,

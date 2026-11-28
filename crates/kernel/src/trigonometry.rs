@@ -462,10 +462,11 @@ impl TrigIdentityCertificate {
         limits: TrigLimits,
     ) -> Result<bool, TrigError> {
         admit_angle(&PiMultiple::new(ratio(0, 1)), domain, limits)?;
-        for value in expected.iter().chain(self.coefficients.iter()).chain([
-            &self.circle_multiplier,
-            &self.addition_multiplier,
-        ]) {
+        for value in expected
+            .iter()
+            .chain(self.coefficients.iter())
+            .chain([&self.circle_multiplier, &self.addition_multiplier])
+        {
             admit(value, limits.max_input_bits)?;
         }
         let circle = &self.circle_multiplier;
@@ -587,7 +588,9 @@ impl PeriodicTrigEquation {
             } else {
                 ratio(2, 1)
             };
-            certificate.families.push(affine_family(self, base, &period));
+            certificate
+                .families
+                .push(affine_family(self, base, &period));
             if !zero {
                 let reflected = match self.function {
                     TrigFunction::Sin if *base != ratio(1, 2) && *base != ratio(-1, 2) => {
@@ -636,7 +639,8 @@ impl PeriodicTrigEquation {
                 && certificate.families.is_empty()
                 && certificate.excluded_poles.is_none());
         }
-        let (Some(principal), Some(period)) = (&certificate.principal, &certificate.argument_period)
+        let (Some(principal), Some(period)) =
+            (&certificate.principal, &certificate.argument_period)
         else {
             return Ok(false);
         };
@@ -664,12 +668,8 @@ impl PeriodicTrigEquation {
             TrigFunction::Tan => (ratio(1, 1), None),
             TrigFunction::Sin if *p == ratio(0, 1) => (ratio(1, 1), None),
             TrigFunction::Cos if *p == ratio(1, 2) => (ratio(1, 1), None),
-            TrigFunction::Sin if *p == ratio(1, 2) || *p == ratio(-1, 2) => {
-                (ratio(2, 1), None)
-            }
-            TrigFunction::Cos if *p == ratio(0, 1) || *p == ratio(1, 1) => {
-                (ratio(2, 1), None)
-            }
+            TrigFunction::Sin if *p == ratio(1, 2) || *p == ratio(-1, 2) => (ratio(2, 1), None),
+            TrigFunction::Cos if *p == ratio(0, 1) || *p == ratio(1, 1) => (ratio(2, 1), None),
             TrigFunction::Sin => (ratio(2, 1), Some(&ratio(1, 1) - p)),
             TrigFunction::Cos => (ratio(2, 1), Some(-p.clone())),
         };
@@ -901,12 +901,9 @@ mod periodic_tests {
         let limits = TrigLimits::default();
         for terms in [[1, 1, 0, -1], [1, -1, 1, 0], [2, 0, 1, -1], [0, -2, 1, 1]] {
             let coefficients = terms.map(|value| ratio(value, 1));
-            let proof = TrigFunction::prove_squared_identity(
-                &coefficients,
-                ScalarDomain::Real,
-                limits,
-            )
-            .unwrap();
+            let proof =
+                TrigFunction::prove_squared_identity(&coefficients, ScalarDomain::Real, limits)
+                    .unwrap();
             assert!(
                 proof
                     .verify(&coefficients, ScalarDomain::Real, limits)

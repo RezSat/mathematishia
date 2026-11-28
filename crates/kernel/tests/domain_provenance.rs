@@ -133,7 +133,12 @@ fn rebuilding_retains_source_provenance_and_collects_new_obligations() {
         source.rebuild_with_expression(Expr::tan(x()), 1, 16),
         Err(DefinednessError::NodeLimitExceeded)
     );
-    let unknown = Expr::function(Symbol::new("abs").unwrap(), x());
+    let absolute = source
+        .rebuild_with_expression(Expr::abs(x()), 128, 16)
+        .unwrap();
+    assert_eq!(absolute.construction_domain(), Some(ScalarDomain::Real));
+    assert_eq!(absolute.conditions(), &[Condition::Positive(x())]);
+    let unknown = Expr::function(Symbol::new("unknown_function").unwrap(), x());
     assert_eq!(
         source.rebuild_with_expression(unknown, 128, 16),
         Err(DefinednessError::UnsupportedFunction)

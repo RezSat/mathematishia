@@ -454,14 +454,9 @@ impl Checker<'_> {
                 1 => Expr::mul([coefficient, variable.clone()]),
                 _ => {
                     if degree > self.context.limits().max_symbolic_power {
-                        return Err(
-                            EvaluationError::Limit(ResourceLimitKind::SymbolicPower).into()
-                        );
+                        return Err(EvaluationError::Limit(ResourceLimitKind::SymbolicPower).into());
                     }
-                    Expr::mul([
-                        coefficient,
-                        Expr::pow(variable.clone(), Expr::from(degree)),
-                    ])
+                    Expr::mul([coefficient, Expr::pow(variable.clone(), Expr::from(degree))])
                 }
             };
             terms.push(term);
@@ -690,10 +685,7 @@ mod derivative_trace_tests {
             context.verify_rational_domain_derivative(&reciprocal, &variable(), &trace),
             Ok(())
         );
-        let quotient = source(Expr::mul([
-            shift(1),
-            Expr::pow(shift(-1), Expr::from(-1)),
-        ]));
+        let quotient = source(Expr::mul([shift(1), Expr::pow(shift(-1), Expr::from(-1))]));
         let trace = context
             .differentiate_rational_domain_expression(&quotient, &variable())
             .unwrap();
